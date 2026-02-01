@@ -22,8 +22,9 @@ const SCOPE_PRIORITY: Record<SkillScope, number> = {
   config: 2,
   user: 3,
   opencode: 4,
-  project: 5,
-  "opencode-project": 6,
+  agent: 5,  // ~/.agent/skills/ - shared by both CLIs
+  project: 6,
+  "opencode-project": 7,
 }
 
 function builtinToLoaded(builtin: BuiltinSkill): LoadedSkill {

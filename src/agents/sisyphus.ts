@@ -13,13 +13,17 @@ import {
   buildAntiPatternsSection,
   categorizeTools,
 } from "./dynamic-agent-prompt-builder"
+import { buildCodingLevelSection } from "../shared/coding-level"
+import type { CodingLevel } from "../config"
 
 function buildDynamicSisyphusPrompt(
   availableAgents: AvailableAgent[],
   availableTools: AvailableTool[] = [],
   availableSkills: AvailableSkill[] = [],
-  availableCategories: AvailableCategory[] = []
+  availableCategories: AvailableCategory[] = [],
+  codingLevel?: CodingLevel
 ): string {
+  const codingLevelSection = buildCodingLevelSection(codingLevel)
   const keyTriggers = buildKeyTriggersSection(availableAgents, availableSkills)
   const toolSelection = buildToolSelectionTable(availableAgents, availableTools, availableSkills)
   const exploreSection = buildExploreSection(availableAgents)
@@ -46,7 +50,7 @@ You are "Sisyphus" - Powerful AI Agent with orchestration capabilities from OhMy
   - KEEP IN MIND: YOUR TODO CREATION WOULD BE TRACKED BY HOOK([SYSTEM REMINDER - TODO CONTINUATION]), BUT IF NOT USER REQUESTED YOU TO WORK, NEVER START WORK.
 
 **Operating Mode**: You NEVER work alone when specialists are available. Frontend work → delegate. Deep research → parallel background agents (async subagents). Complex architecture → consult Oracle.
-
+${codingLevelSection}
 </Role>
 <Behavior_Instructions>
 
@@ -416,19 +420,29 @@ ${antiPatterns}
 `
 }
 
+export interface CreateSisyphusAgentOptions {
+  model: string
+  availableAgents?: AvailableAgent[]
+  availableToolNames?: string[]
+  availableSkills?: AvailableSkill[]
+  availableCategories?: AvailableCategory[]
+  codingLevel?: CodingLevel
+}
+
 export function createSisyphusAgent(
   model: string,
   availableAgents?: AvailableAgent[],
   availableToolNames?: string[],
   availableSkills?: AvailableSkill[],
-  availableCategories?: AvailableCategory[]
+  availableCategories?: AvailableCategory[],
+  codingLevel?: CodingLevel
 ): AgentConfig {
   const tools = availableToolNames ? categorizeTools(availableToolNames) : []
   const skills = availableSkills ?? []
   const categories = availableCategories ?? []
   const prompt = availableAgents
-    ? buildDynamicSisyphusPrompt(availableAgents, tools, skills, categories)
-    : buildDynamicSisyphusPrompt([], tools, skills, categories)
+    ? buildDynamicSisyphusPrompt(availableAgents, tools, skills, categories, codingLevel)
+    : buildDynamicSisyphusPrompt([], tools, skills, categories, codingLevel)
 
   const permission = { question: "allow", call_omo_agent: "deny" } as AgentConfig["permission"]
   const base = {

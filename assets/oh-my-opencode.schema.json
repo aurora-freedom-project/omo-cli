@@ -2853,6 +2853,39 @@
           }
         }
       }
+    },
+    "coding_level": {
+      "default": 5,
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "privacy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "sensitive_patterns": {
+          "default": [
+            ".env",
+            ".env.*",
+            "*.key",
+            "*.pem",
+            "**/secrets/**",
+            "**/credentials/**"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "require_confirmation": {
+          "default": false,
+          "type": "boolean"
+        }
+      }
     }
   }
 }

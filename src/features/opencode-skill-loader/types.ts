@@ -1,7 +1,13 @@
 import type { CommandDefinition } from "../claude-code-command-loader/types"
 import type { SkillMcpConfig } from "../skill-mcp-manager/types"
 
-export type SkillScope = "builtin" | "config" | "user" | "project" | "opencode" | "opencode-project"
+// Skill scopes:
+// - agent: ~/.agent/skills/ (shared by both Claude Code CLI and OpenCode CLI)
+// - user: ~/.claude/skills/ (Claude Code user-level)
+// - project: ./.claude/skills/ (Claude Code project-level)
+// - opencode: ~/.config/opencode/skills/ (OpenCode user-level)
+// - opencode-project: ./.opencode/skills/ (OpenCode project-level)
+export type SkillScope = "builtin" | "config" | "user" | "project" | "opencode" | "opencode-project" | "agent"
 
 export interface SkillMetadata {
   name?: string

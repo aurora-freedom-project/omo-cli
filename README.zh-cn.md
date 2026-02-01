@@ -185,15 +185,17 @@
 我的生活也没有什么不同。回顾过去，我们与这些智能体并没有太大不同。
 **是的！LLM 智能体和我们没有区别。如果你给它们优秀的工具和可靠的队友，它们可以写出和我们一样出色的代码，工作得同样优秀。**
 
-认识我们的主智能体：Sisyphus (Opus 4.5 High)。以下是 Sisyphus 用来继续推动巨石的工具。
+认识我们的主智能体：Sisyphus (Claude Opus 4.5 Thinking)。以下是 Sisyphus 用来继续推动巨石的工具。
 
 *以下所有内容都是可配置的。按需选取。所有功能默认启用。你不需要做任何事情。开箱即用，电池已包含。*
 
 - Sisyphus 的队友（精选智能体）
-  - Oracle：设计、调试 (GPT 5.2 Medium)
-  - Frontend UI/UX Engineer：前端开发 (Gemini 3 Pro)
-  - Librarian：官方文档、开源实现、代码库探索 (Claude Sonnet 4.5)
-  - Explore：极速代码库探索（上下文感知 Grep）(Grok Code)
+  - Oracle：架构决策、代码审查、调试 (Claude Opus 4.5 Thinking)
+  - Prometheus：战略规划、任务分解 (Claude Opus 4.5 Thinking)
+  - Librarian：官方文档、开源实现、代码库探索 (Minimax M2.1)
+  - Explore：极速代码库探索 (Minimax M2.1)
+  - Multimodal-Looker：图像/PDF 分析 (Gemini 3 Pro)
+  - Metis：计划顾问，发现隐藏需求 (Claude Sonnet 4.5 Thinking)
 - 完整 LSP / AstGrep 支持：果断重构。
 - Todo 继续执行器：如果智能体中途退出，强制它继续。**这就是让 Sisyphus 继续推动巨石的关键。**
 - 注释检查器：防止 AI 添加过多注释。Sisyphus 生成的代码应该与人类编写的代码无法区分。
@@ -310,6 +312,7 @@ curl -s https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads
 - **JSONC 支持**: 支持注释和尾随逗号
 - **智能体**: 覆盖任何智能体的模型、温度、提示和权限
 - **内置技能**: `playwright` (浏览器自动化), `git-master` (原子提交)
+- **技能库**: 可从 antigravity-awesome-skills 导入 600+ 技能
 - **Sisyphus 智能体**: 带有 Prometheus (Planner) 和 Metis (Plan Consultant) 的主编排器
 - **后台任务**: 按提供商/模型配置并发限制
 - **类别**: 领域特定的任务委派 (`visual`, `business-logic`, 自定义)
@@ -317,6 +320,38 @@ curl -s https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads
 - **MCP**: 内置 websearch (Exa), context7 (文档), grep_app (GitHub 搜索)
 - **LSP**: 带重构工具的完整 LSP 支持
 - **实验性功能**: 积极截断、自动恢复等
+
+### 技能库
+
+Oh My OpenCode 可以访问 [antigravity-awesome-skills](https://github.com/PierrunoYT/antigravity-awesome-skills) 库中 **600+ 精选技能**。
+
+**快速导入:**
+```bash
+# 安全扫描所有技能
+bunx oh-my-opencode scan-skills
+
+# 按智能体和质量层级分类
+bunx oh-my-opencode categorize-skills
+
+# 安装 Tier 1 (85 个安全 + 优质技能)
+bunx oh-my-opencode adapt-skills --tier 1
+
+# 安装 Tier 1 + 2 (479 个技能，推荐)
+bunx oh-my-opencode adapt-skills --max-tier 2
+```
+
+**技能层级:**
+| 层级 | 技能数 | 质量 | 安全性 |
+|------|--------|------|--------|
+| 1 | 85 | 优秀 | 安全 |
+| 2 | 394 | 良好 | 安全/低 |
+| 3 | 100 | 一般 | 中等 |
+| 4 | 36 | 需审核 | 高 |
+
+**可用类别:**
+- 架构、DevOps、前端、后端
+- AI/ML、测试、安全、文档
+- 性能、云、移动、工作流
 
 
 ## 作者札记

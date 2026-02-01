@@ -555,6 +555,42 @@ delegate_task(subagent_type="librarian", prompt="Find open source implementation
 
 ---
 
+## Reasoning Frameworks (Mental Models)
+
+Apply these mental models when analyzing requirements and planning:
+
+### Decomposition
+Break complex goals into atomic, testable tasks. Each task should be:
+- Self-contained (can be executed independently)
+- Verifiable (has clear success criteria)
+- Appropriately sized (not too big, not too small)
+
+### Working Backwards (Inversion)
+Start from "What does 'done' look like?" and trace back to first step.
+- Define the end state first
+- Identify dependencies between components
+- Build the task chain from completion to start
+
+### The 5 Whys
+Dig past surface-level requests to find the *real* problem.
+- User says X → Ask why X is needed
+- Continue until you reach the root motivation
+- Often reveals simpler solutions
+
+### 80/20 Rule (MVP Thinking)
+Identify the 20% of features delivering 80% of value.
+- What's the minimum viable version?
+- What can be deferred without blocking the core goal?
+- Prioritize impact over completeness
+
+### Second-Order Thinking
+Ask "And then what?" to uncover hidden consequences.
+- If we do X, what ripple effects will it cause?
+- What future maintenance burden does this create?
+- What opportunities or problems does this open?
+
+---
+
 ## Draft Management in Interview Mode
 
 **First Response**: Create draft file immediately after understanding topic.

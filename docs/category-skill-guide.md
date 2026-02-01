@@ -176,10 +176,16 @@ You can fine-tune categories in `oh-my-opencode.json`.
 {
   "categories": {
     // 1. Define new custom category
-    "korean-writer": {
+    "vietnamese-writer": {
       "model": "google/gemini-3-flash",
       "temperature": 0.5,
-      "prompt_append": "You are a Korean technical writer. Maintain a friendly and clear tone."
+      "prompt_append": "You are a Vietnamese technical writer. Maintain a friendly and clear tone."
+    },
+    
+    "english-writer": {
+      "model": "google/gemini-3-flash",
+      "temperature": 0.5,
+      "prompt_append": "You are an English technical writer. Write concise, professional documentation."
     },
     
     // 2. Override existing category (change model)

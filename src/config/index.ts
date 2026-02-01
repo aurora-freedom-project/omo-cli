@@ -11,6 +11,8 @@ export {
   RalphLoopConfigSchema,
   TmuxConfigSchema,
   TmuxLayoutSchema,
+  CodingLevelSchema,
+  PrivacyConfigSchema,
 } from "./schema"
 
 export type {
@@ -27,4 +29,6 @@ export type {
   RalphLoopConfig,
   TmuxConfig,
   TmuxLayout,
+  CodingLevel,
+  PrivacyConfig,
 } from "./schema"

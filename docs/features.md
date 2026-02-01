@@ -10,19 +10,21 @@ Oh-My-OpenCode provides 10 specialized AI agents. Each has distinct expertise, o
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| **Sisyphus** | `anthropic/claude-opus-4-5` | **The default orchestrator.** Plans, delegates, and executes complex tasks using specialized subagents with aggressive parallel execution. Todo-driven workflow with extended thinking (32k budget). |
-| **oracle** | `openai/gpt-5.2` | Architecture decisions, code review, debugging. Read-only consultation - stellar logical reasoning and deep analysis. Inspired by AmpCode. |
-| **librarian** | `opencode/big-pickle` | Multi-repo analysis, documentation lookup, OSS implementation examples. Deep codebase understanding with evidence-based answers. Inspired by AmpCode. |
-| **explore** | `opencode/gpt-5-nano` | Fast codebase exploration and contextual grep. Uses Gemini 3 Flash when Antigravity auth is configured, Haiku when Claude max20 is available, otherwise Grok. Inspired by Claude Code. |
-| **multimodal-looker** | `google/gemini-3-flash` | Visual content specialist. Analyzes PDFs, images, diagrams to extract information. Saves tokens by having another agent process media. |
+| **Sisyphus** | `claude-opus-4-5-thinking` (max) | **The default orchestrator.** Plans, delegates, and executes complex tasks using specialized subagents with aggressive parallel execution. Todo-driven workflow with extended thinking (32k budget). |
+| **oracle** | `claude-opus-4-5-thinking` (max) | Architecture decisions, code review, debugging. Read-only consultation - stellar logical reasoning and deep analysis. Inspired by AmpCode. |
+| **librarian** | `minimax-m2.1` (Ollama) | Multi-repo analysis, documentation lookup, OSS implementation examples. Fast and cost-effective research agent. Inspired by AmpCode. |
+| **explore** | `minimax-m2.1` (Ollama) | Fast codebase exploration and contextual grep. Optimized for speed and cost efficiency. Inspired by Claude Code. |
+| **multimodal-looker** | `gemini-3-pro` (high) | Visual content specialist. Analyzes PDFs, images, diagrams to extract information. Saves tokens by having another agent process media. |
 
 ### Planning Agents
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| **Prometheus** | `anthropic/claude-opus-4-5` | Strategic planner with interview mode. Creates detailed work plans through iterative questioning. |
-| **Metis** | `anthropic/claude-sonnet-4-5` | Plan consultant - pre-planning analysis. Identifies hidden intentions, ambiguities, and AI failure points. |
-| **Momus** | `anthropic/claude-sonnet-4-5` | Plan reviewer - validates plans against clarity, verifiability, and completeness standards. |
+| **Prometheus** | `claude-opus-4-5-thinking` (max) | Strategic planner with interview mode. Creates detailed work plans through iterative questioning. |
+| **Metis** | `claude-sonnet-4-5-thinking` (max) | Plan consultant - pre-planning analysis. Identifies hidden intentions, ambiguities, and AI failure points. |
+| **Momus** | `claude-sonnet-4-5-thinking` (max) | Plan reviewer - validates plans against clarity, verifiability, and completeness standards. |
+
+> **Note**: Models are configurable via `oh-my-opencode.json`. The above represents the recommended configuration for optimal cost/performance balance.
 
 ### Invoking Agents
 
@@ -182,7 +184,7 @@ Three specializations in one:
 ```
 
 **Automatic Style Detection**:
-- Analyzes last 30 commits for language (Korean/English) and style (semantic/plain/short)
+- Analyzes last 30 commits for language (Vietnamese/English) and style (semantic/plain/short)
 - Matches your repo's commit conventions automatically
 
 **Usage**:

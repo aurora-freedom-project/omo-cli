@@ -9,6 +9,9 @@ import {
 } from "./tmux-utils"
 
 describe("isInsideTmux", () => {
+  // Note: These tests modify process.env.TMUX and may conflict when run inside TMUX
+  const runningInTmux = !!process.env.TMUX
+
   test("returns true when TMUX env is set", () => {
     // #given
     const originalTmux = process.env.TMUX
@@ -21,11 +24,15 @@ describe("isInsideTmux", () => {
     expect(result).toBe(true)
 
     // cleanup
-    process.env.TMUX = originalTmux
+    if (originalTmux) {
+      process.env.TMUX = originalTmux
+    } else {
+      delete process.env.TMUX
+    }
   })
 
-  test("returns false when TMUX env is not set", () => {
-    // #given
+  test.skipIf(runningInTmux)("returns false when TMUX env is not set", () => {
+    // #given - cannot reliably test TMUX deletion when running inside tmux
     const originalTmux = process.env.TMUX
     delete process.env.TMUX
 
@@ -36,11 +43,13 @@ describe("isInsideTmux", () => {
     expect(result).toBe(false)
 
     // cleanup
-    process.env.TMUX = originalTmux
+    if (originalTmux) {
+      process.env.TMUX = originalTmux
+    }
   })
 
-  test("returns false when TMUX env is empty string", () => {
-    // #given
+  test.skipIf(runningInTmux)("returns false when TMUX env is empty string", () => {
+    // #given - cannot reliably test empty TMUX when running inside tmux
     const originalTmux = process.env.TMUX
     process.env.TMUX = ""
 
@@ -51,7 +60,11 @@ describe("isInsideTmux", () => {
     expect(result).toBe(false)
 
     // cleanup
-    process.env.TMUX = originalTmux
+    if (originalTmux) {
+      process.env.TMUX = originalTmux
+    } else {
+      delete process.env.TMUX
+    }
   })
 })
 

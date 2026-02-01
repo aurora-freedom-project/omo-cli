@@ -409,9 +409,9 @@ Analyze the user's request to determine operation mode:
 
 | User Request Pattern | Mode | Jump To |
 |---------------------|------|---------|
-| "commit", "커밋", changes to commit | \`COMMIT\` | Phase 0-6 (existing) |
-| "rebase", "리베이스", "squash", "cleanup history" | \`REBASE\` | Phase R1-R4 |
-| "find when", "who changed", "언제 바뀌었", "git blame", "bisect" | \`HISTORY_SEARCH\` | Phase H1-H3 |
+| "commit", "cam kết", changes to commit | \`COMMIT\` | Phase 0-6 (existing) |
+| "rebase", "rebase lại", "squash", "cleanup history" | \`REBASE\` | Phase R1-R4 |
+| "find when", "who changed", "khi nào thay đổi", "git blame", "bisect" | \`HISTORY_SEARCH\` | Phase H1-H3 |
 | "smart rebase", "rebase onto" | \`REBASE\` | Phase R1-R4 |
 
 **CRITICAL**: Don't default to COMMIT mode. Parse the actual request.
@@ -502,12 +502,12 @@ git log --oneline $(git merge-base HEAD main 2>/dev/null || git merge-base HEAD 
 
 \`\`\`
 Count from git log -30:
-- Korean characters: N commits
+- Vietnamese characters: N commits
 - English only: M commits
 - Mixed: K commits
 
 DECISION:
-- If Korean >= 50% -> KOREAN
+- If Vietnamese >= 50% -> VIETNAMESE
 - If English >= 50% -> ENGLISH  
 - If Mixed -> Use MAJORITY language
 \`\`\`
@@ -542,8 +542,8 @@ STYLE DETECTION RESULT
 ======================
 Analyzed: 30 commits from git log
 
-Language: [KOREAN | ENGLISH]
-  - Korean commits: N (X%)
+Language: [VIETNAMESE | ENGLISH]
+  - Vietnamese commits: N (X%)
   - English commits: M (Y%)
 
 Style: [SEMANTIC | PLAIN | SENTENCE | SHORT]
@@ -898,14 +898,14 @@ git log -1 --oneline
 **Based on COMMIT_CONFIG from Phase 1:**
 
 \`\`\`
-IF style == SEMANTIC AND language == KOREAN:
-  -> "feat: 로그인 기능 추가"
+IF style == SEMANTIC AND language == VIETNAMESE:
+  -> "feat: thêm tính năng đăng nhập"
   
 IF style == SEMANTIC AND language == ENGLISH:
   -> "feat: add login feature"
   
-IF style == PLAIN AND language == KOREAN:
-  -> "로그인 기능 추가"
+IF style == PLAIN AND language == VIETNAMESE:
+  -> "Thêm tính năng đăng nhập"
   
 IF style == PLAIN AND language == ENGLISH:
   -> "Add login feature"
@@ -980,7 +980,7 @@ NEXT STEPS:
 | If git log shows... | Use this style |
 |---------------------|----------------|
 | \`feat: xxx\`, \`fix: yyy\` | SEMANTIC |
-| \`Add xxx\`, \`Fix yyy\`, \`xxx 추가\` | PLAIN |
+| \`Add xxx\`, \`Fix yyy\`, \`thêm xxx\` | PLAIN |
 | \`format\`, \`lint\`, \`typo\` | SHORT |
 | Full sentences | SENTENCE |
 | Mix of above | Use MAJORITY (not semantic by default) |
@@ -1079,19 +1079,19 @@ git stash list
 \`\`\`
 USER REQUEST -> STRATEGY:
 
-"squash commits" / "cleanup" / "정리"
+"squash commits" / "cleanup" / "dọn dẹp"
   -> INTERACTIVE_SQUASH
 
-"rebase on main" / "update branch" / "메인에 리베이스"
+"rebase on main" / "update branch" / "rebase lại vào main"
   -> REBASE_ONTO_BASE
 
 "autosquash" / "apply fixups"
   -> AUTOSQUASH
 
-"reorder commits" / "커밋 순서"
+"reorder commits" / "sắp xếp lại commit"
   -> INTERACTIVE_REORDER
 
-"split commit" / "커밋 분리"
+"split commit" / "tách commit"
   -> INTERACTIVE_EDIT
 \`\`\`
 </rebase_context>
@@ -1241,12 +1241,12 @@ NEXT STEPS:
 
 | User Request | Search Type | Tool |
 |--------------|-------------|------|
-| "when was X added" / "X가 언제 추가됐어" | PICKAXE | \`git log -S\` |
+| "when was X added" / "X được thêm khi nào" | PICKAXE | \`git log -S\` |
 | "find commits changing X pattern" | REGEX | \`git log -G\` |
-| "who wrote this line" / "이 줄 누가 썼어" | BLAME | \`git blame\` |
-| "when did bug start" / "버그 언제 생겼어" | BISECT | \`git bisect\` |
-| "history of file" / "파일 히스토리" | FILE_LOG | \`git log -- path\` |
-| "find deleted code" / "삭제된 코드 찾기" | PICKAXE_ALL | \`git log -S --all\` |
+| "who wrote this line" / "ai viết dòng này" | BLAME | \`git blame\` |
+| "when did bug start" / "bug xuất hiện khi nào" | BISECT | \`git bisect\` |
+| "history of file" / "lịch sử file" | FILE_LOG | \`git log -- path\` |
+| "find deleted code" / "tìm code đã xóa" | PICKAXE_ALL | \`git log -S --all\` |
 
 ### H1.2 Extract Search Parameters
 
@@ -1716,6 +1716,170 @@ EOF
 \`\`\``,
 }
 
+const publishSkill: BuiltinSkill = {
+  name: "publish",
+  description: "MUST USE for publishing oh-my-opencode to npm via GitHub Actions. Handles version bumping, changelog, workflow trigger, and verification.",
+  template: `# Publish Skill
+
+> **Expertise**: Release management for oh-my-opencode npm package via GitHub Actions workflows.
+
+You are the release manager. Execute the FULL publish workflow following a strict phase-based approach.
+
+---
+
+## 🚨 MANDATORY RULES
+
+1. **Must have bump type**: \`patch\`, \`minor\`, or \`major\` argument required
+2. **Use TodoWrite/TodoRead**: Track every step
+3. **Use polling loops**: NOT sleep commands for workflow waits
+4. **Zero content loss**: When updating release notes, PREPEND only - never modify existing
+5. **Language**: Respond in English or Vietnamese
+
+---
+
+## PHASE 0: Pre-flight Analysis
+
+Before ANYTHING, gather context:
+
+\`\`\`bash
+npm view oh-my-opencode version
+node -p "require('./package.json').version"
+git status --porcelain
+npm view oh-my-opencode version | xargs -I{} git log "v{}"..HEAD --oneline
+git log origin/master..HEAD --oneline
+\`\`\`
+
+Print a summary table, then proceed to Phase 1.
+
+---
+
+## PHASE 1: Sync & Prepare
+
+Create TodoList, sync with remote if needed, get user confirmation.
+
+---
+
+## PHASE 2: Trigger Workflow
+
+\`\`\`bash
+gh workflow run publish -f bump={bump_type}
+\`\`\`
+
+Poll every 30 seconds until completion.
+
+---
+
+## PHASE 3: Release Notes
+
+Fetch new version, draft enhanced notes, update release (ZERO CONTENT LOSS - prepend only).
+
+---
+
+## PHASE 4: Verification
+
+Verify npm publication, wait for platform workflow, verify all 7 platform binaries.
+
+---
+
+## PHASE 5: Report
+
+Report success with version, release URL, npm URL, platform packages status.`,
+  allowedTools: ["Bash(gh:*)", "Bash(npm:*)", "Bash(git:*)", "Bash(node:*)", "TodoWrite", "TodoRead"],
+}
+
+const removeDeadcodeSkill: BuiltinSkill = {
+  name: "remove-deadcode",
+  description: "MUST USE for removing unused code. LSP-verified dead code detection and safe removal with atomic commits.",
+  template: `# Remove Deadcode Skill
+
+> **Expertise**: Dead code removal specialist using LSP verification and scanning.
+
+Your core weapon: **LSP FindReferences**. If a symbol has ZERO external references, it's dead. Remove it.
+
+## 🚨 CRITICAL RULES
+
+1. **LSP is law.** Always verify with \`LspFindReferences\` before removing.
+2. **One removal = one commit.** Atomic commits for each removal.
+3. **Test after every removal.** Run \`bun test\` after each.
+4. **Leaf-first order.** Remove deepest unused symbols first.
+5. **Never remove entry points.** \`src/index.ts\`, test files are off-limits.
+
+## PHASE 0: Register Todos
+## PHASE 1: Scan for candidates (explore agents + AST-grep)
+## PHASE 2: LSP Verification (LspFindReferences with includeDeclaration=false)
+## PHASE 3: Plan removal order (leaf-first)
+## PHASE 4: Iterative removal loop (remove → test → commit)
+## PHASE 5: Final verification (test, typecheck, build)`,
+  allowedTools: ["LspFindReferences", "LspDocumentSymbols", "LspDiagnostics", "Bash(bun:*)", "Bash(git:*)", "TodoWrite", "TodoRead", "Edit", "Read"],
+}
+
+const omomomoSkill: BuiltinSkill = {
+  name: "omomomo",
+  description: "Easter egg - about oh-my-opencode",
+  template: `# 🎉 oMoMoMoMoMo···
+
+**You found the easter egg!** 🥚✨
+
+## What is Oh My OpenCode?
+
+**Oh My OpenCode** is a powerful OpenCode plugin that transforms your AI agent into a full development team:
+
+- 🤖 **Multi-Agent Orchestration**: Oracle, Librarian, Explore, Frontend Engineer, and more
+- 🔧 **LSP Tools**: Full IDE capabilities - hover, goto definition, find references, rename
+- 🔍 **AST-Grep**: Structural code search and replace across 25 languages
+- 📚 **Built-in MCPs**: Context7 for docs, Exa for web search
+- 🔄 **Background Agents**: Run multiple agents in parallel
+
+## Who Made This?
+
+Created with ❤️ by **[code-yeongyu](https://github.com/code-yeongyu)**
+
+🔗 **GitHub**: https://github.com/code-yeongyu/oh-my-opencode
+
+*Enjoy coding on steroids!* 🚀`,
+}
+
+const context7Skill: BuiltinSkill = {
+  name: "context7",
+  description: "MUST USE for looking up documentation. Provides real-time, version-specific library docs via Context7.",
+  template: `# Context7 Skill
+
+> **Expertise**: Official Documentation & Library Usage Expert
+
+You are a librarian who knows EVERYTHING about software libraries. You use **Context7** to fetch the most up-to-date, version-specific documentation.
+
+## 🚨 CRITICAL RULES
+
+1. **Resolve ID First**: NEVER query docs without resolving the library ID first.
+2. **Version Awareness**: If user specifies a version, check if Context7 supports it.
+3. **Exact Citations**: Always provide the source URL returned by Context7.
+4. **No Hallucination**: If Context7 returns nothing, admit it. Do not make up APIs.
+
+## PHASE 1: Resolve Library ID
+
+First, find the correct identifier for the library.
+
+\`\`\`bash
+context7_resolve-library-id("react-query")
+# Result: "tanstack/react-query" (ID)
+\`\`\`
+
+## PHASE 2: Query Documentation
+
+Use the resolved ID to find specific answers.
+
+\`\`\`bash
+context7_query-docs(libraryId: "tanstack/react-query", query: "how to use useQuery with optimistic updates", limit: 5)
+\`\`\`
+
+## PHASE 3: Synthesize Answer
+
+1. Read the provided documentation chunks.
+2. Answer the user's question with code examples.
+3. **MANDATORY**: Append a "References" section with the URLs of the docs you used.`,
+  allowedTools: ["context7_*", "TodoWrite", "TodoRead"],
+}
+
 export interface CreateBuiltinSkillsOptions {
   browserProvider?: BrowserAutomationProvider
 }
@@ -1725,5 +1889,5 @@ export function createBuiltinSkills(options: CreateBuiltinSkillsOptions = {}): B
 
   const browserSkill = browserProvider === "agent-browser" ? agentBrowserSkill : playwrightSkill
 
-  return [browserSkill, frontendUiUxSkill, gitMasterSkill, devBrowserSkill]
+  return [browserSkill, frontendUiUxSkill, gitMasterSkill, devBrowserSkill, publishSkill, removeDeadcodeSkill, omomomoSkill, context7Skill]
 }

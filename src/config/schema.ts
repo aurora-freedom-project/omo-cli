@@ -363,6 +363,35 @@ export const SisyphusConfigSchema = z.object({
   tasks: SisyphusTasksConfigSchema.optional(),
   swarm: SisyphusSwarmConfigSchema.optional(),
 })
+
+/**
+ * Coding Level Configuration (inspired by ClaudeKit)
+ * Controls the verbosity and educational depth of agent responses.
+ * Level 1-3: Terse (minimal explanation, code-only)
+ * Level 4-6: Standard (balanced explanation)
+ * Level 7-10: Educational (detailed rationale, teaching mode)
+ */
+export const CodingLevelSchema = z.number().min(1).max(10).default(5)
+
+/**
+ * Privacy Awareness Configuration (inspired by ClaudeKit)
+ * Warns users when agents attempt to access sensitive files.
+ */
+export const PrivacyConfigSchema = z.object({
+  /** Enable privacy awareness warnings (default: true) */
+  enabled: z.boolean().default(true),
+  /** File patterns to consider sensitive (glob patterns) */
+  sensitive_patterns: z.array(z.string()).default([
+    ".env",
+    ".env.*",
+    "*.key",
+    "*.pem",
+    "**/secrets/**",
+    "**/credentials/**",
+  ]),
+  /** Require explicit confirmation before accessing sensitive files */
+  require_confirmation: z.boolean().default(false),
+})
 export const OhMyOpenCodeConfigSchema = z.object({
   $schema: z.string().optional(),
   disabled_mcps: z.array(AnyMcpNameSchema).optional(),
@@ -385,6 +414,10 @@ export const OhMyOpenCodeConfigSchema = z.object({
   browser_automation_engine: BrowserAutomationConfigSchema.optional(),
   tmux: TmuxConfigSchema.optional(),
   sisyphus: SisyphusConfigSchema.optional(),
+  /** Coding level (1-10) - controls verbosity of agent responses */
+  coding_level: CodingLevelSchema.optional(),
+  /** Privacy awareness configuration */
+  privacy: PrivacyConfigSchema.optional(),
 })
 
 export type OhMyOpenCodeConfig = z.infer<typeof OhMyOpenCodeConfigSchema>
@@ -414,5 +447,7 @@ export type TmuxLayout = z.infer<typeof TmuxLayoutSchema>
 export type SisyphusTasksConfig = z.infer<typeof SisyphusTasksConfigSchema>
 export type SisyphusSwarmConfig = z.infer<typeof SisyphusSwarmConfigSchema>
 export type SisyphusConfig = z.infer<typeof SisyphusConfigSchema>
+export type CodingLevel = z.infer<typeof CodingLevelSchema>
+export type PrivacyConfig = z.infer<typeof PrivacyConfigSchema>
 
 export { AnyMcpNameSchema, type AnyMcpName, McpNameSchema, type McpName } from "../mcp/types"

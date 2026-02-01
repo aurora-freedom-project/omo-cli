@@ -22,19 +22,21 @@ agents/
 └── index.ts                    # builtinAgents export
 ```
 
-## AGENT MODELS
+## AGENT MODELS (Recommended Configuration)
 | Agent | Model | Temp | Purpose |
-|-------|-------|------|---------|
-| Sisyphus | anthropic/claude-opus-4-5 | 0.1 | Primary orchestrator |
-| Atlas | anthropic/claude-opus-4-5 | 0.1 | Master orchestrator |
-| oracle | openai/gpt-5.2 | 0.1 | Consultation, debugging |
-| librarian | opencode/big-pickle | 0.1 | Docs, GitHub search |
-| explore | opencode/gpt-5-nano | 0.1 | Fast contextual grep |
-| multimodal-looker | google/gemini-3-flash | 0.1 | PDF/image analysis |
-| Prometheus | anthropic/claude-opus-4-5 | 0.1 | Strategic planning |
-| Metis | anthropic/claude-sonnet-4-5 | 0.3 | Pre-planning analysis |
-| Momus | anthropic/claude-sonnet-4-5 | 0.1 | Plan validation |
-| Sisyphus-Junior | anthropic/claude-sonnet-4-5 | 0.1 | Category-spawned executor |
+|-------|-------|------|---------| 
+| Sisyphus | claude-opus-4-5-thinking (max) | 0.1 | Primary orchestrator, Thinking enabled |
+| Atlas | claude-opus-4-5-thinking (max) | 0.1 | Master orchestrator, Thinking enabled |
+| oracle | claude-opus-4-5-thinking (max) | 0.1 | Consultation, debugging, code review |
+| Prometheus | claude-opus-4-5-thinking (max) | 0.1 | Strategic planning, Thinking enabled |
+| Metis | claude-sonnet-4-5-thinking (max) | 0.3 | Pre-planning analysis, gap detection |
+| Momus | claude-sonnet-4-5-thinking (max) | 0.1 | Plan validation |
+| Sisyphus-Junior | claude-sonnet-4-5-thinking (max) | 0.1 | Category-spawned executor |
+| multimodal-looker | gemini-3-pro (high) | 0.1 | PDF/image analysis |
+| librarian | minimax-m2.1 (Ollama) | 0.1 | Docs, GitHub search (fast/cheap) |
+| explore | minimax-m2.1 (Ollama) | 0.1 | Fast contextual grep (fast/cheap) |
+
+> Models configurable via `oh-my-opencode.json`. Above = recommended cost/performance balance.
 
 ## HOW TO ADD
 1. Create `src/agents/my-agent.ts` exporting factory + metadata.

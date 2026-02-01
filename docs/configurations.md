@@ -896,7 +896,7 @@ Each agent has a defined provider priority chain. The system tries providers in 
 |-------|-------------------|-------------------------|
 | **Sisyphus** | `claude-opus-4-5` | anthropic → github-copilot → opencode → antigravity → google |
 | **oracle** | `gpt-5.2` | openai → anthropic → google → github-copilot → opencode |
-| **librarian** | `big-pickle` | opencode → github-copilot → anthropic |
+| **librarian** | `minimax-m2.1` (recommended) | ollama → anthropic → github-copilot |
 | **explore** | `gpt-5-nano` | anthropic → opencode |
 | **multimodal-looker** | `gemini-3-flash` | google → openai → zai-coding-plan → anthropic → opencode |
 | **Prometheus (Planner)** | `claude-opus-4-5` | anthropic → github-copilot → opencode → antigravity → google |

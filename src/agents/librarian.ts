@@ -57,58 +57,31 @@ Classify EVERY request into one of these categories before taking action:
 
 | Type | Trigger Examples | Tools |
 |------|------------------|-------|
-| **TYPE A: CONCEPTUAL** | "How do I use X?", "Best practice for Y?" | Doc Discovery → context7 + websearch |
+| **TYPE A: CONCEPTUAL** | "How do I use X?", "Best practice for Y?" | **Context7 Skill** + Web Search |
 | **TYPE B: IMPLEMENTATION** | "How does X implement Y?", "Show me source of Z" | gh clone + read + blame |
 | **TYPE C: CONTEXT** | "Why was this changed?", "History of X?" | gh issues/prs + git log/blame |
-| **TYPE D: COMPREHENSIVE** | Complex/ambiguous requests | Doc Discovery → ALL tools |
+| **TYPE D: COMPREHENSIVE** | Complex/ambiguous requests | **Context7 Skill** + ALL tools |
 
 ---
 
 ## PHASE 0.5: DOCUMENTATION DISCOVERY (FOR TYPE A & D)
 
-**When to execute**: Before TYPE A or TYPE D investigations involving external libraries/frameworks.
+**CRITICAL**: Use the **\`context7\` skill** for this phase.
 
-### Step 1: Find Official Documentation
-\`\`\`
-websearch("library-name official documentation site")
-\`\`\`
-- Identify the **official documentation URL** (not blogs, not tutorials)
-- Note the base URL (e.g., \`https://docs.example.com\`)
+DO NOT try to search documentation manually unless \`context7\` fails.
 
-### Step 2: Version Check (if version specified)
-If user mentions a specific version (e.g., "React 18", "Next.js 14", "v2.x"):
-\`\`\`
-websearch("library-name v{version} documentation")
-// OR check if docs have version selector:
-webfetch(official_docs_url + "/versions")
-// or
-webfetch(official_docs_url + "/v{version}")
-\`\`\`
-- Confirm you're looking at the **correct version's documentation**
-- Many docs have versioned URLs: \`/docs/v2/\`, \`/v14/\`, etc.
+### Usage Pattern:
 
-### Step 3: Sitemap Discovery (understand doc structure)
 \`\`\`
-webfetch(official_docs_base_url + "/sitemap.xml")
-// Fallback options:
-webfetch(official_docs_base_url + "/sitemap-0.xml")
-webfetch(official_docs_base_url + "/docs/sitemap.xml")
-\`\`\`
-- Parse sitemap to understand documentation structure
-- Identify relevant sections for the user's question
-- This prevents random searching—you now know WHERE to look
-
-### Step 4: Targeted Investigation
-With sitemap knowledge, fetch the SPECIFIC documentation pages relevant to the query:
-\`\`\`
-webfetch(specific_doc_page_from_sitemap)
-context7_query-docs(libraryId: id, query: "specific topic")
+// Delegate to Context7 Skill
+Use tool \`delegate_task\` or equivalent to invoke \`context7\` skill.
+Target: "Check documentation for [library] regarding [topic]"
 \`\`\`
 
-**Skip Doc Discovery when**:
-- TYPE B (implementation) - you're cloning repos anyway
-- TYPE C (context/history) - you're looking at issues/PRs
-- Library has no official docs (rare OSS projects)
+**Why?** The \`context7\` skill has built-in logic to:
+1. Resolve the correct Library ID.
+2. Query version-specific docs.
+3. Provide referenced answers.
 
 ---
 
@@ -117,12 +90,10 @@ context7_query-docs(libraryId: id, query: "specific topic")
 ### TYPE A: CONCEPTUAL QUESTION
 **Trigger**: "How do I...", "What is...", "Best practice for...", rough/general questions
 
-**Execute Documentation Discovery FIRST (Phase 0.5)**, then:
+**Execute Documentation Discovery via Context7 Skill**, then:
 \`\`\`
-Tool 1: context7_resolve-library-id("library-name")
-        → then context7_query-docs(libraryId: id, query: "specific-topic")
-Tool 2: webfetch(relevant_pages_from_sitemap)  // Targeted, not random
-Tool 3: grep_app_searchGitHub(query: "usage pattern", language: ["TypeScript"])
+Tool 1: Invoke \`context7\` skill to get docs.
+Tool 2: grep_app_searchGitHub(query: "usage pattern", language: ["TypeScript"])
 \`\`\`
 
 **Output**: Summarize findings with links to official docs (versioned if applicable) and real-world examples.
@@ -184,11 +155,10 @@ gh api repos/owner/repo/pulls/<number>/files
 ### TYPE D: COMPREHENSIVE RESEARCH
 **Trigger**: Complex questions, ambiguous requests, "deep dive into..."
 
-**Execute Documentation Discovery FIRST (Phase 0.5)**, then execute in parallel (6+ calls):
+**Execute Documentation Discovery via Context7 Skill**, then execute in parallel (6+ calls):
 \`\`\`
-// Documentation (informed by sitemap discovery)
-Tool 1: context7_resolve-library-id → context7_query-docs
-Tool 2: webfetch(targeted_doc_pages_from_sitemap)
+// Documentation
+Tool 1: Invoke \`context7\` skill
 
 // Code Search
 Tool 3: grep_app_searchGitHub(query: "pattern1", language: [...])
@@ -243,7 +213,7 @@ https://github.com/tanstack/query/blob/abc123def/packages/react-query/src/useQue
 
 | Purpose | Tool | Command/Usage |
 |---------|------|---------------|
-| **Official Docs** | context7 | \`context7_resolve-library-id\` → \`context7_query-docs\` |
+| **Official Docs** | context7 skill | Use \`context7\` skill to lookup docs |
 | **Find Docs URL** | websearch_exa | \`websearch_exa_web_search_exa("library official documentation")\` |
 | **Sitemap Discovery** | webfetch | \`webfetch(docs_url + "/sitemap.xml")\` to understand doc structure |
 | **Read Doc Page** | webfetch | \`webfetch(specific_doc_page)\` for targeted documentation |

@@ -94,17 +94,22 @@ oh-my-opencode/
 | Temperature | >0.3 for code agents |
 | Trust | Agent self-reports - ALWAYS verify |
 
-## AGENT MODELS
+## AGENT MODELS (Recommended Configuration)
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| Sisyphus | anthropic/claude-opus-4-5 | Primary orchestrator |
-| Atlas | anthropic/claude-opus-4-5 | Master orchestrator |
-| oracle | openai/gpt-5.2 | Consultation, debugging |
-| librarian | opencode/big-pickle | Docs, GitHub search |
-| explore | opencode/gpt-5-nano | Fast codebase grep |
-| multimodal-looker | google/gemini-3-flash | PDF/image analysis |
-| Prometheus | anthropic/claude-opus-4-5 | Strategic planning |
+| Sisyphus | claude-opus-4-5-thinking (max) | Primary orchestrator, Thinking mode enabled |
+| Atlas | claude-opus-4-5-thinking (max) | Master orchestrator, Thinking mode enabled |
+| oracle | claude-opus-4-5-thinking (max) | Consultation, debugging, code review |
+| Prometheus | claude-opus-4-5-thinking (max) | Strategic planning, Thinking mode enabled |
+| metis | claude-sonnet-4-5-thinking (max) | Pre-planning analysis, gap detection |
+| momus | claude-sonnet-4-5-thinking (max) | Plan validation |
+| sisyphus-junior | claude-sonnet-4-5-thinking (max) | Category-spawned executor |
+| multimodal-looker | gemini-3-pro (high) | PDF/image analysis |
+| librarian | minimax-m2.1 (Ollama) | Docs, GitHub search (fast/cheap) |
+| explore | minimax-m2.1 (Ollama) | Fast codebase grep (fast/cheap) |
+
+> **Note**: Models are dynamically resolved via `oh-my-opencode.json`. The above represents the recommended configuration for optimal cost/performance balance.
 
 ## COMMANDS
 

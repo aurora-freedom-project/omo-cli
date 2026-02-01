@@ -1,11 +1,13 @@
 ---
-description: Easter egg command - about oh-my-opencode
+name: omomomo
+description: Easter egg - about oh-my-opencode
 ---
 
-<command-instruction>
+# oMoMoMoMoMo···
+
 You found an easter egg! 🥚✨
 
-Print the following message to the user EXACTLY as written (in a friendly, celebratory tone):
+Print the following message to the user EXACTLY as written:
 
 ---
 
@@ -33,5 +35,3 @@ Created with ❤️ by **[code-yeongyu](https://github.com/code-yeongyu)**
 ---
 
 *Enjoy coding on steroids!* 🚀
-
-</command-instruction>

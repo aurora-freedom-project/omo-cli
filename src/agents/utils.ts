@@ -180,8 +180,8 @@ export async function createBuiltinAgents(
   uiSelectedModel?: string
 ): Promise<Record<string, AgentConfig>> {
   const connectedProviders = readConnectedProvidersCache()
-  const availableModels = client 
-    ? await fetchAvailableModels(client, { connectedProviders: connectedProviders ?? undefined }) 
+  const availableModels = client
+    ? await fetchAvailableModels(client, { connectedProviders: connectedProviders ?? undefined })
     : new Set<string>()
 
   const result: Record<string, AgentConfig> = {}
@@ -215,16 +215,16 @@ export async function createBuiltinAgents(
 
   const availableSkills: AvailableSkill[] = [...builtinAvailable, ...discoveredAvailable]
 
-   for (const [name, source] of Object.entries(agentSources)) {
-     const agentName = name as BuiltinAgentName
+  for (const [name, source] of Object.entries(agentSources)) {
+    const agentName = name as BuiltinAgentName
 
-     if (agentName === "sisyphus") continue
-     if (agentName === "atlas") continue
-     if (includesCaseInsensitive(disabledAgents, agentName)) continue
+    if (agentName === "sisyphus") continue
+    if (agentName === "atlas") continue
+    if (includesCaseInsensitive(disabledAgents, agentName)) continue
 
     const override = findCaseInsensitive(agentOverrides, agentName)
     const requirement = AGENT_MODEL_REQUIREMENTS[agentName]
-    
+
     const resolution = resolveModelWithFallback({
       uiSelectedModel,
       userModel: override?.model,
@@ -236,7 +236,7 @@ export async function createBuiltinAgents(
     const { model, variant: resolvedVariant } = resolution
 
     let config = buildAgent(source, model, mergedCategories, gitMasterConfig, browserProvider)
-    
+
     // Apply resolved variant from model fallback chain
     if (resolvedVariant) {
       config = { ...config, variant: resolvedVariant }
@@ -270,10 +270,10 @@ export async function createBuiltinAgents(
     }
   }
 
-   if (!disabledAgents.includes("sisyphus")) {
-     const sisyphusOverride = agentOverrides["sisyphus"]
-     const sisyphusRequirement = AGENT_MODEL_REQUIREMENTS["sisyphus"]
-    
+  if (!disabledAgents.includes("sisyphus")) {
+    const sisyphusOverride = agentOverrides["sisyphus"]
+    const sisyphusRequirement = AGENT_MODEL_REQUIREMENTS["sisyphus"]
+
     const sisyphusResolution = resolveModelWithFallback({
       uiSelectedModel,
       userModel: sisyphusOverride?.model,
@@ -292,7 +292,7 @@ export async function createBuiltinAgents(
         availableSkills,
         availableCategories
       )
-      
+
       if (sisyphusResolvedVariant) {
         sisyphusConfig = { ...sisyphusConfig, variant: sisyphusResolvedVariant }
       }
@@ -313,12 +313,12 @@ export async function createBuiltinAgents(
 
       result["sisyphus"] = sisyphusConfig
     }
-   }
+  }
 
-   if (!disabledAgents.includes("atlas")) {
-     const orchestratorOverride = agentOverrides["atlas"]
-     const atlasRequirement = AGENT_MODEL_REQUIREMENTS["atlas"]
-    
+  if (!disabledAgents.includes("atlas")) {
+    const orchestratorOverride = agentOverrides["atlas"]
+    const atlasRequirement = AGENT_MODEL_REQUIREMENTS["atlas"]
+
     const atlasResolution = resolveModelWithFallback({
       uiSelectedModel,
       userModel: orchestratorOverride?.model,
@@ -326,7 +326,7 @@ export async function createBuiltinAgents(
       availableModels,
       systemDefaultModel,
     })
-    
+
     if (atlasResolution) {
       const { model: atlasModel, variant: atlasResolvedVariant } = atlasResolution
 
@@ -336,7 +336,7 @@ export async function createBuiltinAgents(
         availableSkills,
         userCategories: categories,
       })
-      
+
       if (atlasResolvedVariant) {
         orchestratorConfig = { ...orchestratorConfig, variant: atlasResolvedVariant }
       }
@@ -350,9 +350,10 @@ export async function createBuiltinAgents(
         orchestratorConfig = mergeAgentConfig(orchestratorConfig, orchestratorOverride)
       }
 
-      result["atlas"] = orchestratorConfig
+      // Atlas is a background agent - hide from Tab selector
+      result["atlas"] = { ...orchestratorConfig, hidden: true }
     }
-   }
+  }
 
-   return result
- }
+  return result
+}

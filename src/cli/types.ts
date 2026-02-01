@@ -20,6 +20,8 @@ export interface InstallConfig {
   hasCopilot: boolean
   hasOpencodeZen: boolean
   hasZaiCodingPlan: boolean
+  /** If true, use fixed Antigravity config instead of dynamic fallback */
+  useFixedAntigravityConfig?: boolean
 }
 
 export interface ConfigMergeResult {

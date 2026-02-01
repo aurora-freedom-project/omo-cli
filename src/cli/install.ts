@@ -4,6 +4,7 @@ import type { InstallArgs, InstallConfig, ClaudeSubscription, BooleanArg, Detect
 import {
   addPluginToOpenCodeConfig,
   writeOmoConfig,
+  writeFixedAntigravityConfig,
   isOpenCodeInstalled,
   getOpenCodeVersion,
   addAuthPlugins,
@@ -175,6 +176,78 @@ function detectedToInitialValues(detected: DetectedConfig): { claude: ClaudeSubs
 async function runTuiMode(detected: DetectedConfig): Promise<InstallConfig | null> {
   const initial = detectedToInitialValues(detected)
 
+  // First, offer preset configurations for quick setup
+  const preset = await p.select({
+    message: "Choose a configuration preset or customize manually:",
+    options: [
+      {
+        value: "mike-full" as const,
+        label: "🚀 Mike's Full Setup (Recommended)",
+        hint: "Claude Max + OpenAI + Gemini + OpenCode Zen + Z.ai - all providers enabled"
+      },
+      {
+        value: "claude-only" as const,
+        label: "Claude Only",
+        hint: "Just Claude Pro/Max subscription"
+      },
+      {
+        value: "free" as const,
+        label: "Free Tier",
+        hint: "Use opencode/big-pickle fallback models only"
+      },
+      {
+        value: "custom" as const,
+        label: "Custom Setup",
+        hint: "Configure each provider individually"
+      },
+    ],
+    initialValue: "mike-full" as const,
+  })
+
+  if (p.isCancel(preset)) {
+    p.cancel("Installation cancelled.")
+    return null
+  }
+
+  // Return preset config directly if not custom
+  if (preset === "mike-full") {
+    return {
+      hasClaude: true,
+      isMax20: true,
+      hasOpenAI: true,
+      hasGemini: true,
+      hasCopilot: false,
+      hasOpencodeZen: true,
+      hasZaiCodingPlan: true,
+      useFixedAntigravityConfig: true,
+    }
+  }
+
+  if (preset === "claude-only") {
+    return {
+      hasClaude: true,
+      isMax20: false,
+      hasOpenAI: false,
+      hasGemini: false,
+      hasCopilot: false,
+      hasOpencodeZen: false,
+      hasZaiCodingPlan: false,
+    }
+  }
+
+  if (preset === "free") {
+    return {
+      hasClaude: false,
+      isMax20: false,
+      hasOpenAI: false,
+      hasGemini: false,
+      hasCopilot: false,
+      hasOpencodeZen: false,
+      hasZaiCodingPlan: false,
+    }
+  }
+
+  // Custom setup - ask individual questions
   const claude = await p.select({
     message: "Do you have a Claude Pro/Max subscription?",
     options: [
@@ -339,7 +412,9 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   }
 
   printStep(step++, totalSteps, "Writing oh-my-opencode configuration...")
-  const omoResult = writeOmoConfig(config)
+  const omoResult = config.useFixedAntigravityConfig
+    ? writeFixedAntigravityConfig()
+    : writeOmoConfig(config)
   if (!omoResult.success) {
     printError(`Failed: ${omoResult.error}`)
     return 1
@@ -457,7 +532,9 @@ export async function install(args: InstallArgs): Promise<number> {
   }
 
   s.start("Writing oh-my-opencode configuration")
-  const omoResult = writeOmoConfig(config)
+  const omoResult = config.useFixedAntigravityConfig
+    ? writeFixedAntigravityConfig()
+    : writeOmoConfig(config)
   if (!omoResult.success) {
     s.stop(`Failed to write config: ${omoResult.error}`)
     p.outro(color.red("Installation failed."))

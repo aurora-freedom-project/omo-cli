@@ -27,15 +27,15 @@ function parseSkillMcpConfigFromFrontmatter(content: string): SkillMcpConfig | u
 
 async function loadMcpJsonFromDir(skillDir: string): Promise<SkillMcpConfig | undefined> {
   const mcpJsonPath = join(skillDir, "mcp.json")
-  
+
   try {
     const content = await fs.readFile(mcpJsonPath, "utf-8")
     const parsed = JSON.parse(content) as Record<string, unknown>
-    
+
     if (parsed && typeof parsed === "object" && "mcpServers" in parsed && parsed.mcpServers) {
       return parsed.mcpServers as SkillMcpConfig
     }
-    
+
     if (parsed && typeof parsed === "object" && !("mcpServers" in parsed)) {
       const hasCommandField = Object.values(parsed).some(
         (v) => v && typeof v === "object" && "command" in (v as Record<string, unknown>)
@@ -52,12 +52,12 @@ async function loadMcpJsonFromDir(skillDir: string): Promise<SkillMcpConfig | un
 
 function parseAllowedTools(allowedTools: string | string[] | undefined): string[] | undefined {
   if (!allowedTools) return undefined
-  
+
   // Handle YAML array format: already parsed as string[]
   if (Array.isArray(allowedTools)) {
     return allowedTools.map(t => t.trim()).filter(Boolean)
   }
-  
+
   // Handle space-separated string format: "Read Write Edit Bash"
   return allowedTools.split(/\s+/).filter(Boolean)
 }
@@ -210,27 +210,41 @@ export interface DiscoverSkillsOptions {
   includeClaudeCodePaths?: boolean
 }
 
+/**
+ * Discover skills from ~/.agent/skills/
+ * This directory is shared by both Claude Code CLI and OpenCode CLI
+ */
+export async function discoverAgentSkills(): Promise<LoadedSkill[]> {
+  const homedir = process.env.HOME || process.env.USERPROFILE || ""
+  const agentSkillsDir = join(homedir, ".agent", "skills")
+  return loadSkillsFromDir(agentSkillsDir, "agent")
+}
+
 export async function discoverAllSkills(): Promise<LoadedSkill[]> {
-  const [opencodeProjectSkills, projectSkills, opencodeGlobalSkills, userSkills] = await Promise.all([
+  const [agentSkills, opencodeProjectSkills, projectSkills, opencodeGlobalSkills, userSkills] = await Promise.all([
+    discoverAgentSkills(),
     discoverOpencodeProjectSkills(),
     discoverProjectClaudeSkills(),
     discoverOpencodeGlobalSkills(),
     discoverUserClaudeSkills(),
   ])
 
-  return [...opencodeProjectSkills, ...projectSkills, ...opencodeGlobalSkills, ...userSkills]
+  // Priority order: project > agent > opencode > user (later = higher priority for same-name skills)
+  return [...userSkills, ...opencodeGlobalSkills, ...agentSkills, ...projectSkills, ...opencodeProjectSkills]
 }
 
 export async function discoverSkills(options: DiscoverSkillsOptions = {}): Promise<LoadedSkill[]> {
   const { includeClaudeCodePaths = true } = options
 
-  const [opencodeProjectSkills, opencodeGlobalSkills] = await Promise.all([
+  // Always include agent skills (shared by both CLIs)
+  const [agentSkills, opencodeProjectSkills, opencodeGlobalSkills] = await Promise.all([
+    discoverAgentSkills(),
     discoverOpencodeProjectSkills(),
     discoverOpencodeGlobalSkills(),
   ])
 
   if (!includeClaudeCodePaths) {
-    return [...opencodeProjectSkills, ...opencodeGlobalSkills]
+    return [...opencodeGlobalSkills, ...agentSkills, ...opencodeProjectSkills]
   }
 
   const [projectSkills, userSkills] = await Promise.all([
@@ -238,7 +252,8 @@ export async function discoverSkills(options: DiscoverSkillsOptions = {}): Promi
     discoverUserClaudeSkills(),
   ])
 
-  return [...opencodeProjectSkills, ...projectSkills, ...opencodeGlobalSkills, ...userSkills]
+  // Priority order: project > agent > opencode > user (later = higher priority)
+  return [...userSkills, ...opencodeGlobalSkills, ...agentSkills, ...projectSkills, ...opencodeProjectSkills]
 }
 
 export async function getSkillByName(name: string, options: DiscoverSkillsOptions = {}): Promise<LoadedSkill | undefined> {

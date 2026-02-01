@@ -75,7 +75,7 @@ describe("createBuiltinSkills", () => {
 		}
 	})
 
-	test("returns exactly 4 skills regardless of provider", () => {
+	test("returns exactly 8 skills regardless of provider", () => {
 		// #given
 
 		// #when
@@ -83,7 +83,7 @@ describe("createBuiltinSkills", () => {
 		const agentBrowserSkills = createBuiltinSkills({ browserProvider: "agent-browser" })
 
 		// #then
-		expect(defaultSkills).toHaveLength(4)
-		expect(agentBrowserSkills).toHaveLength(4)
+		expect(defaultSkills).toHaveLength(8)
+		expect(agentBrowserSkills).toHaveLength(8)
 	})
 })

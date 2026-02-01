@@ -18,9 +18,9 @@ Analyze the user's request to determine operation mode:
 
 | User Request Pattern | Mode | Jump To |
 |---------------------|------|---------|
-| "commit", "커밋", changes to commit | `COMMIT` | Phase 0-6 (existing) |
-| "rebase", "리베이스", "squash", "cleanup history" | `REBASE` | Phase R1-R4 |
-| "find when", "who changed", "언제 바뀌었", "git blame", "bisect" | `HISTORY_SEARCH` | Phase H1-H3 |
+| "commit", "cam kết", changes to commit | `COMMIT` | Phase 0-6 (existing) |
+| "rebase", "rebase lại", "squash", "cleanup history" | `REBASE` | Phase R1-R4 |
+| "find when", "who changed", "khi nào thay đổi", "git blame", "bisect" | `HISTORY_SEARCH` | Phase H1-H3 |
 | "smart rebase", "rebase onto" | `REBASE` | Phase R1-R4 |
 
 **CRITICAL**: Don't default to COMMIT mode. Parse the actual request.
@@ -111,12 +111,12 @@ git log --oneline $(git merge-base HEAD main 2>/dev/null || git merge-base HEAD 
 
 ```
 Count from git log -30:
-- Korean characters: N commits
+- Vietnamese characters: N commits
 - English only: M commits
 - Mixed: K commits
 
 DECISION:
-- If Korean >= 50% -> KOREAN
+- If Vietnamese >= 50% -> VIETNAMESE
 - If English >= 50% -> ENGLISH  
 - If Mixed -> Use MAJORITY language
 ```
@@ -151,8 +151,8 @@ STYLE DETECTION RESULT
 ======================
 Analyzed: 30 commits from git log
 
-Language: [KOREAN | ENGLISH]
-  - Korean commits: N (X%)
+Language: [VIETNAMESE | ENGLISH]
+  - Vietnamese commits: N (X%)
   - English commits: M (Y%)
 
 Style: [SEMANTIC | PLAIN | SENTENCE | SHORT]
@@ -507,14 +507,14 @@ git log -1 --oneline
 **Based on COMMIT_CONFIG from Phase 1:**
 
 ```
-IF style == SEMANTIC AND language == KOREAN:
-  -> "feat: 로그인 기능 추가"
+IF style == SEMANTIC AND language == VIETNAMESE:
+  -> "feat: thêm tính năng đăng nhập"
   
 IF style == SEMANTIC AND language == ENGLISH:
   -> "feat: add login feature"
   
-IF style == PLAIN AND language == KOREAN:
-  -> "로그인 기능 추가"
+IF style == PLAIN AND language == VIETNAMESE:
+  -> "Thêm tính năng đăng nhập"
   
 IF style == PLAIN AND language == ENGLISH:
   -> "Add login feature"
@@ -589,7 +589,7 @@ NEXT STEPS:
 | If git log shows... | Use this style |
 |---------------------|----------------|
 | `feat: xxx`, `fix: yyy` | SEMANTIC |
-| `Add xxx`, `Fix yyy`, `xxx 추가` | PLAIN |
+| `Add xxx`, `Fix yyy`, `thêm xxx` | PLAIN |
 | `format`, `lint`, `typo` | SHORT |
 | Full sentences | SENTENCE |
 | Mix of above | Use MAJORITY (not semantic by default) |
@@ -688,19 +688,19 @@ git stash list
 ```
 USER REQUEST -> STRATEGY:
 
-"squash commits" / "cleanup" / "정리"
+"squash commits" / "cleanup" / "dọn dẹp"
   -> INTERACTIVE_SQUASH
 
-"rebase on main" / "update branch" / "메인에 리베이스"
+"rebase on main" / "update branch" / "rebase lại vào main"
   -> REBASE_ONTO_BASE
 
 "autosquash" / "apply fixups"
   -> AUTOSQUASH
 
-"reorder commits" / "커밋 순서"
+"reorder commits" / "sắp xếp lại commit"
   -> INTERACTIVE_REORDER
 
-"split commit" / "커밋 분리"
+"split commit" / "tách commit"
   -> INTERACTIVE_EDIT
 ```
 </rebase_context>
@@ -850,12 +850,12 @@ NEXT STEPS:
 
 | User Request | Search Type | Tool |
 |--------------|-------------|------|
-| "when was X added" / "X가 언제 추가됐어" | PICKAXE | `git log -S` |
+| "when was X added" / "X được thêm khi nào" | PICKAXE | `git log -S` |
 | "find commits changing X pattern" | REGEX | `git log -G` |
-| "who wrote this line" / "이 줄 누가 썼어" | BLAME | `git blame` |
-| "when did bug start" / "버그 언제 생겼어" | BISECT | `git bisect` |
-| "history of file" / "파일 히스토리" | FILE_LOG | `git log -- path` |
-| "find deleted code" / "삭제된 코드 찾기" | PICKAXE_ALL | `git log -S --all` |
+| "who wrote this line" / "ai viết dòng này" | BLAME | `git blame` |
+| "when did bug start" / "bug xuất hiện khi nào" | BISECT | `git bisect` |
+| "history of file" / "lịch sử file" | FILE_LOG | `git log -- path` |
+| "find deleted code" / "tìm code đã xóa" | PICKAXE_ALL | `git log -S --all` |
 
 ### H1.2 Extract Search Parameters
 

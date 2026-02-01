@@ -307,6 +307,69 @@ function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial
   return result
 }
 
+/**
+ * Fixed config for "Mike's Full Setup" preset with Antigravity Auth.
+ * This bypasses the dynamic fallback logic and writes exact config matching
+ * the recommended Antigravity + Minimax M2.1 setup from integration guide.
+ * 
+ * Tier System:
+ * - Tier 1 (Opus 4.5): sisyphus, prometheus, oracle
+ * - Tier 2 (Sonnet 4.5): metis, momus, sisyphus-junior
+ * - Tier 3 (Gemini 3 Pro): multimodal-looker
+ * - Tier 4 (Minimax M2.1): explore, librarian
+ * Note: atlas is a background agent and not included in config
+ */
+export const MIKES_ANTIGRAVITY_CONFIG = {
+  $schema: "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  google_auth: false,
+  agents: {
+    // Tier 1: Opus 4.5 Thinking (max)
+    sisyphus: { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" },
+    prometheus: { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" },
+    atlas: { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" }, // background agent
+    oracle: { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" },
+    // Tier 2: Sonnet 4.5 Thinking (max)
+    metis: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
+    momus: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
+    "sisyphus-junior": { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
+    // Tier 3: Gemini 3 Pro (high)
+    "multimodal-looker": { model: "google/antigravity-gemini-3-pro", variant: "high" },
+    // Tier 4: Minimax M2.1 (Ollama Cloud)
+    explore: { model: "ollama/minimax-m2.1:cloud", stream: false },
+    librarian: { model: "ollama/minimax-m2.1:cloud", stream: false },
+  },
+  categories: {
+    "visual-engineering": { model: "google/antigravity-gemini-3-pro", variant: "high" },
+    quick: { model: "google/antigravity-gemini-3-flash", variant: "minimal" },
+    ultrabrain: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
+    "business-logic": { model: "ollama/minimax-m2.1:cloud", stream: false },
+    writing: { model: "google/antigravity-gemini-3-flash", variant: "low" },
+    "unspecified-high": { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" },
+    "unspecified-low": { model: "ollama/minimax-m2.1:cloud", stream: false },
+    artistry: { model: "google/antigravity-gemini-3-pro", variant: "max" },
+  },
+  background_task: {
+    defaultConcurrency: 5,
+  },
+}
+
+export function writeFixedAntigravityConfig(): ConfigMergeResult {
+  try {
+    ensureConfigDir()
+  } catch (err) {
+    return { success: false, configPath: getConfigDir(), error: formatErrorWithSuggestion(err, "create config directory") }
+  }
+
+  const omoConfigPath = getOmoConfig()
+
+  try {
+    writeFileSync(omoConfigPath, JSON.stringify(MIKES_ANTIGRAVITY_CONFIG, null, 2) + "\n")
+    return { success: true, configPath: omoConfigPath }
+  } catch (err) {
+    return { success: false, configPath: omoConfigPath, error: formatErrorWithSuggestion(err, "write oh-my-opencode config") }
+  }
+}
+
 export function generateOmoConfig(installConfig: InstallConfig): Record<string, unknown> {
   return generateModelConfig(installConfig)
 }
@@ -339,7 +402,9 @@ export function writeOmoConfig(installConfig: InstallConfig): ConfigMergeResult 
           return { success: true, configPath: omoConfigPath }
         }
 
-        const merged = deepMerge(existing, newConfig)
+        // Preserve user's existing agents and categories configurations
+        // Only add new keys from generated config, never override existing
+        const merged = deepMergePreserveUserConfig(existing, newConfig)
         writeFileSync(omoConfigPath, JSON.stringify(merged, null, 2) + "\n")
       } catch (parseErr) {
         if (parseErr instanceof SyntaxError) {
@@ -356,6 +421,53 @@ export function writeOmoConfig(installConfig: InstallConfig): ConfigMergeResult 
   } catch (err) {
     return { success: false, configPath: omoConfigPath, error: formatErrorWithSuggestion(err, "write oh-my-opencode config") }
   }
+}
+
+/**
+ * Deep merge that preserves user's existing 'agents' and 'categories' configurations.
+ * For these keys, existing values take priority over new defaults.
+ * For other keys, new config values are merged in (adding new keys only).
+ */
+function deepMergePreserveUserConfig<T extends Record<string, unknown>>(existing: T, newConfig: Partial<T>): T {
+  const result = { ...existing }
+
+  for (const key of Object.keys(newConfig) as Array<keyof T>) {
+    const newValue = newConfig[key]
+    const existingValue = result[key]
+
+    // For 'agents' and 'categories', preserve existing values and only add new agent/category keys
+    if ((key === "agents" || key === "categories") &&
+      existingValue !== null && typeof existingValue === "object" && !Array.isArray(existingValue) &&
+      newValue !== null && typeof newValue === "object" && !Array.isArray(newValue)) {
+      // Add only new keys from newConfig that don't exist in existing
+      const merged = { ...existingValue } as Record<string, unknown>
+      for (const subKey of Object.keys(newValue as Record<string, unknown>)) {
+        if (!(subKey in merged)) {
+          merged[subKey] = (newValue as Record<string, unknown>)[subKey]
+        }
+      }
+      result[key] = merged as T[keyof T]
+    } else if (
+      newValue !== null &&
+      typeof newValue === "object" &&
+      !Array.isArray(newValue) &&
+      existingValue !== null &&
+      typeof existingValue === "object" &&
+      !Array.isArray(existingValue)
+    ) {
+      // For other nested objects, standard deep merge (new values override)
+      result[key] = deepMerge(
+        existingValue as Record<string, unknown>,
+        newValue as Record<string, unknown>
+      ) as T[keyof T]
+    } else if (existingValue === undefined && newValue !== undefined) {
+      // Only add new top-level keys if they don't exist
+      result[key] = newValue as T[keyof T]
+    }
+    // If existingValue is defined, keep it (don't override)
+  }
+
+  return result
 }
 
 interface OpenCodeBinaryResult {

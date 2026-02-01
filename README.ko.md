@@ -189,15 +189,17 @@ Hey please read this readme and tell me why it is different from other agent har
 내 삶도 다르지 않습니다. 돌이켜보면 우리는 이 에이전트들과 그리 다르지 않습니다.
 **맞습니다! LLM 에이전트는 우리와 다르지 않습니다. 훌륭한 도구와 확고한 팀원을 제공하면 우리만큼 훌륭한 코드를 작성하고 똑같이 훌륭하게 작업할 수 있습니다.**
 
-우리의 주요 에이전트를 만나보세요: Sisyphus (Opus 4.5 High). 아래는 Sisyphus가 그 바위를 굴리는 데 사용하는 도구입니다.
+우리의 주요 에이전트를 만나보세요: Sisyphus (Claude Opus 4.5 Thinking). 아래는 Sisyphus가 그 바위를 굴리는 데 사용하는 도구입니다.
 
 *아래의 모든 것은 사용자 정의 가능합니다. 원하는 것을 가져가세요. 모든 기능은 기본적으로 활성화됩니다. 아무것도 할 필요가 없습니다. 포함되어 있으며, 즉시 작동합니다.*
 
 - Sisyphus의 팀원 (큐레이팅된 에이전트)
-  - Oracle: 디자인, 디버깅 (GPT 5.2 Medium)
-  - Frontend UI/UX Engineer: 프론트엔드 개발 (Gemini 3 Pro)
-  - Librarian: 공식 문서, 오픈 소스 구현, 코드베이스 탐색 (Claude Sonnet 4.5)
-  - Explore: 엄청나게 빠른 코드베이스 탐색 (Contextual Grep) (Grok Code)
+  - Oracle: 아키텍처, 코드 리뷰, 디버깅 (Claude Opus 4.5 Thinking)
+  - Prometheus: 전략적 계획, 태스크 분해 (Claude Opus 4.5 Thinking)
+  - Librarian: 공식 문서, 오픈 소스 구현, 코드베이스 탐색 (Minimax M2.1)
+  - Explore: 엄청나게 빠른 코드베이스 탐색 (Minimax M2.1)
+  - Multimodal-Looker: 이미지/PDF 분석 (Gemini 3 Pro)
+  - Metis: 플랜 컨설턴트, 숨겨진 요구사항 발견 (Claude Sonnet 4.5 Thinking)
 - 완전한 LSP / AstGrep 지원: 결정적으로 리팩토링합니다.
 - TODO 연속 강제: 에이전트가 중간에 멈추면 계속하도록 강제합니다. **이것이 Sisyphus가 그 바위를 굴리게 하는 것입니다.**
 - 주석 검사기: AI가 과도한 주석을 추가하는 것을 방지합니다. Sisyphus가 생성한 코드는 인간이 작성한 것과 구별할 수 없어야 합니다.
@@ -313,6 +315,7 @@ oh-my-opencode를 제거하려면:
 - **JSONC 지원**: 주석 및 후행 쉼표 지원
 - **에이전트**: 모든 에이전트의 모델, 온도, 프롬프트 및 권한 재정의
 - **내장 스킬**: `playwright`(브라우저 자동화), `git-master`(원자적 커밋)
+- **스킬 라이브러리**: antigravity-awesome-skills에서 600개 이상의 스킬 가져오기 가능
 - **Sisyphus 에이전트**: Prometheus(플래너) 및 Metis(계획 컨설턴트)가 있는 주요 오케스트레이터
 - **백그라운드 작업**: 공급자/모델별 동시성 제한 구성
 - **카테고리**: 도메인별 작업 위임(`visual`, `business-logic`, 사용자 정의)
@@ -320,6 +323,38 @@ oh-my-opencode를 제거하려면:
 - **MCP**: 내장 websearch(Exa), context7(문서), grep_app(GitHub 검색)
 - **LSP**: 리팩토링 도구가 있는 완전한 LSP 지원
 - **실험적 기능**: 공격적 자르기, 자동 재개 등
+
+### 스킬 라이브러리
+
+Oh My OpenCode는 [antigravity-awesome-skills](https://github.com/PierrunoYT/antigravity-awesome-skills) 라이브러리에서 **600개 이상의 선별된 스킬**에 접근할 수 있습니다.
+
+**빠른 가져오기:**
+```bash
+# 모든 스킬 보안 스캔
+bunx oh-my-opencode scan-skills
+
+# 에이전트 및 품질 계층별 분류
+bunx oh-my-opencode categorize-skills
+
+# Tier 1 설치 (85개 안전 + 우수 품질 스킬)
+bunx oh-my-opencode adapt-skills --tier 1
+
+# Tier 1 + 2 설치 (479개 스킬, 권장)
+bunx oh-my-opencode adapt-skills --max-tier 2
+```
+
+**스킬 계층:**
+| 계층 | 스킬 수 | 품질 | 안전성 |
+|------|---------|------|--------|
+| 1 | 85 | 우수 | 안전 |
+| 2 | 394 | 양호 | 안전/낮음 |
+| 3 | 100 | 보통 | 중간 |
+| 4 | 36 | 검토 필요 | 높음 |
+
+**사용 가능한 카테고리:**
+- 아키텍처, DevOps, 프론트엔드, 백엔드
+- AI/ML, 테스팅, 보안, 문서화
+- 성능, 클라우드, 모바일, 워크플로우
 
 
 ## 작성자의 메모
