@@ -109,23 +109,75 @@ function printBox(content: string, title?: string): void {
   console.log()
 }
 
-function validateNonTuiArgs(args: InstallArgs): { valid: boolean; errors: string[] } {
+/**
+ * Convert preset name to InstallConfig
+ */
+function presetToConfig(preset: string): InstallConfig | null {
+  switch (preset) {
+    case "mike-full":
+      return {
+        hasClaude: true,
+        isMax20: true,
+        hasOpenAI: true,
+        hasGemini: true,
+        hasCopilot: false,
+        hasOpencodeZen: true,
+        hasZaiCodingPlan: true,
+        useFixedAntigravityConfig: true,
+      }
+    case "claude-only":
+      return {
+        hasClaude: true,
+        isMax20: false,
+        hasOpenAI: false,
+        hasGemini: false,
+        hasCopilot: false,
+        hasOpencodeZen: false,
+        hasZaiCodingPlan: false,
+      }
+    case "free":
+      return {
+        hasClaude: false,
+        isMax20: false,
+        hasOpenAI: false,
+        hasGemini: false,
+        hasCopilot: false,
+        hasOpencodeZen: false,
+        hasZaiCodingPlan: false,
+      }
+    default:
+      return null
+  }
+}
+
+function validateNonTuiArgs(args: InstallArgs): { valid: boolean; errors: string[]; usePreset?: boolean } {
   const errors: string[] = []
 
+  // If preset is provided, validate it and skip other validations
+  if (args.preset) {
+    const validPresets = ["mike-full", "claude-only", "free"]
+    if (!validPresets.includes(args.preset)) {
+      errors.push(`Invalid --preset value: ${args.preset} (expected: mike-full, claude-only, free)`)
+      return { valid: false, errors }
+    }
+    return { valid: true, errors: [], usePreset: true }
+  }
+
+  // Original validation for manual provider options
   if (args.claude === undefined) {
-    errors.push("--claude is required (values: no, yes, max20)")
+    errors.push("--claude is required (values: no, yes, max20) or use --preset")
   } else if (!["no", "yes", "max20"].includes(args.claude)) {
     errors.push(`Invalid --claude value: ${args.claude} (expected: no, yes, max20)`)
   }
 
   if (args.gemini === undefined) {
-    errors.push("--gemini is required (values: no, yes)")
+    errors.push("--gemini is required (values: no, yes) or use --preset")
   } else if (!["no", "yes"].includes(args.gemini)) {
     errors.push(`Invalid --gemini value: ${args.gemini} (expected: no, yes)`)
   }
 
   if (args.copilot === undefined) {
-    errors.push("--copilot is required (values: no, yes)")
+    errors.push("--copilot is required (values: no, yes) or use --preset")
   } else if (!["no", "yes"].includes(args.copilot)) {
     errors.push(`Invalid --copilot value: ${args.copilot} (expected: no, yes)`)
   }
@@ -353,7 +405,8 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
       console.log(`  ${SYMBOLS.bullet} ${err}`)
     }
     console.log()
-    printInfo("Usage: bunx oh-my-opencode install --no-tui --claude=<no|yes|max20> --gemini=<no|yes> --copilot=<no|yes>")
+    printInfo("Usage: bunx oh-my-opencode install --preset=mike-full")
+    printInfo("   or: bunx oh-my-opencode install --no-tui --claude=<no|yes|max20> --gemini=<no|yes> --copilot=<no|yes>")
     console.log()
     return 1
   }
@@ -381,7 +434,10 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
     printInfo(`Current config: Claude=${initial.claude}, Gemini=${initial.gemini}`)
   }
 
-  const config = argsToConfig(args)
+  // Use preset config if --preset was provided, otherwise use args
+  const config = validation.usePreset && args.preset
+    ? presetToConfig(args.preset)!
+    : argsToConfig(args)
 
   printStep(step++, totalSteps, "Adding oh-my-opencode plugin...")
   const pluginResult = await addPluginToOpenCodeConfig(VERSION)

@@ -116,8 +116,12 @@ Yes, technically possible. But I cannot recommend using it.
     - [For Those Who Want to Read: Meet Sisyphus](#for-those-who-want-to-read-meet-sisyphus)
       - [Just Install It.](#just-install-it)
   - [Installation](#installation)
+    - [Quick Start](#quick-start)
     - [For Humans](#for-humans)
     - [For LLM Agents](#for-llm-agents)
+  - [Mike's Full Setup](#mikes-full-setup)
+    - [Tier System](#tier-system)
+    - [Why This Setup?](#why-this-setup)
   - [Uninstallation](#uninstallation)
   - [Features](#features)
    - [Configuration](#configuration)
@@ -244,13 +248,21 @@ If you don't want all this, as mentioned, you can just pick and choose specific 
 
 ## Installation
 
+### Quick Start
+
+```bash
+bunx oh-my-opencode@latest install
+```
+
+Select **🚀 Mike's Full Setup (Recommended)** for optimal performance with Antigravity + Minimax M2.1.
+
 ### For Humans
 
 Copy and paste this prompt to your LLM agent (Claude Code, AmpCode, Cursor, etc.):
 
 ```
 Install and configure oh-my-opencode by following the instructions here:
-https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/master/docs/guide/installation.md
+https://raw.githubusercontent.com/aurora-freedom-project/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 
 Or read the [Installation Guide](docs/guide/installation.md) directly—but **we strongly recommend letting an agent handle it. Humans make mistakes.**
@@ -260,8 +272,37 @@ Or read the [Installation Guide](docs/guide/installation.md) directly—but **we
 Fetch the installation guide and follow it:
 
 ```bash
-curl -s https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/master/docs/guide/installation.md
+curl -s https://raw.githubusercontent.com/aurora-freedom-project/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
+
+## Mike's Full Setup
+
+The recommended configuration using **Antigravity** (Claude/Sonnet via Google) + **Minimax M2.1** (via Ollama Cloud).
+
+### Tier System
+
+| Tier | Model | Agents | Use Case |
+|:----:|-------|--------|----------|
+| 🧠 **1** | Opus 4.5 Thinking | sisyphus, prometheus, oracle | Orchestration, planning, debugging |
+| ⚡ **2** | Sonnet 4.5 Thinking | metis, momus, sisyphus-junior | Fast analysis, plan consulting |
+| 👁️ **3** | Gemini 3 Pro | multimodal-looker | Visual/UI analysis, PDFs |
+| 🚀 **4** | Minimax M2.1 | explore, librarian | Fast exploration, code search |
+
+### Why This Setup?
+
+- **Opus 4.5** — Critical thinking: orchestration, architecture, deep debugging
+- **Sonnet 4.5** — Fast but intelligent: analysis, plan review
+- **Gemini 3 Pro** — Multimodal: images, PDFs, UI generation
+- **Minimax M2.1** — High-volume tasks: no rate limits, fast code exploration
+
+### Install
+
+```bash
+bunx oh-my-opencode@latest install
+# Select: 🚀 Mike's Full Setup (Recommended)
+```
+
+This automatically configures your `oh-my-opencode.json` with the optimal tier system.
 
 ## Uninstallation
 

@@ -27,7 +27,8 @@ program
 program
   .command("install")
   .description("Install and configure oh-my-opencode with interactive setup")
-  .option("--no-tui", "Run in non-interactive mode (requires all options)")
+  .option("--no-tui", "Run in non-interactive mode (requires --preset or all provider options)")
+  .option("--preset <name>", "Use preset configuration: mike-full, claude-only, free")
   .option("--claude <value>", "Claude subscription: no, yes, max20")
   .option("--openai <value>", "OpenAI/ChatGPT subscription: no, yes (default: no)")
   .option("--gemini <value>", "Gemini integration: no, yes")
@@ -37,9 +38,16 @@ program
   .option("--skip-auth", "Skip authentication setup hints")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode install
+  $ bunx oh-my-opencode install                              # Interactive TUI
+  $ bunx oh-my-opencode install --preset=mike-full           # Quick non-interactive
+  $ bunx oh-my-opencode install --preset=claude-only         # Claude only
+  $ bunx oh-my-opencode install --preset=free                # Free tier only
   $ bunx oh-my-opencode install --no-tui --claude=max20 --openai=yes --gemini=yes --copilot=no
-  $ bunx oh-my-opencode install --no-tui --claude=no --gemini=no --copilot=yes --opencode-zen=yes
+
+Presets:
+  mike-full     🚀 Recommended - Claude Max + OpenAI + Gemini + Zen + Z.ai
+  claude-only   Claude Pro/Max only
+  free          Free tier (opencode/big-pickle fallback)
 
 Model Providers (Priority: Native > Copilot > OpenCode Zen > Z.ai):
   Claude        Native anthropic/ models (Opus, Sonnet, Haiku)
@@ -52,6 +60,7 @@ Model Providers (Priority: Native > Copilot > OpenCode Zen > Z.ai):
   .action(async (options) => {
     const args: InstallArgs = {
       tui: options.tui !== false,
+      preset: options.preset,
       claude: options.claude,
       openai: options.openai,
       gemini: options.gemini,

@@ -1,8 +1,10 @@
 export type ClaudeSubscription = "no" | "yes" | "max20"
 export type BooleanArg = "no" | "yes"
+export type PresetName = "mike-full" | "claude-only" | "free"
 
 export interface InstallArgs {
   tui: boolean
+  preset?: PresetName
   claude?: ClaudeSubscription
   openai?: BooleanArg
   gemini?: BooleanArg
