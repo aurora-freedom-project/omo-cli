@@ -257,7 +257,7 @@ If you don't want all this, as mentioned, you can just pick and choose specific 
 git clone https://github.com/aurora-freedom-project/oh-my-opencode.git -b dev
 cd oh-my-opencode
 bun install && bun run build
-bun dist/index.js install --preset=mike-full
+bun dist/cli/index.js install --preset=mike-full
 ```
 
 **� Stable Version (NPM)**
