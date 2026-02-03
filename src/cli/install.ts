@@ -630,6 +630,34 @@ export async function install(args: InstallArgs): Promise<number> {
   }
   s.stop(`Config written to ${color.cyan(omoResult.configPath)}`)
 
+  // Automatic skill import for Mike's Full Setup (TUI mode)
+  if (config.useFixedAntigravityConfig) {
+    s.start("Importing full skill library (579+ skills)...")
+
+    await new Promise<void>((resolve) => {
+      const importProcess = spawn(
+        process.execPath,
+        [process.argv[1], "import-skills", "--all"],
+        { stdio: "inherit" }
+      )
+
+      importProcess.on("close", (code) => {
+        if (code === 0) {
+          s.stop(color.green("Skills library imported"))
+        } else {
+          s.stop(color.yellow("Skill import was cancelled or failed"))
+          p.log.warn("You can run 'oh-my-opencode import-skills --all' later to import skills.")
+        }
+        resolve()
+      })
+
+      importProcess.on("error", (err) => {
+        s.stop(color.yellow(`Failed to spawn skill import: ${err.message}`))
+        resolve()
+      })
+    })
+  }
+
   if (!config.hasClaude) {
     console.log()
     console.log(color.bgRed(color.white(color.bold(" CRITICAL WARNING "))))
