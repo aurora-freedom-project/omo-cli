@@ -220,9 +220,19 @@ export async function discoverAgentSkills(): Promise<LoadedSkill[]> {
   return loadSkillsFromDir(agentSkillsDir, "agent")
 }
 
+/**
+ * Discover skills from ./.agent/skills/ (project directory)
+ * This allows project-specific skill libraries from antigravity-awesome-skills
+ */
+export async function discoverProjectAgentSkills(): Promise<LoadedSkill[]> {
+  const projectAgentSkillsDir = join(process.cwd(), ".agent", "skills")
+  return loadSkillsFromDir(projectAgentSkillsDir, "agent")
+}
+
 export async function discoverAllSkills(): Promise<LoadedSkill[]> {
-  const [agentSkills, opencodeProjectSkills, projectSkills, opencodeGlobalSkills, userSkills] = await Promise.all([
+  const [agentSkills, projectAgentSkills, opencodeProjectSkills, projectSkills, opencodeGlobalSkills, userSkills] = await Promise.all([
     discoverAgentSkills(),
+    discoverProjectAgentSkills(),
     discoverOpencodeProjectSkills(),
     discoverProjectClaudeSkills(),
     discoverOpencodeGlobalSkills(),
@@ -230,7 +240,7 @@ export async function discoverAllSkills(): Promise<LoadedSkill[]> {
   ])
 
   // Priority order: project > agent > opencode > user (later = higher priority for same-name skills)
-  return [...userSkills, ...opencodeGlobalSkills, ...agentSkills, ...projectSkills, ...opencodeProjectSkills]
+  return [...userSkills, ...opencodeGlobalSkills, ...agentSkills, ...projectAgentSkills, ...projectSkills, ...opencodeProjectSkills]
 }
 
 export async function discoverSkills(options: DiscoverSkillsOptions = {}): Promise<LoadedSkill[]> {
