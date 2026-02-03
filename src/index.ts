@@ -47,6 +47,8 @@ import {
   discoverProjectClaudeSkills,
   discoverOpencodeGlobalSkills,
   discoverOpencodeProjectSkills,
+  discoverAgentSkills,
+  discoverProjectAgentSkills,
   mergeSkills,
 } from "./features/opencode-skill-loader";
 import { createBuiltinSkills } from "./features/builtin-skills";
@@ -109,13 +111,13 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
   const sessionRecovery = isHookEnabled("session-recovery")
     ? createSessionRecoveryHook(ctx, { experimental: pluginConfig.experimental })
     : null;
-  
+
   // Check for conflicting notification plugins before creating session-notification
   let sessionNotification = null;
   if (isHookEnabled("session-notification")) {
     const forceEnable = pluginConfig.notification?.force_enable ?? false;
     const externalNotifier = detectExternalNotificationPlugin(ctx.directory);
-    
+
     if (externalNotifier.detected && !forceEnable) {
       // External notification plugin detected - skip our notification to avoid conflicts
       console.warn(getNotificationConflictWarning(externalNotifier.pluginName!));
@@ -133,8 +135,8 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     : null;
   const toolOutputTruncator = isHookEnabled("tool-output-truncator")
     ? createToolOutputTruncatorHook(ctx, {
-        experimental: pluginConfig.experimental,
-      })
+      experimental: pluginConfig.experimental,
+    })
     : null;
   // Check for native OpenCode AGENTS.md injection support before creating hook
   let directoryAgentsInjector = null;
@@ -171,8 +173,8 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     "anthropic-context-window-limit-recovery"
   )
     ? createAnthropicContextWindowLimitRecoveryHook(ctx, {
-        experimental: pluginConfig.experimental,
-      })
+      experimental: pluginConfig.experimental,
+    })
     : null;
   const compactionContextInjector = isHookEnabled("compaction-context-injector")
     ? createCompactionContextInjector()
@@ -182,10 +184,10 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     : null;
   const autoUpdateChecker = isHookEnabled("auto-update-checker")
     ? createAutoUpdateCheckerHook(ctx, {
-        showStartupToast: isHookEnabled("startup-toast"),
-        isSisyphusEnabled: pluginConfig.sisyphus_agent?.disabled !== true,
-        autoUpdate: pluginConfig.auto_update ?? true,
-      })
+      showStartupToast: isHookEnabled("startup-toast"),
+      isSisyphusEnabled: pluginConfig.sisyphus_agent?.disabled !== true,
+      autoUpdate: pluginConfig.auto_update ?? true,
+    })
     : null;
   const keywordDetector = isHookEnabled("keyword-detector")
     ? createKeywordDetectorHook(ctx, contextCollector)
@@ -212,9 +214,9 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
 
   const ralphLoop = isHookEnabled("ralph-loop")
     ? createRalphLoopHook(ctx, {
-        config: pluginConfig.ralph_loop,
-        checkSessionExists: async (sessionId) => sessionExists(sessionId),
-      })
+      config: pluginConfig.ralph_loop,
+      checkSessionExists: async (sessionId) => sessionExists(sessionId),
+    })
     : null;
 
   const editErrorRecovery = isHookEnabled("edit-error-recovery")
@@ -338,11 +340,13 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     return true;
   });
   const includeClaudeSkills = pluginConfig.claude_code?.skills !== false;
-  const [userSkills, globalSkills, projectSkills, opencodeProjectSkills] = await Promise.all([
+  const [userSkills, globalSkills, projectSkills, opencodeProjectSkills, agentSkills, projectAgentSkills] = await Promise.all([
     includeClaudeSkills ? discoverUserClaudeSkills() : Promise.resolve([]),
     discoverOpencodeGlobalSkills(),
     includeClaudeSkills ? discoverProjectClaudeSkills() : Promise.resolve([]),
     discoverOpencodeProjectSkills(),
+    discoverAgentSkills(),
+    discoverProjectAgentSkills(),
   ]);
   const mergedSkills = mergeSkills(
     builtinSkills,
@@ -350,7 +354,9 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     userSkills,
     globalSkills,
     projectSkills,
-    opencodeProjectSkills
+    opencodeProjectSkills,
+    agentSkills,
+    projectAgentSkills
   );
   const skillMcpManager = new SkillMcpManager();
   const getSessionIDForMcp = () => getMainSessionID() || "";
@@ -433,7 +439,7 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
             variant: "warning" as const,
             duration: 6000,
           },
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       if (ralphLoop) {
@@ -526,36 +532,36 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
       const { event } = input;
       const props = event.properties as Record<string, unknown> | undefined;
 
-       if (event.type === "session.created") {
-         const sessionInfo = props?.info as
-           | { id?: string; title?: string; parentID?: string }
-           | undefined;
-         log("[event] session.created", { sessionInfo, props });
-         if (!sessionInfo?.parentID) {
-           setMainSession(sessionInfo?.id);
-         }
-         firstMessageVariantGate.markSessionCreated(sessionInfo);
-         await tmuxSessionManager.onSessionCreated(
-           event as { type: string; properties?: { info?: { id?: string; parentID?: string; title?: string } } }
-         );
-       }
+      if (event.type === "session.created") {
+        const sessionInfo = props?.info as
+          | { id?: string; title?: string; parentID?: string }
+          | undefined;
+        log("[event] session.created", { sessionInfo, props });
+        if (!sessionInfo?.parentID) {
+          setMainSession(sessionInfo?.id);
+        }
+        firstMessageVariantGate.markSessionCreated(sessionInfo);
+        await tmuxSessionManager.onSessionCreated(
+          event as { type: string; properties?: { info?: { id?: string; parentID?: string; title?: string } } }
+        );
+      }
 
-       if (event.type === "session.deleted") {
-         const sessionInfo = props?.info as { id?: string } | undefined;
-         if (sessionInfo?.id === getMainSessionID()) {
-           setMainSession(undefined);
-         }
-         if (sessionInfo?.id) {
-           clearSessionAgent(sessionInfo.id);
-           resetMessageCursor(sessionInfo.id);
-           firstMessageVariantGate.clear(sessionInfo.id);
-           await skillMcpManager.disconnectSession(sessionInfo.id);
-           await lspManager.cleanupTempDirectoryClients();
-           await tmuxSessionManager.onSessionDeleted({
-             sessionID: sessionInfo.id,
-           });
-         }
-       }
+      if (event.type === "session.deleted") {
+        const sessionInfo = props?.info as { id?: string } | undefined;
+        if (sessionInfo?.id === getMainSessionID()) {
+          setMainSession(undefined);
+        }
+        if (sessionInfo?.id) {
+          clearSessionAgent(sessionInfo.id);
+          resetMessageCursor(sessionInfo.id);
+          firstMessageVariantGate.clear(sessionInfo.id);
+          await skillMcpManager.disconnectSession(sessionInfo.id);
+          await lspManager.cleanupTempDirectoryClients();
+          await tmuxSessionManager.onSessionDeleted({
+            sessionID: sessionInfo.id,
+          });
+        }
+      }
 
       if (event.type === "message.updated") {
         const info = props?.info as Record<string, unknown> | undefined;
@@ -588,7 +594,7 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
                 body: { parts: [{ type: "text", text: "continue" }] },
                 query: { directory: ctx.directory },
               })
-              .catch(() => {});
+              .catch(() => { });
           }
         }
       }
@@ -647,30 +653,30 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
               : undefined,
             completionPromise: promiseMatch?.[1],
           });
-         } else if (command === "cancel-ralph" && sessionID) {
-           ralphLoop.cancelLoop(sessionID);
-         } else if (command === "ulw-loop" && sessionID) {
-           const rawArgs =
-             args?.command?.replace(/^\/?(ulw-loop)\s*/i, "") || "";
-           const taskMatch = rawArgs.match(/^["'](.+?)["']/);
-           const prompt =
-             taskMatch?.[1] ||
-             rawArgs.split(/\s+--/)[0]?.trim() ||
-             "Complete the task as instructed";
+        } else if (command === "cancel-ralph" && sessionID) {
+          ralphLoop.cancelLoop(sessionID);
+        } else if (command === "ulw-loop" && sessionID) {
+          const rawArgs =
+            args?.command?.replace(/^\/?(ulw-loop)\s*/i, "") || "";
+          const taskMatch = rawArgs.match(/^["'](.+?)["']/);
+          const prompt =
+            taskMatch?.[1] ||
+            rawArgs.split(/\s+--/)[0]?.trim() ||
+            "Complete the task as instructed";
 
-           const maxIterMatch = rawArgs.match(/--max-iterations=(\d+)/i);
-           const promiseMatch = rawArgs.match(
-             /--completion-promise=["']?([^"'\s]+)["']?/i
-           );
+          const maxIterMatch = rawArgs.match(/--max-iterations=(\d+)/i);
+          const promiseMatch = rawArgs.match(
+            /--completion-promise=["']?([^"'\s]+)["']?/i
+          );
 
-           ralphLoop.startLoop(sessionID, prompt, {
-             ultrawork: true,
-             maxIterations: maxIterMatch
-               ? parseInt(maxIterMatch[1], 10)
-               : undefined,
-             completionPromise: promiseMatch?.[1],
-           });
-         }
+          ralphLoop.startLoop(sessionID, prompt, {
+            ultrawork: true,
+            maxIterations: maxIterMatch
+              ? parseInt(maxIterMatch[1], 10)
+              : undefined,
+            completionPromise: promiseMatch?.[1],
+          });
+        }
       }
     },
 
@@ -690,9 +696,9 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
       await agentUsageReminder?.["tool.execute.after"](input, output);
       await categorySkillReminder?.["tool.execute.after"](input, output);
       await interactiveBashSession?.["tool.execute.after"](input, output);
-await editErrorRecovery?.["tool.execute.after"](input, output);
-        await delegateTaskRetry?.["tool.execute.after"](input, output);
-        await atlasHook?.["tool.execute.after"]?.(input, output);
+      await editErrorRecovery?.["tool.execute.after"](input, output);
+      await delegateTaskRetry?.["tool.execute.after"](input, output);
+      await atlasHook?.["tool.execute.after"]?.(input, output);
       await taskResumeInfo["tool.execute.after"](input, output);
     },
   };
