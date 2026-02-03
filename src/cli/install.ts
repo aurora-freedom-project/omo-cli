@@ -1,5 +1,6 @@
 import * as p from "@clack/prompts"
 import color from "picocolors"
+import { spawn } from "node:child_process"
 import type { InstallArgs, InstallConfig, ClaudeSubscription, BooleanArg, DetectedConfig } from "./types"
 import {
   addPluginToOpenCodeConfig,
@@ -470,18 +471,30 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   // Automatic skill import for Mike's Full Setup
   if (args.preset === "mike-full") {
     printStep(step++, totalSteps, "Importing full skill library (579+ skills)...")
-    try {
-      // Import importSkills dynamically to avoid deep dependencies if not needed
-      const { importSkills } = await import("./import-skills")
-      const success = await importSkills({ all: true })
-      if (success) {
-        printSuccess("Skills library imported")
-      } else {
-        printWarning("Failed to import skills library. You can run 'oh-my-opencode import-skills --all' later.")
-      }
-    } catch (error) {
-      printWarning(`Skill import skipped: ${error}`)
-    }
+
+    await new Promise<void>((resolve) => {
+      // Spawn a new process to run import-skills with inherited stdio
+      // This ensures the user sees the progress bar and logs directly
+      const importProcess = spawn(
+        process.execPath, // Path to bun executable
+        [process.argv[1], "import-skills", "--all"],
+        { stdio: "inherit" }
+      )
+
+      importProcess.on("close", (code) => {
+        if (code === 0) {
+          printSuccess("Skills library imported")
+        } else {
+          printWarning("Skill import process exited with error or was cancelled. You can run 'oh-my-opencode import-skills --all' later.")
+        }
+        resolve()
+      })
+
+      importProcess.on("error", (err) => {
+        printWarning(`Failed to spawn skill import process: ${err.message}`)
+        resolve()
+      })
+    })
   } else {
     step++
   }
