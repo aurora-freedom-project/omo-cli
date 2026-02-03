@@ -467,6 +467,25 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
     step += 2
   }
 
+  // Automatic skill import for Mike's Full Setup
+  if (args.preset === "mike-full") {
+    printStep(step++, totalSteps, "Importing full skill library (579+ skills)...")
+    try {
+      // Import importSkills dynamically to avoid deep dependencies if not needed
+      const { importSkills } = await import("./import-skills")
+      const success = await importSkills({ all: true })
+      if (success) {
+        printSuccess("Skills library imported")
+      } else {
+        printWarning("Failed to import skills library. You can run 'oh-my-opencode import-skills --all' later.")
+      }
+    } catch (error) {
+      printWarning(`Skill import skipped: ${error}`)
+    }
+  } else {
+    step++
+  }
+
   printStep(step++, totalSteps, "Writing oh-my-opencode configuration...")
   const omoResult = config.useFixedAntigravityConfig
     ? writeFixedAntigravityConfig()
