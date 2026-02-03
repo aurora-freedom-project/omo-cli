@@ -376,18 +376,18 @@ Oh My OpenCode includes access to **600+ curated skills** from the [antigravity-
 
 **Quick Import:**
 ```bash
-# Security scan all skills
-bunx oh-my-opencode scan-skills
+# Import all safe and verified skills (Recommended)
+bunx oh-my-opencode import-skills --all --valid-only
 
-# Categorize by agent and quality tier
-bunx oh-my-opencode categorize-skills
+# Import specific bundle
+bunx oh-my-opencode import-skills --bundle web-development
 
-# Install Tier 1 (85 SAFE + Excellent quality skills)
-bunx oh-my-opencode adapt-skills --tier 1
-
-# Install Tier 1 + 2 (479 skills, recommended)
-bunx oh-my-opencode adapt-skills --max-tier 2
+# List available skills
+bunx oh-my-opencode import-skills --list
 ```
+
+**Note:** If you used **Mike's Full Setup**, the skills library is automatically imported for you.
+
 
 **Skill Tiers:**
 | Tier | Skills | Quality | Safety |
