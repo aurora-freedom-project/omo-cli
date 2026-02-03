@@ -250,11 +250,22 @@ If you don't want all this, as mentioned, you can just pick and choose specific 
 
 ### Quick Start
 
+**🚀 Development Version (Recommended for Mike's Full Setup)**
+*Access Antigravity + Minimax M2.1 Tier System immediately:*
+
+```bash
+git clone https://github.com/aurora-freedom-project/oh-my-opencode.git -b dev
+cd oh-my-opencode
+bun install && bun run build
+bun dist/index.js install --preset=mike-full
+```
+
+**� Stable Version (NPM)**
+*Standard installation:*
+
 ```bash
 bunx oh-my-opencode@latest install
 ```
-
-Select **🚀 Mike's Full Setup (Recommended)** for optimal performance with Antigravity + Minimax M2.1.
 
 ### For Humans
 
