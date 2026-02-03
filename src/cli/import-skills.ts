@@ -63,11 +63,15 @@ async function runGitCommand(args: string[], cwd: string): Promise<{
         let stderr = '';
 
         git.stdout?.on('data', (data) => {
-            stdout += data.toString();
+            const str = data.toString();
+            stdout += str;
+            process.stdout.write(str); // Stream to console
         });
 
         git.stderr?.on('data', (data) => {
-            stderr += data.toString();
+            const str = data.toString();
+            stderr += str;
+            process.stderr.write(str); // Stream to console
         });
 
         git.on('close', (code) => {
