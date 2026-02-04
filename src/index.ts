@@ -52,6 +52,7 @@ import {
   mergeSkills,
 } from "./features/opencode-skill-loader";
 import { createBuiltinSkills } from "./features/builtin-skills";
+import { generatedSkills } from "./features/bundled-skills";
 import { getSystemMcpServerNames } from "./features/claude-code-mcp-loader";
 import {
   setMainSession,
@@ -340,13 +341,41 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     return true;
   });
   const includeClaudeSkills = pluginConfig.claude_code?.skills !== false;
-  const [userSkills, globalSkills, projectSkills, opencodeProjectSkills, agentSkills, projectAgentSkills] = await Promise.all([
+  const skillsMode = pluginConfig.skills_mode ?? "filesystem";
+
+  // Load skills based on mode
+  let agentSkills: Awaited<ReturnType<typeof discoverAgentSkills>> = [];
+  let projectAgentSkills: Awaited<ReturnType<typeof discoverProjectAgentSkills>> = [];
+
+  if (skillsMode === "bundled") {
+    // Use pre-bundled skills from generated-skills.ts
+    // Convert BuiltinSkill[] to LoadedSkill[] format
+    agentSkills = generatedSkills.map((s) => ({
+      name: s.name,
+      scope: "agent" as const,
+      definition: {
+        name: s.name,
+        description: s.description,
+        template: s.template,
+        argumentHint: s.argumentHint,
+        model: s.model,
+        agent: s.agent,
+        subtask: s.subtask,
+      },
+    }));
+  } else {
+    // Load skills from filesystem (~/.agent/skills/ and .agent/skills/)
+    [agentSkills, projectAgentSkills] = await Promise.all([
+      discoverAgentSkills(),
+      discoverProjectAgentSkills(),
+    ]);
+  }
+
+  const [userSkills, globalSkills, projectSkills, opencodeProjectSkills] = await Promise.all([
     includeClaudeSkills ? discoverUserClaudeSkills() : Promise.resolve([]),
     discoverOpencodeGlobalSkills(),
     includeClaudeSkills ? discoverProjectClaudeSkills() : Promise.resolve([]),
     discoverOpencodeProjectSkills(),
-    discoverAgentSkills(),
-    discoverProjectAgentSkills(),
   ]);
   const mergedSkills = mergeSkills(
     builtinSkills,

@@ -392,6 +392,8 @@ export const PrivacyConfigSchema = z.object({
   /** Require explicit confirmation before accessing sensitive files */
   require_confirmation: z.boolean().default(false),
 })
+export const SkillsModeSchema = z.enum(["bundled", "filesystem"]).default("filesystem")
+
 export const OhMyOpenCodeConfigSchema = z.object({
   $schema: z.string().optional(),
   disabled_mcps: z.array(AnyMcpNameSchema).optional(),
@@ -418,6 +420,12 @@ export const OhMyOpenCodeConfigSchema = z.object({
   coding_level: CodingLevelSchema.optional(),
   /** Privacy awareness configuration */
   privacy: PrivacyConfigSchema.optional(),
+  /**
+   * Skills loading mode:
+   * - "bundled": Load 600+ pre-bundled skills (larger plugin, always available)
+   * - "filesystem": Load skills from ~/.agent/skills/ and project .agent/skills/ (default)
+   */
+  skills_mode: SkillsModeSchema.optional(),
 })
 
 export type OhMyOpenCodeConfig = z.infer<typeof OhMyOpenCodeConfigSchema>
