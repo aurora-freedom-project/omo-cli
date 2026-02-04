@@ -167,16 +167,27 @@ Use this when a task matches an available skill's description.
 `
 
 function buildDescriptionFromItems(items: CommandInfo[]): string {
-  const commandListForDescription = items
+  // Limit to 50 items in description to prevent context overflow
+  // (620 bundled skills = ~60KB description, too long for model context)
+  const MAX_ITEMS_IN_DESCRIPTION = 50
+  const displayItems = items.slice(0, MAX_ITEMS_IN_DESCRIPTION)
+  const hasMore = items.length > MAX_ITEMS_IN_DESCRIPTION
+
+  const commandListForDescription = displayItems
     .map((cmd) => {
       const hint = cmd.metadata.argumentHint ? ` ${cmd.metadata.argumentHint}` : ""
       return `- /${cmd.name}${hint}: ${cmd.metadata.description} (${cmd.scope})`
     })
     .join("\n")
 
+  const moreMessage = hasMore
+    ? `\n\n...and ${items.length - MAX_ITEMS_IN_DESCRIPTION} more skills available. Use "skill" tool with any skill name to load it.`
+    : ""
+
   return `${TOOL_DESCRIPTION_PREFIX}
+Total: ${items.length} skills/commands available.
 <available_skills>
-${commandListForDescription}
+${commandListForDescription}${moreMessage}
 </available_skills>`
 }
 
