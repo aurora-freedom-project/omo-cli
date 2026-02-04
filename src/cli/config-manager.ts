@@ -371,7 +371,11 @@ export function writeFixedAntigravityConfig(): ConfigMergeResult {
 }
 
 export function generateOmoConfig(installConfig: InstallConfig): Record<string, unknown> {
-  return generateModelConfig(installConfig)
+  const config = generateModelConfig(installConfig)
+  if (installConfig.skillsMode) {
+    config.skills_mode = installConfig.skillsMode
+  }
+  return config
 }
 
 export function writeOmoConfig(installConfig: InstallConfig): ConfigMergeResult {

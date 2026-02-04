@@ -1,6 +1,7 @@
 export type ClaudeSubscription = "no" | "yes" | "max20"
 export type BooleanArg = "no" | "yes"
 export type PresetName = "mike-full" | "claude-only" | "free"
+export type SkillsMode = "bundled" | "filesystem"
 
 export interface InstallArgs {
   tui: boolean
@@ -12,6 +13,7 @@ export interface InstallArgs {
   opencodeZen?: BooleanArg
   zaiCodingPlan?: BooleanArg
   skipAuth?: boolean
+  skillsMode?: SkillsMode
 }
 
 export interface InstallConfig {
@@ -24,6 +26,8 @@ export interface InstallConfig {
   hasZaiCodingPlan: boolean
   /** If true, use fixed Antigravity config instead of dynamic fallback */
   useFixedAntigravityConfig?: boolean
+  /** Skills mode: bundled (615 pre-bundled) or filesystem (load from ~/.agent/skills/) */
+  skillsMode?: SkillsMode
 }
 
 export interface ConfigMergeResult {

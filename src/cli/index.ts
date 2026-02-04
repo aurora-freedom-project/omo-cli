@@ -29,6 +29,7 @@ program
   .description("Install and configure oh-my-opencode with interactive setup")
   .option("--no-tui", "Run in non-interactive mode (requires --preset or all provider options)")
   .option("--preset <name>", "Use preset configuration: mike-full, claude-only, free")
+  .option("--skills-mode <mode>", "Skills loading mode: bundled (615 pre-bundled) or filesystem (default)")
   .option("--claude <value>", "Claude subscription: no, yes, max20")
   .option("--openai <value>", "OpenAI/ChatGPT subscription: no, yes (default: no)")
   .option("--gemini <value>", "Gemini integration: no, yes")

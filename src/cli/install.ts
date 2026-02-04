@@ -113,42 +113,49 @@ function printBox(content: string, title?: string): void {
 /**
  * Convert preset name to InstallConfig
  */
-function presetToConfig(preset: string): InstallConfig | null {
-  switch (preset) {
-    case "mike-full":
-      return {
-        hasClaude: true,
-        isMax20: true,
-        hasOpenAI: true,
-        hasGemini: true,
-        hasCopilot: false,
-        hasOpencodeZen: true,
-        hasZaiCodingPlan: true,
-        useFixedAntigravityConfig: true,
-      }
-    case "claude-only":
-      return {
-        hasClaude: true,
-        isMax20: false,
-        hasOpenAI: false,
-        hasGemini: false,
-        hasCopilot: false,
-        hasOpencodeZen: false,
-        hasZaiCodingPlan: false,
-      }
-    case "free":
-      return {
-        hasClaude: false,
-        isMax20: false,
-        hasOpenAI: false,
-        hasGemini: false,
-        hasCopilot: false,
-        hasOpencodeZen: false,
-        hasZaiCodingPlan: false,
-      }
-    default:
-      return null
+function presetToConfig(preset: string, skillsMode?: "bundled" | "filesystem"): InstallConfig | null {
+  const baseConfig: InstallConfig | null = (() => {
+    switch (preset) {
+      case "mike-full":
+        return {
+          hasClaude: true,
+          isMax20: true,
+          hasOpenAI: true,
+          hasGemini: true,
+          hasCopilot: false,
+          hasOpencodeZen: true,
+          hasZaiCodingPlan: true,
+          useFixedAntigravityConfig: true,
+        }
+      case "claude-only":
+        return {
+          hasClaude: true,
+          isMax20: false,
+          hasOpenAI: false,
+          hasGemini: false,
+          hasCopilot: false,
+          hasOpencodeZen: false,
+          hasZaiCodingPlan: false,
+        }
+      case "free":
+        return {
+          hasClaude: false,
+          isMax20: false,
+          hasOpenAI: false,
+          hasGemini: false,
+          hasCopilot: false,
+          hasOpencodeZen: false,
+          hasZaiCodingPlan: false,
+        }
+      default:
+        return null
+    }
+  })()
+
+  if (baseConfig && skillsMode) {
+    baseConfig.skillsMode = skillsMode
   }
+  return baseConfig
 }
 
 function validateNonTuiArgs(args: InstallArgs): { valid: boolean; errors: string[]; usePreset?: boolean } {
@@ -264,6 +271,29 @@ async function runTuiMode(detected: DetectedConfig): Promise<InstallConfig | nul
 
   // Return preset config directly if not custom
   if (preset === "mike-full") {
+    // Ask for skills mode
+    const skillsMode = await p.select({
+      message: "How do you want to load agent skills?",
+      options: [
+        {
+          value: "bundled" as const,
+          label: "📦 Bundled (615 skills pre-loaded)",
+          hint: "Larger plugin (~6MB), skills always available"
+        },
+        {
+          value: "filesystem" as const,
+          label: "📁 Filesystem (load from ~/.agent/skills/)",
+          hint: "Smaller plugin (~1MB), requires import-skills first"
+        },
+      ],
+      initialValue: "bundled" as const,
+    })
+
+    if (p.isCancel(skillsMode)) {
+      p.cancel("Installation cancelled.")
+      return null
+    }
+
     return {
       hasClaude: true,
       isMax20: true,
@@ -273,6 +303,7 @@ async function runTuiMode(detected: DetectedConfig): Promise<InstallConfig | nul
       hasOpencodeZen: true,
       hasZaiCodingPlan: true,
       useFixedAntigravityConfig: true,
+      skillsMode: skillsMode,
     }
   }
 
@@ -437,7 +468,7 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
 
   // Use preset config if --preset was provided, otherwise use args
   const config = validation.usePreset && args.preset
-    ? presetToConfig(args.preset)!
+    ? presetToConfig(args.preset, args.skillsMode)!
     : argsToConfig(args)
 
   printStep(step++, totalSteps, "Adding oh-my-opencode plugin...")
