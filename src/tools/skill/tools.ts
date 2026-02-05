@@ -24,7 +24,13 @@ function loadedSkillToInfo(skill: LoadedSkill): SkillInfo {
 function formatSkillsXml(skills: SkillInfo[]): string {
   if (skills.length === 0) return ""
 
-  const skillsXml = skills.map(skill => {
+  // Limit skills in description to prevent context overflow
+  // (620 bundled skills = way too long for model context)
+  const MAX_SKILLS_IN_DESCRIPTION = 50
+  const displaySkills = skills.slice(0, MAX_SKILLS_IN_DESCRIPTION)
+  const hasMore = skills.length > MAX_SKILLS_IN_DESCRIPTION
+
+  const skillsXml = displaySkills.map(skill => {
     const lines = [
       "  <skill>",
       `    <name>${skill.name}</name>`,
@@ -37,7 +43,11 @@ function formatSkillsXml(skills: SkillInfo[]): string {
     return lines.join("\n")
   }).join("\n")
 
-  return `\n\n<available_skills>\n${skillsXml}\n</available_skills>`
+  const moreMessage = hasMore
+    ? `\n  <!-- ...and ${skills.length - MAX_SKILLS_IN_DESCRIPTION} more skills available. Use any skill name directly. -->`
+    : ""
+
+  return `\n\n<total_skills>${skills.length}</total_skills>\n<available_skills>\n${skillsXml}${moreMessage}\n</available_skills>`
 }
 
 async function extractSkillBody(skill: LoadedSkill): Promise<string> {
