@@ -23,7 +23,7 @@
 | **Claude Sonnet 4.5 Thinking** | Deep analysis, architecture | oracle |
 | **Gemini 3 Pro** | Multimodal, visual tasks | multimodal-looker, visual-engineering |
 | **Gemini 3 Flash** | Quick one-off tasks | quick, writing |
-| **Minimax M2.1** | Coding workhorse, exploration | librarian, Metis, explore, business-logic |
+| **Minimax M2.1** | Code research, exploration, no rate limits | librarian, Metis, explore, business-logic |
 
 ### New Features from ClaudeKit Integration
 - **Coding Level**: Adjustable verbosity (1-10) for Sisyphus.
@@ -56,7 +56,7 @@ flowchart TD
     subgraph SUBAGENTS["🔧 Subagents (Auto-delegate / @mention)"]
         oracle["<b>oracle</b><br/>Opus 4.5 Thinking<br/>Architecture Review"]
         librarian["<b>librarian</b><br/>Minimax M2.1<br/>Research & Docs"]
-        explore["<b>explore</b><br/>Minimax M2.1<br/>Fast Grep"]
+        explore["<b>explore</b><br/>Minimax M2.1<br/>Fast Code Research"]
         multimodal["<b>multimodal-looker</b><br/>Gemini 3 Pro<br/>PDF/Image Analysis"]
     end
 
@@ -243,9 +243,9 @@ Ask @librarian find examples of rate limiting in Express.js
 Ask @librarian what's the best practice for error handling in this codebase?
 ```
 
-#### @explore — Fast Grep (Gemini 3 Flash)
+#### @explore — Fast Code Research (Minimax M2.1)
 
-Dùng cho: quick codebase exploration, finding files/functions
+Dùng cho: quick codebase exploration, finding files/functions, no rate limits
 
 ```
 Ask @explore where is authentication implemented?
@@ -535,4 +535,4 @@ Setup của bạn có multi-account rotation tự động. Nếu vẫn gặp iss
 
 ---
 
-*Tài liệu custom cho setup cá nhân • 2026-01-31*
+*Tài liệu custom cho setup cá nhân • 2026-02-05*

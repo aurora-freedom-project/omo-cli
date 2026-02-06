@@ -61,22 +61,49 @@ Thế là xong. Tất cả tính năng sẽ hoạt động như magic — parall
 
 ## Cài Đặt
 
-### Cho Người Dùng
+> **Note:** Đây là bản custom fork. Phải cài từ source, không dùng được `bunx oh-my-opencode` từ npm.
 
-Copy và paste prompt này vào LLM agent (Claude Code, AmpCode, Cursor, etc.):
-
-```
-Install and configure oh-my-opencode by following the instructions here:
-https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/master/docs/guide/installation.md
-```
-
-Hoặc đọc [Installation Guide](docs/guide/installation.md) trực tiếp — nhưng **chúng tôi khuyến nghị để agent xử lý. Con người hay mắc lỗi.**
-
-### Cho LLM Agents
+### Quick Start
 
 ```bash
-curl -s https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/master/docs/guide/installation.md
+# Clone repo
+git clone https://github.com/aurora-freedom-project/oh-my-opencode.git -b dev
+cd oh-my-opencode
+
+# Build
+bun install && bun run build
+
+# Install với preset
+bun dist/cli/index.js install --preset=mike-full     # 🚀 Khuyến nghị
+bun dist/cli/index.js install --preset=claude-only   # Claude only
 ```
+
+### Interactive Install (TUI)
+
+```bash
+bun dist/cli/index.js install
+# → Chọn preset trong menu
+```
+
+### OpenCode Config
+
+Sau khi install, cấu hình `~/.config/opencode/opencode.json`:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "opencode-antigravity-auth@latest",
+    "/path/to/oh-my-opencode"  // Đường dẫn folder đã clone
+  ],
+  "provider": {
+    "google": { /* Antigravity models */ },
+    "ollama": { /* Minimax M2.1 */ }
+  }
+}
+```
+
+> Xem full config example trong [README.md](README.md#opencode-config-example).
 
 ---
 
@@ -117,7 +144,7 @@ curl -s https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads
 
 ### Skills Library
 
-Oh My OpenCode cung cấp quyền truy cập **600+ skills được tuyển chọn** từ [antigravity-awesome-skills](https://github.com/PierrunoYT/antigravity-awesome-skills).
+Oh My OpenCode cung cấp quyền truy cập **626+ skills được tuyển chọn** từ [antigravity-awesome-skills](https://github.com/PierrunoYT/antigravity-awesome-skills). Skills được bundle sẵn (không cần import) + hỗ trợ filesystem discovery.
 
 **Import nhanh:**
 ```bash
@@ -160,7 +187,7 @@ oh-my-opencode cung cấp **10 AI agents chuyên biệt**:
 | **Sisyphus** | `claude-opus-4-5-thinking` (max) | **Orchestrator mặc định.** Plans, delegates, executes với parallel execution. Extended thinking 32k. |
 | **oracle** | `claude-opus-4-5-thinking` (max) | Architecture decisions, code review, debugging. Read-only - reasoning logic sâu. |
 | **librarian** | `minimax-m2.1` (Ollama) | Multi-repo analysis, documentation lookup, OSS examples. |
-| **explore** | `minimax-m2.1` (Ollama) | Fast codebase exploration và contextual grep. |
+| **explore** | `minimax-m2.1` (Ollama) | Fast codebase exploration và contextual grep. Không rate-limit. |
 | **multimodal-looker** | `gemini-3-pro` (high) | PDF, images, diagrams analysis. |
 
 ### Planning Agents
@@ -168,7 +195,7 @@ oh-my-opencode cung cấp **10 AI agents chuyên biệt**:
 | Agent | Model | Mục Đích |
 |-------|-------|----------|
 | **Prometheus** | `claude-opus-4-5-thinking` (max) | Strategic planner với interview mode. Tạo plans chi tiết. |
-| **Metis** | `minimax-m2.1` (Ollama) | Plan consultant - phân tích trước. Tìm hidden requirements. |
+| **Metis** | `claude-sonnet-4-5-thinking` (max) | Plan consultant - phân tích trước. Tìm hidden requirements. |
 | **Momus** | `claude-sonnet-4-5` | Plan reviewer - validate plans. |
 
 ### Tool Restrictions
@@ -387,7 +414,7 @@ Built-in skills với MCP servers:
     "multimodal-looker": { "model": "google/gemini-3-pro", "variant": "high" },
     "explore": { "model": "ollama/minimax-m2.1:cloud", "stream": false },
     "librarian": { "model": "ollama/minimax-m2.1:cloud", "stream": false },
-    "Metis": { "model": "ollama/minimax-m2.1:cloud", "stream": false }
+    "Metis": { "model": "google/claude-sonnet-4-5-thinking", "variant": "max" }
   },
   
   "categories": {
@@ -445,4 +472,4 @@ Kể từ tháng 1/2026, Anthropic đã hạn chế third-party OAuth access. oh
 
 ---
 
-*Tài liệu được dịch và bổ sung bởi cộng đồng Việt Nam • 2026*
+*Tài liệu được dịch và bổ sung bởi cộng đồng Việt Nam • 2026-02-05*

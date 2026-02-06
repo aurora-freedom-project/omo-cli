@@ -75,7 +75,7 @@ Yes, technically possible. But I cannot recommend using it.
 [![License](https://img.shields.io/badge/license-SUL--1.0-white?labelColor=black&style=flat-square)](https://github.com/code-yeongyu/oh-my-opencode/blob/master/LICENSE.md)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/code-yeongyu/oh-my-opencode)
 
-[English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-cn.md)
+[English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-cn.md) | [Tiếng Việt](README.vi.md)
 
 </div>
 
@@ -248,47 +248,42 @@ If you don't want all this, as mentioned, you can just pick and choose specific 
 
 ## Installation
 
+> **Note:** Đây là bản custom fork với nhiều tính năng mở rộng. Phải cài từ source, không dùng được `bunx oh-my-opencode` từ npm.
+
 ### Quick Start
 
-**🚀 Development Version (Recommended for Mike's Full Setup)**
-*Access Antigravity + Minimax M2.1 Tier System immediately:*
-
 ```bash
+# Clone repo
 git clone https://github.com/aurora-freedom-project/oh-my-opencode.git -b dev
 cd oh-my-opencode
+
+# Build
 bun install && bun run build
-bun dist/cli/index.js install --preset=mike-full
+
+# Install với preset (chọn 1 trong 2)
+bun dist/cli/index.js install --preset=mike-full     # 🚀 Khuyến nghị
+bun dist/cli/index.js install --preset=claude-only   # Claude only
 ```
 
-**� Stable Version (NPM)**
-*Standard installation:*
+### Interactive Install (TUI)
 
 ```bash
-bunx oh-my-opencode@latest install
+bun dist/cli/index.js install
+# → Chọn preset trong menu
 ```
 
-### For Humans
+### For LLM Agents
 
-Copy and paste this prompt to your LLM agent (Claude Code, AmpCode, Cursor, etc.):
+Copy prompt này vào Claude Code / AmpCode / Cursor:
 
 ```
 Install and configure oh-my-opencode by following the instructions here:
 https://raw.githubusercontent.com/aurora-freedom-project/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 
-Or read the [Installation Guide](docs/guide/installation.md) directly—but **we strongly recommend letting an agent handle it. Humans make mistakes.**
-
-### For LLM Agents
-
-Fetch the installation guide and follow it:
-
-```bash
-curl -s https://raw.githubusercontent.com/aurora-freedom-project/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
-```
-
 ## Mike's Full Setup
 
-The recommended configuration using **Antigravity** (Claude/Sonnet via Google) + **Minimax M2.1** (via Ollama Cloud).
+Configuration sử dụng **Antigravity** (Claude/Sonnet via Google) + **Minimax M2.1** (via Ollama Cloud).
 
 ### Tier System
 
@@ -306,14 +301,70 @@ The recommended configuration using **Antigravity** (Claude/Sonnet via Google) +
 - **Gemini 3 Pro** — Multimodal: images, PDFs, UI generation
 - **Minimax M2.1** — High-volume tasks: no rate limits, fast code exploration
 
-### Install
+Sau khi clone và build, chạy:
 
 ```bash
-bunx oh-my-opencode@latest install
-# Select: 🚀 Mike's Full Setup (Recommended)
+bun dist/cli/index.js install --preset=mike-full
 ```
 
-This automatically configures your `oh-my-opencode.json` with the optimal tier system.
+File `oh-my-opencode.json` sẽ được tự động cấu hình với tier system tối ưu.
+
+### OpenCode Config Example
+
+Sau khi install, file `~/.config/opencode/opencode.json` sẽ trông như sau:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "opencode-antigravity-auth@latest",
+    "/path/to/oh-my-opencode"  // Đường dẫn đến folder đã clone
+  ],
+  "provider": {
+    "google": {
+      "name": "Google",
+      "models": {
+        "antigravity-claude-opus-4-5-thinking": {
+          "name": "Claude Opus 4.5 Thinking (Antigravity)",
+          "limit": { "context": 200000, "output": 64000 },
+          "variants": {
+            "low": { "thinkingConfig": { "thinkingBudget": 8192 } },
+            "max": { "thinkingConfig": { "thinkingBudget": 32768 } }
+          }
+        },
+        "antigravity-claude-sonnet-4-5-thinking": {
+          "name": "Claude Sonnet 4.5 Thinking (Antigravity)",
+          "limit": { "context": 200000, "output": 64000 },
+          "variants": {
+            "low": { "thinkingConfig": { "thinkingBudget": 8192 } },
+            "max": { "thinkingConfig": { "thinkingBudget": 32768 } }
+          }
+        },
+        "antigravity-gemini-3-pro": {
+          "name": "Gemini 3 Pro (Antigravity)",
+          "limit": { "context": 1048576, "output": 65535 },
+          "variants": { "low": { "thinkingLevel": "low" }, "high": { "thinkingLevel": "high" } }
+        },
+        "antigravity-gemini-3-flash": {
+          "name": "Gemini 3 Flash (Antigravity)",
+          "limit": { "context": 1048576, "output": 65536 },
+          "variants": { "minimal": { "thinkingLevel": "minimal" }, "high": { "thinkingLevel": "high" } }
+        }
+      }
+    },
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": { "baseURL": "http://localhost:11434/v1" },
+      "models": {
+        "minimax-m2.1:cloud": { "name": "Minimax M2.1 (Ollama Cloud)" }
+      }
+    }
+  }
+}
+```
+
+> **Lưu ý:** Thay `/path/to/oh-my-opencode` bằng đường dẫn thực tế đến folder đã clone.
 
 ## Uninstallation
 
@@ -347,6 +398,29 @@ To remove oh-my-opencode:
    # Plugin should no longer be loaded
    ```
 
+## Troubleshooting
+
+Having issues? Use the built-in diagnostic tool:
+
+```bash
+bunx oh-my-opencode doctor
+```
+
+**Doctor checks (23+ diagnostics):**
+- OpenCode installation & plugin status
+- Provider connectivity (Anthropic, Google, Ollama)
+- Skills validation (bundled + filesystem)
+- MCP servers health
+- Configuration syntax & schema
+- Model availability per provider
+
+**Common Options:**
+```bash
+bunx oh-my-opencode doctor --verbose        # Detailed output
+bunx oh-my-opencode doctor --category=skills # Check skills only
+bunx oh-my-opencode doctor --json            # Machine-readable output
+```
+
 ## Features
 
 We have lots of features that you'll think should obviously exist, and once you experience them, you'll never be able to go back to how things were before.
@@ -372,7 +446,7 @@ See the full [Configuration Documentation](docs/configurations.md) for detailed 
 - **JSONC Support**: Comments and trailing commas supported
 - **Agents**: Override models, temperatures, prompts, and permissions for any agent
 - **Built-in Skills**: `playwright` (browser automation), `git-master` (atomic commits)
-- **Skills Library**: 600+ importable skills from antigravity-awesome-skills
+- **Skills Library**: 626+ bundled skills + filesystem discovery (Dual Skills Mode)
 - **Sisyphus Agent**: Main orchestrator with Prometheus (Planner) and Metis (Plan Consultant)
 - **Background Tasks**: Configure concurrency limits per provider/model
 - **Categories**: Domain-specific task delegation (`visual`, `business-logic`, custom)
@@ -383,7 +457,11 @@ See the full [Configuration Documentation](docs/configurations.md) for detailed 
 
 ### Skills Library
 
-Oh My OpenCode includes access to **600+ curated skills** from the [antigravity-awesome-skills](https://github.com/PierrunoYT/antigravity-awesome-skills) library.
+Oh My OpenCode includes **626+ curated skills** bundled at build time from the [antigravity-awesome-skills](https://github.com/PierrunoYT/antigravity-awesome-skills) library.
+
+**Dual Skills Mode (v3.2+):**
+- **Bundled Skills**: 626 skills pre-loaded, always available
+- **Filesystem Skills**: Additional skills from `.opencode/skills/` and `~/.config/opencode/skills/`
 
 **Quick Import:**
 ```bash
