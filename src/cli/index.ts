@@ -9,6 +9,7 @@ import { importSkills, listBundles } from "./import-skills"
 import { runSecurityScan } from "./skills-scanner"
 import { runCategorization } from "./skills-categorizer"
 import { adaptTier, adaptAllTiers } from "./skills-adapter"
+import { syncSkills } from "./skills-sync"
 import type { InstallArgs } from "./types"
 import type { RunOptions } from "./run"
 import type { GetLocalVersionOptions } from "./get-local-version/types"
@@ -20,55 +21,31 @@ const VERSION = packageJson.version
 const program = new Command()
 
 program
-  .name("oh-my-opencode")
+  .name("omo-cli")
   .description("The ultimate OpenCode plugin - multi-model orchestration, LSP tools, and more")
   .version(VERSION, "-v, --version", "Show version number")
 
 program
   .command("install")
-  .description("Install and configure oh-my-opencode with interactive setup")
-  .option("--no-tui", "Run in non-interactive mode (requires --preset or all provider options)")
-  .option("--preset <name>", "Use preset configuration: mike-full, claude-only, free")
-  .option("--skills-mode <mode>", "Skills loading mode: bundled (615 pre-bundled) or filesystem (default)")
-  .option("--claude <value>", "Claude subscription: no, yes, max20")
-  .option("--openai <value>", "OpenAI/ChatGPT subscription: no, yes (default: no)")
-  .option("--gemini <value>", "Gemini integration: no, yes")
-  .option("--copilot <value>", "GitHub Copilot subscription: no, yes")
-  .option("--opencode-zen <value>", "OpenCode Zen access: no, yes (default: no)")
-  .option("--zai-coding-plan <value>", "Z.ai Coding Plan subscription: no, yes (default: no)")
+  .description("Install and configure omo-cli using profiles")
+  .option("--no-tui", "Run in non-interactive mode (requires --profile)")
+  .option("-p, --profile <name>", "Apply a profile by name (e.g., mike)")
+  .option("--skills-mode <mode>", "Skills loading mode: bundled (626+ pre-bundled) or filesystem (default)")
   .option("--skip-auth", "Skip authentication setup hints")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode install                              # Interactive TUI
-  $ bunx oh-my-opencode install --preset=mike-full           # Quick non-interactive
-  $ bunx oh-my-opencode install --preset=claude-only         # Claude only
-  $ bunx oh-my-opencode install --preset=free                # Free tier only
-  $ bunx oh-my-opencode install --no-tui --claude=max20 --openai=yes --gemini=yes --copilot=no
+  $ bunx omo-cli install                              # Interactive TUI (profile wizard)
+  $ bunx omo-cli install --no-tui --profile=mike      # Non-interactive
 
-Presets:
-  mike-full     🚀 Recommended - Claude Max + OpenAI + Gemini + Zen + Z.ai
-  claude-only   Claude Pro/Max only
-  free          Free tier (opencode/big-pickle fallback)
-
-Model Providers (Priority: Native > Copilot > OpenCode Zen > Z.ai):
-  Claude        Native anthropic/ models (Opus, Sonnet, Haiku)
-  OpenAI        Native openai/ models (GPT-5.2 for Oracle)
-  Gemini        Native google/ models (Gemini 3 Pro, Flash)
-  Copilot       github-copilot/ models (fallback)
-  OpenCode Zen  opencode/ models (opencode/claude-opus-4-5, etc.)
-  Z.ai          zai-coding-plan/glm-4.7 (Librarian priority)
+Profiles define the active models for each agent and task category.
+You can view or create profiles using 'omo-cli profile' commands.
 `)
   .action(async (options) => {
     const args: InstallArgs = {
       tui: options.tui !== false,
-      preset: options.preset,
-      claude: options.claude,
-      openai: options.openai,
-      gemini: options.gemini,
-      copilot: options.copilot,
-      opencodeZen: options.opencodeZen,
-      zaiCodingPlan: options.zaiCodingPlan,
+      profile: options.profile,
       skipAuth: options.skipAuth ?? false,
+      skillsMode: options.skillsMode,
     }
     const exitCode = await install(args)
     process.exit(exitCode)
@@ -82,9 +59,9 @@ program
   .option("-t, --timeout <ms>", "Timeout in milliseconds (default: 30 minutes)", parseInt)
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode run "Fix the bug in index.ts"
-  $ bunx oh-my-opencode run --agent Sisyphus "Implement feature X"
-  $ bunx oh-my-opencode run --timeout 3600000 "Large refactoring task"
+  $ bunx omo-cli run "Fix the bug in index.ts"
+  $ bunx omo-cli run --agent Sisyphus "Implement feature X"
+  $ bunx omo-cli run --timeout 3600000 "Large refactoring task"
 
 Unlike 'opencode run', this command waits until:
   - All todos are completed or cancelled
@@ -108,9 +85,9 @@ program
   .option("--json", "Output in JSON format for scripting")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode get-local-version
-  $ bunx oh-my-opencode get-local-version --json
-  $ bunx oh-my-opencode get-local-version --directory /path/to/project
+  $ bunx omo-cli get-local-version
+  $ bunx omo-cli get-local-version --json
+  $ bunx omo-cli get-local-version --directory /path/to/project
 
 This command shows:
   - Current installed version
@@ -129,16 +106,16 @@ This command shows:
 
 program
   .command("doctor")
-  .description("Check oh-my-opencode installation health and diagnose issues")
+  .description("Check omo-cli installation health and diagnose issues")
   .option("--verbose", "Show detailed diagnostic information")
   .option("--json", "Output results in JSON format")
   .option("--category <category>", "Run only specific category")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode doctor
-  $ bunx oh-my-opencode doctor --verbose
-  $ bunx oh-my-opencode doctor --json
-  $ bunx oh-my-opencode doctor --category authentication
+  $ bunx omo-cli doctor
+  $ bunx omo-cli doctor --verbose
+  $ bunx omo-cli doctor --json
+  $ bunx omo-cli doctor --category authentication
 
 Categories:
   installation     Check OpenCode and plugin installation
@@ -162,7 +139,7 @@ program
   .command("version")
   .description("Show version information")
   .action(() => {
-    console.log(`oh-my-opencode v${VERSION}`)
+    console.log(`omo-cli v${VERSION}`)
   })
 
 program
@@ -170,7 +147,7 @@ program
   .description("Import skills from antigravity-awesome-skills library (560+ skills)")
   .option("-b, --bundle <name>", "Import a skill bundle (essentials, web-dev, security, devops, etc.)")
   .option("-s, --skills <names...>", "Import specific skills by name")
-  .option("-t, --target <path>", "Target directory (default: ~/.agent/skills)")
+  .option("-t, --target <path>", "Target directory (default: ~/.agents/skills)")
   .option("-l, --list", "List available bundles")
   .option("-a, --all", "Import ALL skills from repository (616)")
   .option("--tier <number>", "Import skills by tier (1-4, requires categorize-skills first)")
@@ -178,14 +155,14 @@ program
   .option("--valid-only", "With --all: only import valid skills (with proper SKILL.md)")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode import-skills --list
-  $ bunx oh-my-opencode import-skills --audit
-  $ bunx oh-my-opencode import-skills --tier 1        # Tier 1: 85 SAFE + Excellent
-  $ bunx oh-my-opencode import-skills --tier 2        # Tier 2: 394 SAFE/LOW + Good
-  $ bunx oh-my-opencode import-skills --all
-  $ bunx oh-my-opencode import-skills --all --valid-only
-  $ bunx oh-my-opencode import-skills --bundle essentials
-  $ bunx oh-my-opencode import-skills --skills brainstorming api-design
+  $ bunx omo-cli import-skills --list
+  $ bunx omo-cli import-skills --audit
+  $ bunx omo-cli import-skills --tier 1        # Tier 1: 85 SAFE + Excellent
+  $ bunx omo-cli import-skills --tier 2        # Tier 2: 394 SAFE/LOW + Good
+  $ bunx omo-cli import-skills --all
+  $ bunx omo-cli import-skills --all --valid-only
+  $ bunx omo-cli import-skills --bundle essentials
+  $ bunx omo-cli import-skills --skills brainstorming api-design
 
 Available Tiers (run categorize-skills first):
   Tier 1    85 skills  - SAFE + Excellent quality (recommended start)
@@ -228,9 +205,9 @@ program
   .option("-d, --details", "Show detailed skill list")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode scan-skills
-  $ bunx oh-my-opencode scan-skills --details
-  $ bunx oh-my-opencode scan-skills --output ./my-report.json
+  $ bunx omo-cli scan-skills
+  $ bunx omo-cli scan-skills --details
+  $ bunx omo-cli scan-skills --output ./my-report.json
 
 This command scans all 600+ skills for:
   🔴 HIGH risk:   Dangerous commands (rm -rf, sudo, curl|bash)
@@ -254,8 +231,8 @@ program
   .option("-o, --output <path>", "Output path for categorization report")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode categorize-skills
-  $ bunx oh-my-opencode categorize-skills --input ./my-scan.json
+  $ bunx omo-cli categorize-skills
+  $ bunx omo-cli categorize-skills --input ./my-scan.json
 
 This command creates:
   📊 Tiered import lists (Tier 1-4 based on risk/quality)
@@ -279,12 +256,12 @@ program
   .description("Adapt and import skills with OMO metadata (agents, category, tier)")
   .option("--tier <number>", "Adapt specific tier (1-4)")
   .option("--max-tier <number>", "Adapt all tiers up to max (default: 2)")
-  .option("-t, --target <path>", "Target directory (default: ~/.agent/skills)")
+  .option("-t, --target <path>", "Target directory (default: ~/.agents/skills)")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode adapt-skills --tier 1         # Tier 1 only (85 skills)
-  $ bunx oh-my-opencode adapt-skills --max-tier 2     # Tier 1 + 2 (479 skills)
-  $ bunx oh-my-opencode adapt-skills --max-tier 3     # Tier 1-3 (579 skills)
+  $ bunx omo-cli adapt-skills --tier 1         # Tier 1 only (85 skills)
+  $ bunx omo-cli adapt-skills --max-tier 2     # Tier 1 + 2 (479 skills)
+  $ bunx omo-cli adapt-skills --max-tier 3     # Tier 1-3 (626+ skills)
 
 This command:
   1. Copies skills from cache to target
@@ -312,6 +289,25 @@ Complete Workflow:
       })
     }
   })
+
+program
+  .command("sync-skills")
+  .description("Safely sync global skills from the raw remote agentskills.io standard repo")
+  .option("-f, --force", "Force refresh shadow clone")
+  .addHelpText("after", `
+Examples:
+  $ bunx omo-cli sync-skills
+  $ bunx omo-cli sync-skills -f
+
+This command uses a Shadow Clone architecture to fetch the latest global skills 
+without corrupting local git caches. It automatically applies YAML fixes and 
+deduplicates skill names before copying to ~/.opencode/skills.
+`)
+  .action(async (options) => {
+    await syncSkills(options.force)
+  })
+
+
 
 program.addCommand(createMcpOAuthCommand())
 

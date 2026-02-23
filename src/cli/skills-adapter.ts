@@ -56,9 +56,9 @@ function getAgentRecommendations(
         }
     }
 
-    // If no primary agent, add sisyphus as default
+    // If no primary agent, add orchestrator as default
     if (agents.length === 0) {
-        agents.push('sisyphus');
+        agents.push('orchestrator');
     }
 
     return agents.slice(0, 3); // Max 3 agents
@@ -240,7 +240,7 @@ export async function adaptTier(options: {
     const securityPath = options.securityPath ||
         join(process.cwd(), "skills_security_report.json");
     const targetPath = options.targetPath ||
-        join(homedir(), ".agent", "skills");
+        join(homedir(), ".agents", "skills");
     const skillsRepoPath = join(homedir(), ".antigravity-skills-cache");
 
     const report: AdaptationReport = {

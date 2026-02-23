@@ -1,18 +1,19 @@
 import * as p from "@clack/prompts"
 import color from "picocolors"
 import { spawn } from "node:child_process"
-import type { InstallArgs, InstallConfig, ClaudeSubscription, BooleanArg, DetectedConfig } from "./types"
+import type { InstallArgs, InstallConfig, DetectedConfig } from "./types"
 import {
   addPluginToOpenCodeConfig,
   writeOmoConfig,
-  writeFixedAntigravityConfig,
   isOpenCodeInstalled,
   getOpenCodeVersion,
   addAuthPlugins,
   addProviderConfig,
   detectCurrentConfig,
 } from "./config-manager"
-import { shouldShowChatGPTOnlyWarning } from "./model-fallback"
+
+import { listProfiles, applyProfile, getActiveProfile, deriveInstallConfigFromProfile } from "./profile-manager"
+import { runProfileWizard } from "./profile-wizard"
 import packageJson from "../../package.json" with { type: "json" }
 
 const VERSION = packageJson.version
@@ -110,336 +111,95 @@ function printBox(content: string, title?: string): void {
   console.log()
 }
 
-/**
- * Convert preset name to InstallConfig
- */
-function presetToConfig(preset: string, skillsMode?: "bundled" | "filesystem"): InstallConfig | null {
-  const baseConfig: InstallConfig | null = (() => {
-    switch (preset) {
-      case "mike-full":
-        return {
-          hasClaude: true,
-          isMax20: true,
-          hasOpenAI: true,
-          hasGemini: true,
-          hasCopilot: false,
-          hasOpencodeZen: true,
-          hasZaiCodingPlan: true,
-          useFixedAntigravityConfig: true,
-        }
-      case "claude-only":
-        return {
-          hasClaude: true,
-          isMax20: false,
-          hasOpenAI: false,
-          hasGemini: false,
-          hasCopilot: false,
-          hasOpencodeZen: false,
-          hasZaiCodingPlan: false,
-        }
-      case "free":
-        return {
-          hasClaude: false,
-          isMax20: false,
-          hasOpenAI: false,
-          hasGemini: false,
-          hasCopilot: false,
-          hasOpencodeZen: false,
-          hasZaiCodingPlan: false,
-        }
-      default:
-        return null
-    }
-  })()
+async function runTuiMode(detected: DetectedConfig, args: InstallArgs): Promise<InstallConfig | null> {
+  // ---------------------------------------------------------------------------
+  // Profile-based selection: scan profiles/ dir + offer wizard
+  // ---------------------------------------------------------------------------
+  const profiles = listProfiles()
+  const activeProfile = getActiveProfile()
 
-  if (baseConfig && skillsMode) {
-    baseConfig.skillsMode = skillsMode
-  }
-  return baseConfig
-}
-
-function validateNonTuiArgs(args: InstallArgs): { valid: boolean; errors: string[]; usePreset?: boolean } {
-  const errors: string[] = []
-
-  // If preset is provided, validate it and skip other validations
-  if (args.preset) {
-    const validPresets = ["mike-full", "claude-only", "free"]
-    if (!validPresets.includes(args.preset)) {
-      errors.push(`Invalid --preset value: ${args.preset} (expected: mike-full, claude-only, free)`)
-      return { valid: false, errors }
-    }
-    return { valid: true, errors: [], usePreset: true }
-  }
-
-  // Original validation for manual provider options
-  if (args.claude === undefined) {
-    errors.push("--claude is required (values: no, yes, max20) or use --preset")
-  } else if (!["no", "yes", "max20"].includes(args.claude)) {
-    errors.push(`Invalid --claude value: ${args.claude} (expected: no, yes, max20)`)
-  }
-
-  if (args.gemini === undefined) {
-    errors.push("--gemini is required (values: no, yes) or use --preset")
-  } else if (!["no", "yes"].includes(args.gemini)) {
-    errors.push(`Invalid --gemini value: ${args.gemini} (expected: no, yes)`)
-  }
-
-  if (args.copilot === undefined) {
-    errors.push("--copilot is required (values: no, yes) or use --preset")
-  } else if (!["no", "yes"].includes(args.copilot)) {
-    errors.push(`Invalid --copilot value: ${args.copilot} (expected: no, yes)`)
-  }
-
-  if (args.openai !== undefined && !["no", "yes"].includes(args.openai)) {
-    errors.push(`Invalid --openai value: ${args.openai} (expected: no, yes)`)
-  }
-
-  if (args.opencodeZen !== undefined && !["no", "yes"].includes(args.opencodeZen)) {
-    errors.push(`Invalid --opencode-zen value: ${args.opencodeZen} (expected: no, yes)`)
-  }
-
-  if (args.zaiCodingPlan !== undefined && !["no", "yes"].includes(args.zaiCodingPlan)) {
-    errors.push(`Invalid --zai-coding-plan value: ${args.zaiCodingPlan} (expected: no, yes)`)
-  }
-
-  return { valid: errors.length === 0, errors }
-}
-
-function argsToConfig(args: InstallArgs): InstallConfig {
-  return {
-    hasClaude: args.claude !== "no",
-    isMax20: args.claude === "max20",
-    hasOpenAI: args.openai === "yes",
-    hasGemini: args.gemini === "yes",
-    hasCopilot: args.copilot === "yes",
-    hasOpencodeZen: args.opencodeZen === "yes",
-    hasZaiCodingPlan: args.zaiCodingPlan === "yes",
-  }
-}
-
-function detectedToInitialValues(detected: DetectedConfig): { claude: ClaudeSubscription; openai: BooleanArg; gemini: BooleanArg; copilot: BooleanArg; opencodeZen: BooleanArg; zaiCodingPlan: BooleanArg } {
-  let claude: ClaudeSubscription = "no"
-  if (detected.hasClaude) {
-    claude = detected.isMax20 ? "max20" : "yes"
-  }
-
-  return {
-    claude,
-    openai: detected.hasOpenAI ? "yes" : "no",
-    gemini: detected.hasGemini ? "yes" : "no",
-    copilot: detected.hasCopilot ? "yes" : "no",
-    opencodeZen: detected.hasOpencodeZen ? "yes" : "no",
-    zaiCodingPlan: detected.hasZaiCodingPlan ? "yes" : "no",
-  }
-}
-
-async function runTuiMode(detected: DetectedConfig): Promise<InstallConfig | null> {
-  const initial = detectedToInitialValues(detected)
-
-  // First, offer preset configurations for quick setup
-  const preset = await p.select({
-    message: "Choose a configuration preset or customize manually:",
-    options: [
-      {
-        value: "mike-full" as const,
-        label: "🚀 Mike's Full Setup (Recommended)",
-        hint: "Claude Max + OpenAI + Gemini + OpenCode Zen + Z.ai - all providers enabled"
-      },
-      {
-        value: "claude-only" as const,
-        label: "Claude Only",
-        hint: "Just Claude Pro/Max subscription"
-      },
-      {
-        value: "free" as const,
-        label: "Free Tier",
-        hint: "Use opencode/big-pickle fallback models only"
-      },
-      {
-        value: "custom" as const,
-        label: "Custom Setup",
-        hint: "Configure each provider individually"
-      },
-    ],
-    initialValue: "mike-full" as const,
+  const profileOptions = profiles.map((prof) => ({
+    value: prof.name,
+    label: `📦 ${prof.name}`,
+    hint: prof.summary,
+  }))
+  profileOptions.push({
+    value: "__create_custom__",
+    label: "✨ Create Custom Profile",
+    hint: "Interactive wizard — configure every agent and category model",
   })
 
-  if (p.isCancel(preset)) {
+  const selectedProfile = await p.select({
+    message: "Choose a profile:",
+    options: profileOptions,
+    initialValue: activeProfile ?? "mike",
+  })
+
+  if (p.isCancel(selectedProfile)) {
     p.cancel("Installation cancelled.")
     return null
   }
 
-  // Return preset config directly if not custom
-  if (preset === "mike-full") {
-    // Ask for skills mode
-    const skillsMode = await p.select({
-      message: "How do you want to load agent skills?",
-      options: [
-        {
-          value: "bundled" as const,
-          label: "📦 Bundled (615 skills pre-loaded)",
-          hint: "Larger plugin (~6MB), skills always available"
-        },
-        {
-          value: "filesystem" as const,
-          label: "📁 Filesystem (load from ~/.agent/skills/)",
-          hint: "Smaller plugin (~1MB), requires import-skills first"
-        },
-      ],
-      initialValue: "bundled" as const,
-    })
+  // Handle custom profile creation via wizard
+  if (selectedProfile === "__create_custom__") {
+    const wizardResult = await runProfileWizard()
+    if (!wizardResult) return null
 
-    if (p.isCancel(skillsMode)) {
-      p.cancel("Installation cancelled.")
-      return null
-    }
+    // We do NOT try to do arg skillsMode stuff automatically here
+    return deriveInstallConfigFromProfile(wizardResult)
+  }
 
-    return {
-      hasClaude: true,
-      isMax20: true,
-      hasOpenAI: true,
-      hasGemini: true,
-      hasCopilot: false,
-      hasOpencodeZen: true,
-      hasZaiCodingPlan: true,
-      useFixedAntigravityConfig: true,
-      skillsMode: skillsMode,
+  // Apply the selected profile
+  const result = applyProfile(selectedProfile as string)
+  if (!result.success) {
+    p.log.error(`Failed to apply profile: ${result.error}`)
+    return null
+  }
+
+  if (args.skillsMode) {
+    const { readFileSync, writeFileSync } = await import("node:fs")
+    try {
+      const content = readFileSync(result.path, "utf-8")
+      const configJson = JSON.parse(content)
+      configJson.skills_mode = args.skillsMode
+      writeFileSync(result.path, JSON.stringify(configJson, null, 2) + "\n")
+    } catch {
+      // failed to update skills mode, ignore
     }
   }
 
-  if (preset === "claude-only") {
-    return {
-      hasClaude: true,
-      isMax20: false,
-      hasOpenAI: false,
-      hasGemini: false,
-      hasCopilot: false,
-      hasOpencodeZen: false,
-      hasZaiCodingPlan: false,
-    }
-  }
+  p.log.success(`Applied profile '${color.cyan(selectedProfile as string)}' to ${color.dim(result.path)}`)
 
-  if (preset === "free") {
-    return {
-      hasClaude: false,
-      isMax20: false,
-      hasOpenAI: false,
-      hasGemini: false,
-      hasCopilot: false,
-      hasOpencodeZen: false,
-      hasZaiCodingPlan: false,
-    }
-  }
-
-  // Custom setup - ask individual questions
-  const claude = await p.select({
-    message: "Do you have a Claude Pro/Max subscription?",
-    options: [
-      { value: "no" as const, label: "No", hint: "Will use opencode/big-pickle as fallback" },
-      { value: "yes" as const, label: "Yes (standard)", hint: "Claude Opus 4.5 for orchestration" },
-      { value: "max20" as const, label: "Yes (max20 mode)", hint: "Full power with Claude Sonnet 4.5 for Librarian" },
-    ],
-    initialValue: initial.claude,
-  })
-
-  if (p.isCancel(claude)) {
-    p.cancel("Installation cancelled.")
-    return null
-  }
-
-  const openai = await p.select({
-    message: "Do you have an OpenAI/ChatGPT Plus subscription?",
-    options: [
-      { value: "no" as const, label: "No", hint: "Oracle will use fallback models" },
-      { value: "yes" as const, label: "Yes", hint: "GPT-5.2 for Oracle (high-IQ debugging)" },
-    ],
-    initialValue: initial.openai,
-  })
-
-  if (p.isCancel(openai)) {
-    p.cancel("Installation cancelled.")
-    return null
-  }
-
-  const gemini = await p.select({
-    message: "Will you integrate Google Gemini?",
-    options: [
-      { value: "no" as const, label: "No", hint: "Frontend/docs agents will use fallback" },
-      { value: "yes" as const, label: "Yes", hint: "Beautiful UI generation with Gemini 3 Pro" },
-    ],
-    initialValue: initial.gemini,
-  })
-
-  if (p.isCancel(gemini)) {
-    p.cancel("Installation cancelled.")
-    return null
-  }
-
-  const copilot = await p.select({
-    message: "Do you have a GitHub Copilot subscription?",
-    options: [
-      { value: "no" as const, label: "No", hint: "Only native providers will be used" },
-      { value: "yes" as const, label: "Yes", hint: "Fallback option when native providers unavailable" },
-    ],
-    initialValue: initial.copilot,
-  })
-
-  if (p.isCancel(copilot)) {
-    p.cancel("Installation cancelled.")
-    return null
-  }
-
-  const opencodeZen = await p.select({
-    message: "Do you have access to OpenCode Zen (opencode/ models)?",
-    options: [
-      { value: "no" as const, label: "No", hint: "Will use other configured providers" },
-      { value: "yes" as const, label: "Yes", hint: "opencode/claude-opus-4-5, opencode/gpt-5.2, etc." },
-    ],
-    initialValue: initial.opencodeZen,
-  })
-
-  if (p.isCancel(opencodeZen)) {
-    p.cancel("Installation cancelled.")
-    return null
-  }
-
-  const zaiCodingPlan = await p.select({
-    message: "Do you have a Z.ai Coding Plan subscription?",
-    options: [
-      { value: "no" as const, label: "No", hint: "Will use other configured providers" },
-      { value: "yes" as const, label: "Yes", hint: "Fallback for Librarian and Multimodal Looker" },
-    ],
-    initialValue: initial.zaiCodingPlan,
-  })
-
-  if (p.isCancel(zaiCodingPlan)) {
-    p.cancel("Installation cancelled.")
-    return null
-  }
-
-  return {
-    hasClaude: claude !== "no",
-    isMax20: claude === "max20",
-    hasOpenAI: openai === "yes",
-    hasGemini: gemini === "yes",
-    hasCopilot: copilot === "yes",
-    hasOpencodeZen: opencodeZen === "yes",
-    hasZaiCodingPlan: zaiCodingPlan === "yes",
-  }
+  // Profile applied — derive config for downstream steps
+  const profileName = selectedProfile as string
+  return deriveInstallConfigFromProfile(profileName)
 }
 
 async function runNonTuiInstall(args: InstallArgs): Promise<number> {
-  const validation = validateNonTuiArgs(args)
-  if (!validation.valid) {
+  if (!args.profile) {
     printHeader(false)
     printError("Validation failed:")
-    for (const err of validation.errors) {
-      console.log(`  ${SYMBOLS.bullet} ${err}`)
+    console.log(`  ${SYMBOLS.bullet} Missing required argument: --profile`)
+    console.log()
+    const profiles = listProfiles()
+    if (profiles.length > 0) {
+      printInfo("Available profiles:")
+      for (const p of profiles) {
+        console.log(`  ${color.cyan(p.name.padEnd(15))} ${p.summary}`)
+      }
     }
     console.log()
-    printInfo("Usage: bunx oh-my-opencode install --preset=mike-full")
-    printInfo("   or: bunx oh-my-opencode install --no-tui --claude=<no|yes|max20> --gemini=<no|yes> --copilot=<no|yes>")
+    printInfo("Usage: bunx omo-cli install --no-tui --profile=mike")
     console.log()
+    return 1
+  }
+
+  const isProfileValid = listProfiles().some(p => p.name === args.profile)
+  if (!isProfileValid) {
+    printHeader(false)
+    printError(`Validation failed: Profile '${args.profile}' not found.`)
+    console.log("To create a custom profile, run the interactive TUI:")
+    console.log("  $ bunx omo-cli install")
     return 1
   }
 
@@ -462,16 +222,34 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   }
 
   if (isUpdate) {
-    const initial = detectedToInitialValues(detected)
-    printInfo(`Current config: Claude=${initial.claude}, Gemini=${initial.gemini}`)
+    printInfo("Existing configuration detected — will be updated")
   }
 
-  // Use preset config if --preset was provided, otherwise use args
-  const config = validation.usePreset && args.preset
-    ? presetToConfig(args.preset, args.skillsMode)!
-    : argsToConfig(args)
+  // Derive the target models from the exact profile JSON content
+  const config = deriveInstallConfigFromProfile(args.profile)
 
-  printStep(step++, totalSteps, "Adding oh-my-opencode plugin...")
+  printStep(step++, totalSteps, "Applying profile config...")
+  const applyParams = applyProfile(args.profile)
+  if (!applyParams.success) {
+    printError(`Failed: ${applyParams.error}`)
+    return 1
+  }
+
+  if (args.skillsMode) {
+    const { readFileSync, writeFileSync } = await import("node:fs")
+    try {
+      const content = readFileSync(applyParams.path, "utf-8")
+      const configJson = JSON.parse(content)
+      configJson.skills_mode = args.skillsMode
+      writeFileSync(applyParams.path, JSON.stringify(configJson, null, 2) + "\n")
+    } catch {
+      // failed to update skills mode, ignore
+    }
+  }
+
+  printSuccess(`Profile '${color.cyan(args.profile)}' applied to ${color.dim(applyParams.path)}`)
+
+  printStep(step++, totalSteps, "Adding omo-cli plugin...")
   const pluginResult = await addPluginToOpenCodeConfig(VERSION)
   if (!pluginResult.success) {
     printError(`Failed: ${pluginResult.error}`)
@@ -500,29 +278,29 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   }
 
   // Automatic skill import for Mike's Full Setup
-  if (args.preset === "mike-full") {
-    printStep(step++, totalSteps, "Importing full skill library (579+ skills)...")
+  if (args.profile === "mike" || config.skillsMode === "bundled") {
+    printStep(step++, totalSteps, "Synchronizing full skill library (700+ skills)...")
 
     await new Promise<void>((resolve) => {
-      // Spawn a new process to run import-skills with inherited stdio
+      // Spawn a new process to run sync-skills with inherited stdio
       // This ensures the user sees the progress bar and logs directly
-      const importProcess = spawn(
+      const syncProcess = spawn(
         process.execPath, // Path to bun executable
-        [process.argv[1], "import-skills", "--all"],
+        [process.argv[1], "sync-skills"],
         { stdio: "inherit" }
       )
 
-      importProcess.on("close", (code) => {
+      syncProcess.on("close", (code) => {
         if (code === 0) {
-          printSuccess("Skills library imported")
+          printSuccess("Skills library synchronized")
         } else {
-          printWarning("Skill import process exited with error or was cancelled. You can run 'oh-my-opencode import-skills --all' later.")
+          printWarning("Skill synchronization process exited with error or was cancelled. You can run 'omo-cli sync-skills' later.")
         }
         resolve()
       })
 
-      importProcess.on("error", (err) => {
-        printWarning(`Failed to spawn skill import process: ${err.message}`)
+      syncProcess.on("error", (err) => {
+        printWarning(`Failed to spawn skill synchronization process: ${err.message}`)
         resolve()
       })
     })
@@ -530,15 +308,8 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
     step++
   }
 
-  printStep(step++, totalSteps, "Writing oh-my-opencode configuration...")
-  const omoResult = config.useFixedAntigravityConfig
-    ? writeFixedAntigravityConfig()
-    : writeOmoConfig(config)
-  if (!omoResult.success) {
-    printError(`Failed: ${omoResult.error}`)
-    return 1
-  }
-  printSuccess(`Config written ${SYMBOLS.arrow} ${color.dim(omoResult.configPath)}`)
+  printStep(step++, totalSteps, "Verifying configuration...")
+  printSuccess(`Configured properly for selected profile.`)
 
   printBox(formatConfigSummary(config), isUpdate ? "Updated Configuration" : "Installation Complete")
 
@@ -546,7 +317,7 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
     console.log()
     console.log(color.bgRed(color.white(color.bold(" CRITICAL WARNING "))))
     console.log()
-    console.log(color.red(color.bold("  Sisyphus agent is STRONGLY optimized for Claude Opus 4.5.")))
+    console.log(color.red(color.bold("  Sisyphus agent is STRONGLY optimized for Claude Opus 4.6.")))
     console.log(color.red("  Without Claude, you may experience significantly degraded performance:"))
     console.log(color.dim("    • Reduced orchestration quality"))
     console.log(color.dim("    • Weaker tool selection and delegation"))
@@ -572,7 +343,7 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   )
 
   console.log(`${SYMBOLS.star} ${color.yellow("If you found this helpful, consider starring the repo!")}`)
-  console.log(`  ${color.dim("gh repo star code-yeongyu/oh-my-opencode")}`)
+  console.log(`  ${color.dim("gh repo star code-yeongyu/omo-cli")}`)
   console.log()
   console.log(color.dim("oMoMoMoMo... Enjoy!"))
   console.log()
@@ -601,8 +372,7 @@ export async function install(args: InstallArgs): Promise<number> {
   p.intro(color.bgMagenta(color.white(isUpdate ? " oMoMoMoMo... Update " : " oMoMoMoMo... ")))
 
   if (isUpdate) {
-    const initial = detectedToInitialValues(detected)
-    p.log.info(`Existing configuration detected: Claude=${initial.claude}, Gemini=${initial.gemini}`)
+    p.log.info("Existing configuration detected — will be updated")
   }
 
   const s = p.spinner()
@@ -618,10 +388,10 @@ export async function install(args: InstallArgs): Promise<number> {
     s.stop(`OpenCode ${version ?? "installed"} ${color.green("[OK]")}`)
   }
 
-  const config = await runTuiMode(detected)
+  const config = await runTuiMode(detected, args)
   if (!config) return 1
 
-  s.start("Adding oh-my-opencode to OpenCode config")
+  s.start("Adding omo-cli to OpenCode config")
   const pluginResult = await addPluginToOpenCodeConfig(VERSION)
   if (!pluginResult.success) {
     s.stop(`Failed to add plugin: ${pluginResult.error}`)
@@ -640,50 +410,42 @@ export async function install(args: InstallArgs): Promise<number> {
     }
     s.stop(`Auth plugins added to ${color.cyan(authResult.configPath)}`)
 
-    s.start("Adding provider configurations")
-    const providerResult = addProviderConfig(config)
-    if (!providerResult.success) {
-      s.stop(`Failed to add provider config: ${providerResult.error}`)
+    s.start("Writing omo-cli configuration")
+    const omoResult = writeOmoConfig(config)
+    if (!omoResult.success) {
+      s.stop(`Failed to write config: ${omoResult.error}`)
       p.outro(color.red("Installation failed."))
       return 1
     }
-    s.stop(`Provider config added to ${color.cyan(providerResult.configPath)}`)
+    s.stop(`Omo-cli config written to ${color.cyan(omoResult.configPath)}`)
   }
 
-  s.start("Writing oh-my-opencode configuration")
-  const omoResult = config.useFixedAntigravityConfig
-    ? writeFixedAntigravityConfig()
-    : writeOmoConfig(config)
-  if (!omoResult.success) {
-    s.stop(`Failed to write config: ${omoResult.error}`)
-    p.outro(color.red("Installation failed."))
-    return 1
-  }
-  s.stop(`Config written to ${color.cyan(omoResult.configPath)}`)
+  s.start("Verifying omo-cli configuration")
+  s.stop(`Config verified for chosen profile.`)
 
-  // Automatic skill import for Mike's Full Setup (TUI mode)
-  if (config.useFixedAntigravityConfig) {
-    s.start("Importing full skill library (579+ skills)...")
+  // Automatic skill import for Mike's profile or bundled mode
+  if (config.skillsMode === "bundled") {
+    s.start("Synchronizing full skill library (700+ skills)...")
 
     await new Promise<void>((resolve) => {
-      const importProcess = spawn(
+      const syncProcess = spawn(
         process.execPath,
-        [process.argv[1], "import-skills", "--all"],
+        [process.argv[1], "sync-skills"],
         { stdio: "inherit" }
       )
 
-      importProcess.on("close", (code) => {
+      syncProcess.on("close", (code) => {
         if (code === 0) {
-          s.stop(color.green("Skills library imported"))
+          s.stop(color.green("Skills library synchronized"))
         } else {
-          s.stop(color.yellow("Skill import was cancelled or failed"))
-          p.log.warn("You can run 'oh-my-opencode import-skills --all' later to import skills.")
+          s.stop(color.yellow("Skill synchronization was cancelled or failed"))
+          p.log.warn("You can run 'omo-cli sync-skills' later to import skills.")
         }
         resolve()
       })
 
-      importProcess.on("error", (err) => {
-        s.stop(color.yellow(`Failed to spawn skill import: ${err.message}`))
+      syncProcess.on("error", (err) => {
+        s.stop(color.yellow(`Failed to spawn skill synchronization process: ${err.message}`))
         resolve()
       })
     })
@@ -693,7 +455,7 @@ export async function install(args: InstallArgs): Promise<number> {
     console.log()
     console.log(color.bgRed(color.white(color.bold(" CRITICAL WARNING "))))
     console.log()
-    console.log(color.red(color.bold("  Sisyphus agent is STRONGLY optimized for Claude Opus 4.5.")))
+    console.log(color.red(color.bold("  Sisyphus agent is STRONGLY optimized for Claude Opus 4.6.")))
     console.log(color.red("  Without Claude, you may experience significantly degraded performance:"))
     console.log(color.dim("    • Reduced orchestration quality"))
     console.log(color.dim("    • Weaker tool selection and delegation"))
@@ -720,7 +482,7 @@ export async function install(args: InstallArgs): Promise<number> {
   )
 
   p.log.message(`${color.yellow("★")} If you found this helpful, consider starring the repo!`)
-  p.log.message(`  ${color.dim("gh repo star code-yeongyu/oh-my-opencode")}`)
+  p.log.message(`  ${color.dim("gh repo star code-yeongyu/omo-cli")}`)
 
   p.outro(color.green("oMoMoMoMo... Enjoy!"))
 

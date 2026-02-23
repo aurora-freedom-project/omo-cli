@@ -6,7 +6,6 @@ import {
   type OpenCodeConfigPaths,
 } from "../shared"
 import type { ConfigMergeResult, DetectedConfig, InstallConfig } from "./types"
-import { generateModelConfig } from "./model-fallback"
 
 const OPENCODE_BINARIES = ["opencode", "opencode-desktop"] as const
 
@@ -131,7 +130,7 @@ export async function fetchNpmDistTags(packageName: string): Promise<NpmDistTags
   }
 }
 
-const PACKAGE_NAME = "oh-my-opencode"
+const PACKAGE_NAME = "omo-cli"
 
 const PRIORITIZED_TAGS = ["latest", "beta", "next"] as const
 
@@ -307,76 +306,7 @@ function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial
   return result
 }
 
-/**
- * Fixed config for "Mike's Full Setup" preset with Antigravity Auth.
- * This bypasses the dynamic fallback logic and writes exact config matching
- * the recommended Antigravity + Minimax M2.1 setup from integration guide.
- * 
- * Tier System:
- * - Tier 1 (Opus 4.5): sisyphus, prometheus, oracle
- * - Tier 2 (Sonnet 4.5): metis, momus, sisyphus-junior
- * - Tier 3 (Gemini 3 Pro): multimodal-looker
- * - Tier 4 (Minimax M2.1): explore, librarian
- * Note: atlas is a background agent and not included in config
- */
-export const MIKES_ANTIGRAVITY_CONFIG = {
-  $schema: "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
-  google_auth: false,
-  agents: {
-    // Tier 1: Opus 4.5 Thinking (max)
-    sisyphus: { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" },
-    prometheus: { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" },
-    atlas: { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" }, // background agent
-    oracle: { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" },
-    // Tier 2: Sonnet 4.5 Thinking (max)
-    metis: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
-    momus: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
-    "sisyphus-junior": { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
-    // Tier 3: Gemini 3 Pro (high)
-    "multimodal-looker": { model: "google/antigravity-gemini-3-pro", variant: "high" },
-    // Tier 4: Minimax M2.1 (Ollama Cloud)
-    explore: { model: "ollama/minimax-m2.1:cloud", stream: false },
-    librarian: { model: "ollama/minimax-m2.1:cloud", stream: false },
-  },
-  categories: {
-    "visual-engineering": { model: "google/antigravity-gemini-3-pro", variant: "high" },
-    quick: { model: "google/antigravity-gemini-3-flash", variant: "minimal" },
-    ultrabrain: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
-    "business-logic": { model: "ollama/minimax-m2.1:cloud", stream: false },
-    writing: { model: "google/antigravity-gemini-3-flash", variant: "low" },
-    "unspecified-high": { model: "google/antigravity-claude-opus-4-5-thinking", variant: "max" },
-    "unspecified-low": { model: "ollama/minimax-m2.1:cloud", stream: false },
-    artistry: { model: "google/antigravity-gemini-3-pro", variant: "max" },
-  },
-  background_task: {
-    defaultConcurrency: 5,
-  },
-}
-
-export function writeFixedAntigravityConfig(): ConfigMergeResult {
-  try {
-    ensureConfigDir()
-  } catch (err) {
-    return { success: false, configPath: getConfigDir(), error: formatErrorWithSuggestion(err, "create config directory") }
-  }
-
-  const omoConfigPath = getOmoConfig()
-
-  try {
-    writeFileSync(omoConfigPath, JSON.stringify(MIKES_ANTIGRAVITY_CONFIG, null, 2) + "\n")
-    return { success: true, configPath: omoConfigPath }
-  } catch (err) {
-    return { success: false, configPath: omoConfigPath, error: formatErrorWithSuggestion(err, "write oh-my-opencode config") }
-  }
-}
-
-export function generateOmoConfig(installConfig: InstallConfig): Record<string, unknown> {
-  const config = generateModelConfig(installConfig)
-  if (installConfig.skillsMode) {
-    config.skills_mode = installConfig.skillsMode
-  }
-  return config
-}
+import type { SkillsMode } from "./types"
 
 export function writeOmoConfig(installConfig: InstallConfig): ConfigMergeResult {
   try {
@@ -388,42 +318,22 @@ export function writeOmoConfig(installConfig: InstallConfig): ConfigMergeResult 
   const omoConfigPath = getOmoConfig()
 
   try {
-    const newConfig = generateOmoConfig(installConfig)
-
-    if (existsSync(omoConfigPath)) {
-      try {
-        const stat = statSync(omoConfigPath)
-        const content = readFileSync(omoConfigPath, "utf-8")
-
-        if (stat.size === 0 || isEmptyOrWhitespace(content)) {
-          writeFileSync(omoConfigPath, JSON.stringify(newConfig, null, 2) + "\n")
-          return { success: true, configPath: omoConfigPath }
-        }
-
-        const existing = parseJsonc<Record<string, unknown>>(content)
-        if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
-          writeFileSync(omoConfigPath, JSON.stringify(newConfig, null, 2) + "\n")
-          return { success: true, configPath: omoConfigPath }
-        }
-
-        // Preserve user's existing agents and categories configurations
-        // Only add new keys from generated config, never override existing
-        const merged = deepMergePreserveUserConfig(existing, newConfig)
-        writeFileSync(omoConfigPath, JSON.stringify(merged, null, 2) + "\n")
-      } catch (parseErr) {
-        if (parseErr instanceof SyntaxError) {
-          writeFileSync(omoConfigPath, JSON.stringify(newConfig, null, 2) + "\n")
-          return { success: true, configPath: omoConfigPath }
-        }
-        throw parseErr
+    // If the file does not exist, we create a minimal base config.
+    // In the new profile-driven flow, applyProfile() already copies the entire profile template. 
+    // This is just a fallback to ensure the file exists.
+    if (!existsSync(omoConfigPath)) {
+      const newConfig = {
+        $schema: "https://raw.githubusercontent.com/code-yeongyu/omo-cli/master/assets/omo-cli.schema.json",
+        agents: {},
+        categories: {},
+        skills_mode: installConfig.skillsMode ?? "bundled",
       }
-    } else {
       writeFileSync(omoConfigPath, JSON.stringify(newConfig, null, 2) + "\n")
     }
 
     return { success: true, configPath: omoConfigPath }
   } catch (err) {
-    return { success: false, configPath: omoConfigPath, error: formatErrorWithSuggestion(err, "write oh-my-opencode config") }
+    return { success: false, configPath: omoConfigPath, error: formatErrorWithSuggestion(err, "write omo-cli config") }
   }
 }
 
@@ -660,8 +570,8 @@ export const ANTIGRAVITY_PROVIDER_CONFIG = {
           max: { thinkingConfig: { thinkingBudget: 32768 } },
         },
       },
-      "antigravity-claude-opus-4-5-thinking": {
-        name: "Claude Opus 4.5 Thinking (Antigravity)",
+      "antigravity-claude-opus-4-6-thinking": {
+        name: "Claude Opus 4.6 Thinking (Antigravity)",
         limit: { context: 200000, output: 64000 },
         modalities: { input: ["text", "image", "pdf"], output: ["text"] },
         variants: {
@@ -762,7 +672,7 @@ export function detectCurrentConfig(): DetectedConfig {
 
   const openCodeConfig = parseResult.config
   const plugins = openCodeConfig.plugin ?? []
-  result.isInstalled = plugins.some((p) => p.startsWith("oh-my-opencode"))
+  result.isInstalled = plugins.some((p) => p.startsWith("omo-cli"))
 
   if (!result.isInstalled) {
     return result

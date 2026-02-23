@@ -7,8 +7,8 @@ import * as configManager from "./config-manager"
 import type { InstallArgs } from "./types"
 
 // Mock console methods to capture output
-const mockConsoleLog = mock(() => {})
-const mockConsoleError = mock(() => {})
+const mockConsoleLog = mock(() => { })
+const mockConsoleError = mock(() => { })
 
 describe("install CLI - binary check behavior", () => {
   let tempDir: string
@@ -55,12 +55,7 @@ describe("install CLI - binary check behavior", () => {
 
     const args: InstallArgs = {
       tui: false,
-      claude: "yes",
-      openai: "no",
-      gemini: "no",
-      copilot: "no",
-      opencodeZen: "no",
-      zaiCodingPlan: "no",
+      profile: "mike",
     }
 
     // #when running install
@@ -90,12 +85,7 @@ describe("install CLI - binary check behavior", () => {
 
     const args: InstallArgs = {
       tui: false,
-      claude: "yes",
-      openai: "no",
-      gemini: "no",
-      copilot: "no",
-      opencodeZen: "no",
-      zaiCodingPlan: "no",
+      profile: "mike",
     }
 
     // #when running install
@@ -108,7 +98,7 @@ describe("install CLI - binary check behavior", () => {
     // #then opencode.json should have plugin entry
     const config = JSON.parse(readFileSync(configPath, "utf-8"))
     expect(config.plugin).toBeDefined()
-    expect(config.plugin.some((p: string) => p.includes("oh-my-opencode"))).toBe(true)
+    expect(config.plugin.some((p: string) => p.includes("omo-cli"))).toBe(true)
 
     // #then exit code should be 0 (success)
     expect(exitCode).toBe(0)
@@ -129,12 +119,7 @@ describe("install CLI - binary check behavior", () => {
 
     const args: InstallArgs = {
       tui: false,
-      claude: "yes",
-      openai: "no",
-      gemini: "no",
-      copilot: "no",
-      opencodeZen: "no",
-      zaiCodingPlan: "no",
+      profile: "mike",
     }
 
     // #when running install
