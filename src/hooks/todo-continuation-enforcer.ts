@@ -4,16 +4,16 @@ import { join } from "node:path"
 import type { BackgroundManager } from "../features/background-agent"
 import { getMainSessionID, subagentSessions } from "../features/claude-code-session-state"
 import {
-    findNearestMessageWithFields,
-    MESSAGE_STORAGE,
-    type ToolPermission,
+  findNearestMessageWithFields,
+  MESSAGE_STORAGE,
+  type ToolPermission,
 } from "../features/hook-message-injector"
 import { log } from "../shared/logger"
-import { createSystemDirective, SystemDirectiveTypes } from "../shared/system-directive"
+import { formatSystemDirective, SystemDirectiveTypes } from "../shared/system-directive"
 
 const HOOK_NAME = "todo-continuation-enforcer"
 
-const DEFAULT_SKIP_AGENTS = ["prometheus", "compaction"]
+const DEFAULT_SKIP_AGENTS = ["coder", "compaction"]
 
 export interface TodoContinuationEnforcerOptions {
   backgroundManager?: BackgroundManager
@@ -41,7 +41,7 @@ interface SessionState {
   abortDetectedAt?: number
 }
 
-const CONTINUATION_PROMPT = `${createSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
+const CONTINUATION_PROMPT = `${formatSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
 
 Incomplete tasks remain in your todo list. Continue working on the next pending task.
 
@@ -150,7 +150,7 @@ export function createTodoContinuationEnforcer(
         variant: "warning" as const,
         duration: TOAST_DURATION_MS,
       },
-    }).catch(() => {})
+    }).catch(() => { })
   }
 
   interface ResolvedMessageInfo {
@@ -205,11 +205,11 @@ export function createTodoContinuationEnforcer(
       const prevMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
       agentName = agentName ?? prevMessage?.agent
       model = model ?? (prevMessage?.model?.providerID && prevMessage?.model?.modelID
-        ? { 
-            providerID: prevMessage.model.providerID, 
-            modelID: prevMessage.model.modelID,
-            ...(prevMessage.model.variant ? { variant: prevMessage.model.variant } : {})
-          }
+        ? {
+          providerID: prevMessage.model.providerID,
+          modelID: prevMessage.model.modelID,
+          ...(prevMessage.model.variant ? { variant: prevMessage.model.variant } : {})
+        }
         : undefined)
       tools = tools ?? prevMessage?.tools
     }
@@ -223,7 +223,7 @@ export function createTodoContinuationEnforcer(
     const writePermission = tools?.write
     const hasWritePermission = !tools ||
       ((editPermission !== false && editPermission !== "deny") &&
-       (writePermission !== false && writePermission !== "deny"))
+        (writePermission !== false && writePermission !== "deny"))
     if (!hasWritePermission) {
       log(`[${HOOK_NAME}] Skipped: agent lacks write permission`, { sessionID, agent: agentName })
       return

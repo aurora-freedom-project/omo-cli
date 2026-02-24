@@ -7,7 +7,7 @@
 ```
 shared/
 ├── tmux/                  # Tmux TUI integration (types, utils, constants)
-├── logger.ts              # File-based logging (/tmp/oh-my-opencode.log)
+├── logger.ts              # File-based logging (/tmp/omo-cli.log)
 ├── dynamic-truncator.ts   # Token-aware context window management (194 lines)
 ├── model-resolver.ts      # 3-step resolution (Override → Fallback → Default)
 ├── model-requirements.ts  # Agent/category model fallback chains (132 lines)

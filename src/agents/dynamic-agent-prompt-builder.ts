@@ -127,10 +127,10 @@ ${useWhen.map((w) => `|  | ${w} |`).join("\n")}`
 }
 
 export function buildLibrarianSection(agents: AvailableAgent[]): string {
-  const librarianAgent = agents.find((a) => a.name === "librarian")
-  if (!librarianAgent) return ""
+  const researcherAgent = agents.find((a) => a.name === "researcher")
+  if (!researcherAgent) return ""
 
-  const useWhen = librarianAgent.metadata.useWhen || []
+  const useWhen = researcherAgent.metadata.useWhen || []
 
   return `### Librarian Agent = Reference Grep
 
@@ -252,11 +252,11 @@ delegate_task(category="...", load_skills=[], prompt="...")  // Empty load_skill
 }
 
 export function buildOracleSection(agents: AvailableAgent[]): string {
-  const oracleAgent = agents.find((a) => a.name === "oracle")
-  if (!oracleAgent) return ""
+  const advisorAgent = agents.find((a) => a.name === "advisor")
+  if (!advisorAgent) return ""
 
-  const useWhen = oracleAgent.metadata.useWhen || []
-  const avoidWhen = oracleAgent.metadata.avoidWhen || []
+  const useWhen = advisorAgent.metadata.useWhen || []
+  const avoidWhen = advisorAgent.metadata.avoidWhen || []
 
   return `<Oracle_Usage>
 ## Oracle — Read-Only High-IQ Consultant
@@ -337,7 +337,7 @@ export function buildUltraworkSection(
   }
 
   if (agents.length > 0) {
-    const ultraworkAgentPriority = ["explore", "librarian", "plan", "oracle"]
+    const ultraworkAgentPriority = ["explorer", "researcher", "plan", "advisor"]
     const sortedAgents = [...agents].sort((a, b) => {
       const aIdx = ultraworkAgentPriority.indexOf(a.name)
       const bIdx = ultraworkAgentPriority.indexOf(b.name)
@@ -350,7 +350,7 @@ export function buildUltraworkSection(
     lines.push("**Agents** (for specialized consultation/exploration):")
     for (const agent of sortedAgents) {
       const shortDesc = agent.description.split(".")[0] || agent.description
-      const suffix = agent.name === "explore" || agent.name === "librarian" ? " (multiple)" : ""
+      const suffix = agent.name === "explorer" || agent.name === "researcher" ? " (multiple)" : ""
       lines.push(`- \`${agent.name}${suffix}\`: ${shortDesc}`)
     }
   }

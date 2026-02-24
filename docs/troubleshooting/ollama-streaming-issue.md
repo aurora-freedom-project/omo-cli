@@ -2,7 +2,7 @@
 
 ## Problem
 
-When using Ollama as a provider with oh-my-opencode agents, you may encounter:
+When using Ollama as a provider with omo-cli agents, you may encounter:
 
 ```
 JSON Parse error: Unexpected EOF
@@ -25,7 +25,7 @@ Claude Code SDK expects a single JSON object, not multiple NDJSON lines, causing
 
 - **Ollama API**: Returns streaming responses as NDJSON by design
 - **Claude Code SDK**: Doesn't properly handle NDJSON responses for tool calls
-- **oh-my-opencode**: Passes through the SDK's behavior (can't fix at this layer)
+- **omo-cli**: Passes through the SDK's behavior (can't fix at this layer)
 
 ## Solutions
 
@@ -66,7 +66,7 @@ The proper fix requires Claude Code SDK to:
 3. Merge `tool_calls` from multiple lines
 4. Return a single merged response
 
-**Tracking**: https://github.com/code-yeongyu/oh-my-opencode/issues/1124
+**Tracking**: https://github.com/code-yeongyu/omo-cli/issues/1124
 
 ## Workaround Implementation
 
@@ -113,7 +113,7 @@ curl -s http://localhost:11434/api/chat \
 
 ## Related Issues
 
-- **oh-my-opencode**: https://github.com/code-yeongyu/oh-my-opencode/issues/1124
+- **omo-cli**: https://github.com/code-yeongyu/omo-cli/issues/1124
 - **Ollama API Docs**: https://github.com/ollama/ollama/blob/main/docs/api.md
 
 ## Getting Help

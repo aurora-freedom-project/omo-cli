@@ -23,7 +23,7 @@ OpenCode plugin: multi-model agent orchestration (Claude Opus 4.5, GPT-5.2, Gemi
 ## STRUCTURE
 
 ```
-oh-my-opencode/
+omo-cli/
 ├── src/
 │   ├── agents/        # 10 AI agents - see src/agents/AGENTS.md
 │   ├── hooks/         # 32 lifecycle hooks - see src/hooks/AGENTS.md
@@ -109,7 +109,7 @@ oh-my-opencode/
 | librarian | minimax-m2.1 (Ollama) | Docs, GitHub search (fast/cheap) |
 | explore | minimax-m2.1 (Ollama) | Fast codebase grep (fast/cheap) |
 
-> **Note**: Models are dynamically resolved via `oh-my-opencode.json`. The above represents the recommended configuration for optimal cost/performance balance.
+> **Note**: Models are dynamically resolved via `omo-cli.json`. The above represents the recommended configuration for optimal cost/performance balance.
 
 ## COMMANDS
 

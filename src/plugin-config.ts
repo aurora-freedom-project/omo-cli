@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { OhMyOpenCodeConfigSchema, type OhMyOpenCodeConfig } from "./config";
+import { OmoCliConfigSchema, type OmoCliConfig } from "./config";
 import {
   log,
   deepMerge,
@@ -14,7 +14,7 @@ import {
 export function loadConfigFromPath(
   configPath: string,
   ctx: unknown
-): OhMyOpenCodeConfig | null {
+): OmoCliConfig | null {
   try {
     if (fs.existsSync(configPath)) {
       const content = fs.readFileSync(configPath, "utf-8");
@@ -22,7 +22,7 @@ export function loadConfigFromPath(
 
       migrateConfigFile(configPath, rawConfig);
 
-      const result = OhMyOpenCodeConfigSchema.safeParse(rawConfig);
+      const result = OmoCliConfigSchema.safeParse(rawConfig);
 
       if (!result.success) {
         const errorMsg = result.error.issues
@@ -48,9 +48,9 @@ export function loadConfigFromPath(
 }
 
 export function mergeConfigs(
-  base: OhMyOpenCodeConfig,
-  override: OhMyOpenCodeConfig
-): OhMyOpenCodeConfig {
+  base: OmoCliConfig,
+  override: OmoCliConfig
+): OmoCliConfig {
   return {
     ...base,
     ...override,
@@ -93,10 +93,10 @@ export function mergeConfigs(
 export function loadPluginConfig(
   directory: string,
   ctx: unknown
-): OhMyOpenCodeConfig {
+): OmoCliConfig {
   // User-level config path - prefer .jsonc over .json
   const configDir = getOpenCodeConfigDir({ binary: "opencode" });
-  const userBasePath = path.join(configDir, "oh-my-opencode");
+  const userBasePath = path.join(configDir, "omo-cli");
   const userDetected = detectConfigFile(userBasePath);
   const userConfigPath =
     userDetected.format !== "none"
@@ -104,7 +104,7 @@ export function loadPluginConfig(
       : userBasePath + ".json";
 
   // Project-level config path - prefer .jsonc over .json
-  const projectBasePath = path.join(directory, ".opencode", "oh-my-opencode");
+  const projectBasePath = path.join(directory, ".opencode", "omo-cli");
   const projectDetected = detectConfigFile(projectBasePath);
   const projectConfigPath =
     projectDetected.format !== "none"
@@ -112,7 +112,7 @@ export function loadPluginConfig(
       : projectBasePath + ".json";
 
   // Load user config first (base)
-  let config: OhMyOpenCodeConfig =
+  let config: OmoCliConfig =
     loadConfigFromPath(userConfigPath, ctx) ?? {};
 
   // Override with project config

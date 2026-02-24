@@ -1,4 +1,4 @@
-# 🎯 Hướng Dẫn Skills - oh-my-opencode
+# 🎯 Hướng Dẫn Skills - omo-cli
 
 ## Mục Lục
 - [Skills là gì?](#skills-là-gì)
@@ -131,7 +131,7 @@ opencode
 ### Claude Code CLI
 
 ```bash
-# Tương tự - skills trong ~/.agent/skills/ hoạt động cho cả hai
+# Tương tự - skills trong ~/.agents/skills/ hoạt động cho cả hai
 claude
 > /api-design-principles
 
@@ -352,17 +352,17 @@ Skills tự động có sẵn cho các agent OMO tương ứng:
 bun run src/cli/index.ts adapt-skills --max-tier 3
 
 # Kiểm tra số skills đã cài
-ls ~/.agent/skills/ | wc -l
+ls ~/.agents/skills/ | wc -l
 
 # Xem chi tiết một skill
-cat ~/.agent/skills/api-design-principles/SKILL.md
+cat ~/.agents/skills/api-design-principles/SKILL.md
 ```
 
 ---
 
 ## Tạo Skill tùy chỉnh
 
-Tạo file `~/.agent/skills/my-skill/SKILL.md`:
+Tạo file `~/.agents/skills/my-skill/SKILL.md`:
 
 ```yaml
 ---
@@ -390,7 +390,7 @@ Skill sẽ được tự động phát hiện và có sẵn trong cả OpenCode 
 | Thông tin | Giá trị |
 |-----------|---------|
 | Tổng số skills | **579** |
-| Thư mục chung | `~/.agent/skills/` |
+| Thư mục chung | `~/.agents/skills/` |
 | CLI hỗ trợ | OpenCode, Claude Code |
 | Cách gọi | Slash command, ngôn ngữ tự nhiên, agent delegation |
 | Categories | 11 loại chính |

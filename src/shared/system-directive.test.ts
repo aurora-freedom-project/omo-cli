@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test"
 import {
   hasSystemReminder,
   removeSystemReminders,
+  SYSTEM_DIRECTIVE_PREFIX,
+  formatSystemDirective,
   isSystemDirective,
-  createSystemDirective,
 } from "./system-directive"
 
 describe("system-directive utilities", () => {
@@ -125,9 +126,16 @@ const x = 1;
     })
   })
 
+  describe("formatSystemDirective", () => {
+    test("should format directive correctly", () => {
+      expect(formatSystemDirective("TEST")).toBe(`${SYSTEM_DIRECTIVE_PREFIX}TEST]`)
+    })
+  })
+
   describe("isSystemDirective", () => {
-    test("should return true for OH-MY-OPENCODE system directives", () => {
-      const directive = createSystemDirective("TEST")
+    test("should return true for OMO-CLI system directives", () => {
+      // Changed the test to use formatSystemDirective and pass a string directly
+      const directive = formatSystemDirective("TEST")
       expect(isSystemDirective(directive)).toBe(true)
     })
 
@@ -141,7 +149,7 @@ const x = 1;
     })
 
     test("should handle leading whitespace", () => {
-      const directive = `  ${createSystemDirective("TEST")}`
+      const directive = `  ${formatSystemDirective("TEST")}`
       expect(isSystemDirective(directive)).toBe(true)
     })
   })

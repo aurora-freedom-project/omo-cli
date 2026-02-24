@@ -1,23 +1,23 @@
 /**
- * Unified system directive prefix for oh-my-opencode internal messages.
- * All system-generated messages should use this prefix for consistent filtering.
+ * Contains constants and utilities for generating AI system directives.
  *
- * Format: [SYSTEM DIRECTIVE: OH-MY-OPENCODE - {TYPE}]
+ * System directives are special commands injected into the conversation context
+ * Format: [SYSTEM DIRECTIVE: OMO-CLI - {TYPE}]
  */
 
-export const SYSTEM_DIRECTIVE_PREFIX = "[SYSTEM DIRECTIVE: OH-MY-OPENCODE"
+export const SYSTEM_DIRECTIVE_PREFIX = "[SYSTEM DIRECTIVE: OMO-CLI"
 
 /**
- * Creates a system directive header with the given type.
- * @param type - The directive type (e.g., "TODO CONTINUATION", "RALPH LOOP")
- * @returns Formatted directive string like "[SYSTEM DIRECTIVE: OH-MY-OPENCODE - TODO CONTINUATION]"
+ * Format a system directive
+ * @param type The type of directive (e.g. "TODO CONTINUATION")
+ * @returns Formatted directive string like "[SYSTEM DIRECTIVE: OMO-CLI - TODO CONTINUATION]"
  */
-export function createSystemDirective(type: string): string {
+export function formatSystemDirective(type: string): string {
   return `${SYSTEM_DIRECTIVE_PREFIX} - ${type}]`
 }
 
 /**
- * Checks if a message starts with the oh-my-opencode system directive prefix.
+ * Checks if a message starts with the omo-cli system directive prefix.
  * Used by keyword-detector and other hooks to skip system-generated messages.
  * @param text - The message text to check
  * @returns true if the message is a system directive

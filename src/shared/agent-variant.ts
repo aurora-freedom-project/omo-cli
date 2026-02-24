@@ -1,9 +1,9 @@
-import type { OhMyOpenCodeConfig } from "../config"
+import type { OmoCliConfig } from "../config"
 import { findCaseInsensitive } from "./case-insensitive"
 import { AGENT_MODEL_REQUIREMENTS, CATEGORY_MODEL_REQUIREMENTS } from "./model-requirements"
 
 export function resolveAgentVariant(
-  config: OhMyOpenCodeConfig,
+  config: OmoCliConfig,
   agentName?: string
 ): string | undefined {
   if (!agentName) {
@@ -31,7 +31,7 @@ export function resolveAgentVariant(
 }
 
 export function resolveVariantForModel(
-  config: OhMyOpenCodeConfig,
+  config: OmoCliConfig,
   agentName: string,
   currentModel: { providerID: string; modelID: string },
 ): string | undefined {
@@ -68,7 +68,7 @@ function findVariantInChain(
 }
 
 export function applyAgentVariant(
-  config: OhMyOpenCodeConfig,
+  config: OmoCliConfig,
   agentName: string | undefined,
   message: { variant?: string }
 ): void {

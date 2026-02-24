@@ -1,6 +1,6 @@
 import { injectHookMessage } from "../../features/hook-message-injector"
 import { log } from "../../shared/logger"
-import { createSystemDirective, SystemDirectiveTypes } from "../../shared/system-directive"
+import { formatSystemDirective, SystemDirectiveTypes } from "../../shared/system-directive"
 
 export interface SummarizeContext {
   sessionID: string
@@ -10,7 +10,7 @@ export interface SummarizeContext {
   directory: string
 }
 
-const SUMMARIZE_CONTEXT_PROMPT = `${createSystemDirective(SystemDirectiveTypes.COMPACTION_CONTEXT)}
+const SUMMARIZE_CONTEXT_PROMPT = `${formatSystemDirective(SystemDirectiveTypes.COMPACTION_CONTEXT)}
 
 When summarizing this session, you MUST include the following sections in your summary:
 

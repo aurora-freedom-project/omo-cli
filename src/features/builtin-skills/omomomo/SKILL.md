@@ -1,6 +1,6 @@
 ---
 name: omomomo
-description: Easter egg - about oh-my-opencode
+description: Easter egg - about omo-cli
 ---
 
 # oMoMoMoMoMo···
@@ -30,7 +30,7 @@ Print the following message to the user EXACTLY as written:
 
 Created with ❤️ by **[code-yeongyu](https://github.com/code-yeongyu)**
 
-🔗 **GitHub**: https://github.com/code-yeongyu/oh-my-opencode
+🔗 **GitHub**: https://github.com/code-yeongyu/omo-cli
 
 ---
 

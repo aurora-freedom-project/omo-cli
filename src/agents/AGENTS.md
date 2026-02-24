@@ -36,7 +36,7 @@ agents/
 | librarian | minimax-m2.1 (Ollama) | 0.1 | Docs, GitHub search (fast/cheap) |
 | explore | minimax-m2.1 (Ollama) | 0.1 | Fast contextual grep (fast/cheap) |
 
-> Models configurable via `oh-my-opencode.json`. Above = recommended cost/performance balance.
+> Models configurable via `omo-cli.json`. Above = recommended cost/performance balance.
 
 ## HOW TO ADD
 1. Create `src/agents/my-agent.ts` exporting factory + metadata.

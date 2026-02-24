@@ -11,7 +11,7 @@ mock.module("../../shared/logger", () => ({
 }))
 
 mock.module("../../shared/system-directive", () => ({
-  createSystemDirective: (type: string) => `[DIRECTIVE:${type}]`,
+  formatSystemDirective: (type: string) => `[DIRECTIVE:${type}]`,
   SystemDirectiveTypes: {
     TODO_CONTINUATION: "TODO CONTINUATION",
     RALPH_LOOP: "RALPH LOOP",

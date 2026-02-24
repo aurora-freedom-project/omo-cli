@@ -60,7 +60,7 @@ export function createBackgroundTask(manager: BackgroundManager): ToolDefinition
       const ctx = toolContext as ToolContextWithMetadata
 
       if (!args.agent || args.agent.trim() === "") {
-        return `[ERROR] Agent parameter is required. Please specify which agent to use (e.g., "explore", "librarian", "build", etc.)`
+        return `[ERROR] Agent parameter is required. Please specify which agent to use (e.g., "explorer", "researcher", "build", etc.)`
       }
 
       try {
@@ -69,7 +69,7 @@ export function createBackgroundTask(manager: BackgroundManager): ToolDefinition
         const firstMessageAgent = messageDir ? findFirstMessageWithAgent(messageDir) : null
         const sessionAgent = getSessionAgent(ctx.sessionID)
         const parentAgent = ctx.agent ?? sessionAgent ?? firstMessageAgent ?? prevMessage?.agent
-        
+
         log("[background_task] parentAgent resolution", {
           sessionID: ctx.sessionID,
           ctxAgent: ctx.agent,
@@ -78,13 +78,13 @@ export function createBackgroundTask(manager: BackgroundManager): ToolDefinition
           prevMessageAgent: prevMessage?.agent,
           resolvedParentAgent: parentAgent,
         })
-        
+
         const parentModel = prevMessage?.model?.providerID && prevMessage?.model?.modelID
-          ? { 
-              providerID: prevMessage.model.providerID, 
-              modelID: prevMessage.model.modelID,
-              ...(prevMessage.model.variant ? { variant: prevMessage.model.variant } : {})
-            }
+          ? {
+            providerID: prevMessage.model.providerID,
+            modelID: prevMessage.model.modelID,
+            ...(prevMessage.model.variant ? { variant: prevMessage.model.variant } : {})
+          }
           : undefined
 
         const task = await manager.launch({
@@ -141,7 +141,7 @@ function formatTaskStatus(task: BackgroundTask): string {
     duration = "N/A"
   }
   const promptPreview = truncateText(task.prompt, 500)
-  
+
   let progressSection = ""
   if (task.progress?.lastTool) {
     progressSection = `\n| Last tool | ${task.progress.lastTool} |`
@@ -150,7 +150,7 @@ function formatTaskStatus(task: BackgroundTask): string {
   let lastMessageSection = ""
   if (task.progress?.lastMessage) {
     const truncated = truncateText(task.progress.lastMessage, 500)
-    const messageTime = task.progress.lastMessageAt 
+    const messageTime = task.progress.lastMessageAt
       ? task.progress.lastMessageAt.toISOString()
       : "N/A"
     lastMessageSection = `
@@ -201,7 +201,7 @@ async function formatTaskResult(task: BackgroundTask, client: OpencodeClient): P
   if (!task.sessionID) {
     return `Error: Task has no sessionID`
   }
-  
+
   const messagesResult = await client.session.messages({
     path: { id: task.sessionID },
   })
@@ -214,7 +214,7 @@ async function formatTaskResult(task: BackgroundTask, client: OpencodeClient): P
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const messages = ((messagesResult as any).data ?? messagesResult) as Array<{
     info?: { role?: string; time?: string }
-    parts?: Array<{ 
+    parts?: Array<{
       type?: string
       text?: string
       content?: string | Array<{ type: string; text?: string }>
@@ -260,7 +260,7 @@ Session ID: ${task.sessionID}
     const timeB = String((b as { info?: { time?: string } }).info?.time ?? "")
     return timeA.localeCompare(timeB)
   })
-  
+
   const newMessages = consumeNewMessages(task.sessionID, sortedMessages)
   if (newMessages.length === 0) {
     const duration = formatDuration(task.startedAt ?? new Date(), task.completedAt)
@@ -279,7 +279,7 @@ Session ID: ${task.sessionID}
   // Extract content from ALL messages, not just the last one
   // Tool results may be in earlier messages while the final message is empty
   const extractedContent: string[] = []
-  
+
   for (const message of newMessages) {
     for (const part of message.parts ?? []) {
       // Handle both "text" and "reasoning" parts (thinking models use "reasoning")
@@ -302,7 +302,7 @@ Session ID: ${task.sessionID}
       }
     }
   }
-  
+
   const textContent = extractedContent
     .filter((text) => text.length > 0)
     .join("\n\n")
@@ -429,7 +429,7 @@ export function createBackgroundCancel(manager: BackgroundManager, client: Openc
             } else if (task.sessionID) {
               client.session.abort({
                 path: { id: task.sessionID },
-              }).catch(() => {})
+              }).catch(() => { })
 
               task.status = "cancelled"
               task.completedAt = new Date()
@@ -446,9 +446,9 @@ export function createBackgroundCancel(manager: BackgroundManager, client: Openc
             .map(t => `| \`${t.id}\` | ${t.description} | ${t.status} | ${t.sessionID ? `\`${t.sessionID}\`` : "(not started)"} |`)
             .join("\n")
 
-           const resumableTasks = cancelledInfo.filter(t => t.sessionID)
-           const resumeSection = resumableTasks.length > 0
-             ? `\n## Continue Instructions
+          const resumableTasks = cancelledInfo.filter(t => t.sessionID)
+          const resumeSection = resumableTasks.length > 0
+            ? `\n## Continue Instructions
 
 To continue a cancelled task, use:
 \`\`\`
@@ -457,7 +457,7 @@ delegate_task(session_id="<session_id>", prompt="Continue: <your follow-up>")
 
 Continuable sessions:
 ${resumableTasks.map(t => `- \`${t.sessionID}\` (${t.description})`).join("\n")}`
-             : ""
+            : ""
 
           return `Cancelled ${cancellableTasks.length} background task(s):
 
@@ -497,7 +497,7 @@ Status: ${task.status}`
         if (task.sessionID) {
           client.session.abort({
             path: { id: task.sessionID },
-          }).catch(() => {})
+          }).catch(() => { })
         }
 
         task.status = "cancelled"

@@ -8,15 +8,33 @@ const BashPermission = z.union([
   z.record(z.string(), PermissionValue),
 ])
 
+const SkillPermissionSchema = z.union([
+  PermissionValue,
+  z.record(z.string(), PermissionValue),
+])
+
 const AgentPermissionSchema = z.object({
   edit: PermissionValue.optional(),
   bash: BashPermission.optional(),
   webfetch: PermissionValue.optional(),
   doom_loop: PermissionValue.optional(),
   external_directory: PermissionValue.optional(),
+  skill: SkillPermissionSchema.optional(),
+  task: z.union([PermissionValue, z.record(z.string(), PermissionValue)]).optional(),
 })
 
 export const BuiltinAgentNameSchema = z.enum([
+  // New native-friendly names
+  "orchestrator",
+  "coder",
+  "advisor",
+  "researcher",
+  "explorer",
+  "vision",
+  "planner",
+  "reviewer",
+  "navigator",
+  // Legacy names (backwards compat — resolved via AGENT_NAME_MAP)
   "sisyphus",
   "prometheus",
   "oracle",
@@ -36,8 +54,21 @@ export const BuiltinSkillNameSchema = z.enum([
 ])
 
 export const OverridableAgentNameSchema = z.enum([
+  // Native names
   "build",
   "plan",
+  "orchestrator",
+  "worker",
+  "builder",
+  "coder",
+  "planner",
+  "reviewer",
+  "advisor",
+  "researcher",
+  "explorer",
+  "vision",
+  "navigator",
+  // Legacy names (backwards compat)
   "sisyphus",
   "sisyphus-junior",
   "OpenCode-Builder",
@@ -84,10 +115,14 @@ export const HookNameSchema = z.enum([
   "auto-slash-command",
   "edit-error-recovery",
   "delegate-task-retry",
+  "coder-md-only",
+  "worker-notepad",
+  "navigator",
+  // Legacy hook names (backwards compat)
   "prometheus-md-only",
   "sisyphus-junior-notepad",
-  "start-work",
   "atlas",
+  "start-work",
 ])
 
 export const BuiltinCommandNameSchema = z.enum([
@@ -118,6 +153,10 @@ export const AgentOverrideConfigSchema = z.object({
   permission: AgentPermissionSchema.optional(),
   /** Maximum tokens for response. Passed directly to OpenCode SDK. */
   maxTokens: z.number().optional(),
+  /** Maximum steps/iterations for the agent. Maps to native OpenCode maxSteps. */
+  maxSteps: z.number().optional(),
+  /** Hide this agent from the agent picker UI. */
+  hidden: z.boolean().optional(),
   /** Extended thinking configuration (Anthropic). Overrides category and default settings. */
   thinking: z.object({
     type: z.enum(["enabled", "disabled"]),
@@ -132,8 +171,21 @@ export const AgentOverrideConfigSchema = z.object({
 })
 
 export const AgentOverridesSchema = z.object({
+  // Native names
   build: AgentOverrideConfigSchema.optional(),
   plan: AgentOverrideConfigSchema.optional(),
+  orchestrator: AgentOverrideConfigSchema.optional(),
+  worker: AgentOverrideConfigSchema.optional(),
+  builder: AgentOverrideConfigSchema.optional(),
+  coder: AgentOverrideConfigSchema.optional(),
+  planner: AgentOverrideConfigSchema.optional(),
+  reviewer: AgentOverrideConfigSchema.optional(),
+  advisor: AgentOverrideConfigSchema.optional(),
+  researcher: AgentOverrideConfigSchema.optional(),
+  explorer: AgentOverrideConfigSchema.optional(),
+  vision: AgentOverrideConfigSchema.optional(),
+  navigator: AgentOverrideConfigSchema.optional(),
+  // Legacy names (backwards compat)
   sisyphus: AgentOverrideConfigSchema.optional(),
   "sisyphus-junior": AgentOverrideConfigSchema.optional(),
   "OpenCode-Builder": AgentOverrideConfigSchema.optional(),
@@ -344,8 +396,8 @@ export const TmuxConfigSchema = z.object({
 export const SisyphusTasksConfigSchema = z.object({
   /** Enable Sisyphus Tasks system (default: false) */
   enabled: z.boolean().default(false),
-  /** Storage path for tasks (default: .sisyphus/tasks) */
-  storage_path: z.string().default(".sisyphus/tasks"),
+  /** Storage path for tasks (default: .opencode/tasks) */
+  storage_path: z.string().default(".opencode/tasks"),
   /** Enable Claude Code path compatibility mode */
   claude_code_compat: z.boolean().default(false),
 })
@@ -353,8 +405,8 @@ export const SisyphusTasksConfigSchema = z.object({
 export const SisyphusSwarmConfigSchema = z.object({
   /** Enable Sisyphus Swarm system (default: false) */
   enabled: z.boolean().default(false),
-  /** Storage path for teams (default: .sisyphus/teams) */
-  storage_path: z.string().default(".sisyphus/teams"),
+  /** Storage path for teams (default: .opencode/teams) */
+  storage_path: z.string().default(".opencode/teams"),
   /** UI mode: toast notifications, tmux panes, or both */
   ui_mode: z.enum(["toast", "tmux", "both"]).default("toast"),
 })
@@ -394,7 +446,7 @@ export const PrivacyConfigSchema = z.object({
 })
 export const SkillsModeSchema = z.enum(["bundled", "filesystem"]).default("filesystem")
 
-export const OhMyOpenCodeConfigSchema = z.object({
+export const OmoCliConfigSchema = z.object({
   $schema: z.string().optional(),
   disabled_mcps: z.array(AnyMcpNameSchema).optional(),
   disabled_agents: z.array(BuiltinAgentNameSchema).optional(),
@@ -423,12 +475,12 @@ export const OhMyOpenCodeConfigSchema = z.object({
   /**
    * Skills loading mode:
    * - "bundled": Load 600+ pre-bundled skills (larger plugin, always available)
-   * - "filesystem": Load skills from ~/.agent/skills/ and project .agent/skills/ (default)
+   * - "filesystem": Load skills from ~/.agents/skills/ and project .agents/skills/ (default, falls back to ~/.agent/skills/)
    */
   skills_mode: SkillsModeSchema.optional(),
 })
 
-export type OhMyOpenCodeConfig = z.infer<typeof OhMyOpenCodeConfigSchema>
+export type OmoCliConfig = z.infer<typeof OmoCliConfigSchema>
 export type AgentOverrideConfig = z.infer<typeof AgentOverrideConfigSchema>
 export type AgentOverrides = z.infer<typeof AgentOverridesSchema>
 export type BackgroundTaskConfig = z.infer<typeof BackgroundTaskConfigSchema>

@@ -5,9 +5,11 @@ node_modules/
 # Build output
 dist/
 
-# Platform binaries (built, not committed)
-packages/*/bin/oh-my-opencode
-packages/*/bin/oh-my-opencode.exe
+# Configuration
+omo-cli.json
+.opencode/node_modules/
+.DS_Store
+src/.DS_Store
 
 # IDE
 .idea/

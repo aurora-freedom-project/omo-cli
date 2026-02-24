@@ -306,7 +306,7 @@ delegate_task(category="quick", prompt="...")          // "Just get it done fast
 You can define your own categories:
 
 ```json
-// .opencode/oh-my-opencode.json
+// .opencode/omo-cli.json
 {
   "categories": {
     "unity-game-dev": {

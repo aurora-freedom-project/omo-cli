@@ -15,6 +15,14 @@ export const MINIMUM_OPENCODE_VERSION = "1.1.1"
  */
 export const OPENCODE_NATIVE_AGENTS_INJECTION_VERSION = "1.1.37"
 
+/**
+ * OpenCode version that introduced native skill tool.
+ * When this version is detected, the plugin's skill tool is not registered
+ * to avoid overriding the native skill discovery. Plugin proactive hooks
+ * (keyword-detector, category-skill-reminder, BM25 routing) remain active.
+ */
+export const OPENCODE_NATIVE_SKILLS_VERSION = "1.0.190"
+
 const NOT_CACHED = Symbol("NOT_CACHED")
 let cachedVersion: string | null | typeof NOT_CACHED = NOT_CACHED
 

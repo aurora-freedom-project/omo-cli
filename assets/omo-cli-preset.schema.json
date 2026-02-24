@@ -1,0 +1,145 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Oh-My-OpenCode Preset",
+    "description": "Configuration preset for omo-cli agent orchestration",
+    "type": "object",
+    "required": [
+        "name",
+        "description"
+    ],
+    "properties": {
+        "$schema": {
+            "type": "string"
+        },
+        "name": {
+            "type": "string",
+            "description": "Unique preset identifier (kebab-case recommended)",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "description": {
+            "type": "string",
+            "description": "Human-readable description of this preset"
+        },
+        "version": {
+            "type": "string",
+            "description": "Preset version"
+        },
+        "tiers": {
+            "type": "object",
+            "description": "Tier-based model assignment. Each tier maps to multiple agents.",
+            "additionalProperties": {
+                "type": "object",
+                "required": [
+                    "model",
+                    "agents"
+                ],
+                "properties": {
+                    "model": {
+                        "type": "string",
+                        "description": "Model identifier (e.g. google/antigravity-claude-opus-4-5-thinking)"
+                    },
+                    "variant": {
+                        "type": "string"
+                    },
+                    "stream": {
+                        "type": "boolean"
+                    },
+                    "agents": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Agent names assigned to this tier"
+                    }
+                }
+            }
+        },
+        "agents": {
+            "type": "object",
+            "description": "Direct per-agent model overrides (takes precedence over tiers)",
+            "additionalProperties": {
+                "type": "object",
+                "required": [
+                    "model"
+                ],
+                "properties": {
+                    "model": {
+                        "type": "string"
+                    },
+                    "variant": {
+                        "type": "string"
+                    },
+                    "stream": {
+                        "type": "boolean"
+                    }
+                }
+            }
+        },
+        "categories": {
+            "type": "object",
+            "description": "Category-based model assignment for skill delegation",
+            "additionalProperties": {
+                "type": "object",
+                "required": [
+                    "model"
+                ],
+                "properties": {
+                    "model": {
+                        "type": "string"
+                    },
+                    "variant": {
+                        "type": "string"
+                    },
+                    "stream": {
+                        "type": "boolean"
+                    }
+                }
+            }
+        },
+        "skills_mode": {
+            "type": "string",
+            "enum": [
+                "bundled",
+                "filesystem"
+            ],
+            "description": "How to load agent skills"
+        },
+        "background_task": {
+            "type": "object",
+            "properties": {
+                "defaultConcurrency": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                }
+            }
+        },
+        "providers": {
+            "type": "object",
+            "description": "Provider availability flags for install flow",
+            "properties": {
+                "hasClaude": {
+                    "type": "boolean"
+                },
+                "isMax20": {
+                    "type": "boolean"
+                },
+                "hasOpenAI": {
+                    "type": "boolean"
+                },
+                "hasGemini": {
+                    "type": "boolean"
+                },
+                "hasCopilot": {
+                    "type": "boolean"
+                },
+                "hasOpencodeZen": {
+                    "type": "boolean"
+                },
+                "hasZaiCodingPlan": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}

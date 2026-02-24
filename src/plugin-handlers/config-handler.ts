@@ -1,5 +1,5 @@
 import { createBuiltinAgents } from "../agents";
-import { createSisyphusJuniorAgentWithOverrides } from "../agents/sisyphus-junior";
+import { createWorkerAgentWithOverrides } from "../agents/worker";
 import {
   loadUserCommands,
   loadProjectCommands,
@@ -24,21 +24,21 @@ import {
 import { loadMcpConfigs } from "../features/claude-code-mcp-loader";
 import { loadAllPluginComponents } from "../features/claude-code-plugin-loader";
 import { createBuiltinMcps } from "../mcp";
-import type { OhMyOpenCodeConfig } from "../config";
+import type { OmoCliConfig } from "../config";
 import { log, fetchAvailableModels, readConnectedProvidersCache } from "../shared";
 import { getOpenCodeConfigPaths } from "../shared/opencode-config-dir";
 import { migrateAgentConfig } from "../shared/permission-compat";
 import { AGENT_NAME_MAP } from "../shared/migration";
 import { resolveModelWithFallback } from "../shared/model-resolver";
 import { AGENT_MODEL_REQUIREMENTS } from "../shared/model-requirements";
-import { PROMETHEUS_SYSTEM_PROMPT, PROMETHEUS_PERMISSION } from "../agents/prometheus-prompt";
+import { CODER_SYSTEM_PROMPT, CODER_PERMISSION } from "../agents/coder-prompt";
 import { DEFAULT_CATEGORIES } from "../tools/delegate-task/constants";
 import type { ModelCacheState } from "../plugin-state";
 import type { CategoryConfig } from "../config/schema";
 
 export interface ConfigHandlerDeps {
   ctx: { directory: string; client?: any };
-  pluginConfig: OhMyOpenCodeConfig;
+  pluginConfig: OmoCliConfig;
   modelCacheState: ModelCacheState;
 }
 
@@ -85,17 +85,17 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
 
     const pluginComponents = (pluginConfig.claude_code?.plugins ?? true)
       ? await loadAllPluginComponents({
-          enabledPluginsOverride: pluginConfig.claude_code?.plugins_override,
-        })
+        enabledPluginsOverride: pluginConfig.claude_code?.plugins_override,
+      })
       : {
-          commands: {},
-          skills: {},
-          agents: {},
-          mcpServers: {},
-          hooksConfigs: [],
-          plugins: [],
-          errors: [],
-        };
+        commands: {},
+        skills: {},
+        agents: {},
+        mcpServers: {},
+        hooksConfigs: [],
+        plugins: [],
+        errors: [],
+      };
 
     if (pluginComponents.plugins.length > 0) {
       log(`Loaded ${pluginComponents.plugins.length} Claude Code plugins`, {
@@ -182,21 +182,21 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
       build?: Record<string, unknown>;
       plan?: Record<string, unknown>;
       explore?: { tools?: Record<string, unknown> };
-      librarian?: { tools?: Record<string, unknown> };
-      "multimodal-looker"?: { tools?: Record<string, unknown> };
-      atlas?: { tools?: Record<string, unknown> };
-      sisyphus?: { tools?: Record<string, unknown> };
+      researcher?: { tools?: Record<string, unknown> };
+      vision?: { tools?: Record<string, unknown> };
+      navigator?: { tools?: Record<string, unknown> };
+      orchestrator?: { tools?: Record<string, unknown> };
     };
     const configAgent = config.agent as AgentConfig | undefined;
 
-    if (isSisyphusEnabled && builtinAgents.sisyphus) {
-      (config as { default_agent?: string }).default_agent = "sisyphus";
+    if (isSisyphusEnabled && builtinAgents.orchestrator) {
+      (config as { default_agent?: string }).default_agent = "orchestrator";
 
       const agentConfig: Record<string, unknown> = {
-        sisyphus: builtinAgents.sisyphus,
+        sisyphus: builtinAgents.orchestrator,
       };
 
-      agentConfig["sisyphus-junior"] = createSisyphusJuniorAgentWithOverrides(
+      agentConfig["sisyphus-junior"] = createWorkerAgentWithOverrides(
         pluginConfig.agents?.["sisyphus-junior"],
         config.model as string | undefined
       );
@@ -226,28 +226,28 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
           planConfigWithoutName as Record<string, unknown>
         );
         const prometheusOverride =
-          pluginConfig.agents?.["prometheus"] as
-            | (Record<string, unknown> & {
-                category?: string
-                model?: string
-                variant?: string
-                reasoningEffort?: string
-                textVerbosity?: string
-                thinking?: { type: string; budgetTokens?: number }
-                temperature?: number
-                top_p?: number
-                maxTokens?: number
-              })
-            | undefined;
+          pluginConfig.agents?.["coder"] as
+          | (Record<string, unknown> & {
+            category?: string
+            model?: string
+            variant?: string
+            reasoningEffort?: string
+            textVerbosity?: string
+            thinking?: { type: string; budgetTokens?: number }
+            temperature?: number
+            top_p?: number
+            maxTokens?: number
+          })
+          | undefined;
 
         const categoryConfig = prometheusOverride?.category
           ? resolveCategoryConfig(
-              prometheusOverride.category,
-              pluginConfig.categories
-            )
+            prometheusOverride.category,
+            pluginConfig.categories
+          )
           : undefined;
 
-        const prometheusRequirement = AGENT_MODEL_REQUIREMENTS["prometheus"];
+        const prometheusRequirement = AGENT_MODEL_REQUIREMENTS["coder"];
         const connectedProviders = readConnectedProvidersCache();
         const availableModels = ctx.client
           ? await fetchAvailableModels(ctx.client, { connectedProviders: connectedProviders ?? undefined })
@@ -271,13 +271,13 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
         const topPToUse = prometheusOverride?.top_p ?? categoryConfig?.top_p;
         const maxTokensToUse = prometheusOverride?.maxTokens ?? categoryConfig?.maxTokens;
         const prometheusBase = {
-          name: "prometheus",
+          name: "coder",
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(variantToUse ? { variant: variantToUse } : {}),
           mode: "all" as const,
-          prompt: PROMETHEUS_SYSTEM_PROMPT,
-          permission: PROMETHEUS_PERMISSION,
-          description: `${configAgent?.plan?.description ?? "Plan agent"} (Prometheus - OhMyOpenCode)`,
+          prompt: CODER_SYSTEM_PROMPT,
+          permission: CODER_PERMISSION,
+          description: `${configAgent?.plan?.description ?? "Plan agent"} (Prometheus - OmoCli)`,
           color: (configAgent?.plan?.color as string) ?? "#FF6347",
           ...(temperatureToUse !== undefined ? { temperature: temperatureToUse } : {}),
           ...(topPToUse !== undefined ? { top_p: topPToUse } : {}),
@@ -292,20 +292,20 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
             : {}),
         };
 
-        agentConfig["prometheus"] = prometheusOverride
+        agentConfig["coder"] = prometheusOverride
           ? { ...prometheusBase, ...prometheusOverride }
           : prometheusBase;
       }
 
-    const filteredConfigAgents = configAgent
-      ? Object.fromEntries(
+      const filteredConfigAgents = configAgent
+        ? Object.fromEntries(
           Object.entries(configAgent)
             .filter(([key]) => {
               if (key === "build") return false;
               if (key === "plan" && replacePlan) return false;
-              // Filter out agents that oh-my-opencode provides to prevent
-              // OpenCode defaults from overwriting user config in oh-my-opencode.json
-              // See: https://github.com/code-yeongyu/oh-my-opencode/issues/472
+              // Filter out agents that omo-cli provides to prevent
+              // OpenCode defaults from overwriting user config in omo-cli.json
+              // See: https://github.com/code-yeongyu/omo-cli/issues/472
               if (key in builtinAgents) return false;
               return true;
             })
@@ -314,24 +314,24 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
               value ? migrateAgentConfig(value as Record<string, unknown>) : value,
             ])
         )
-      : {};
+        : {};
 
       const migratedBuild = configAgent?.build
         ? migrateAgentConfig(configAgent.build as Record<string, unknown>)
         : {};
 
-      const planDemoteConfig = replacePlan && agentConfig["prometheus"]
-        ? { 
-            ...agentConfig["prometheus"],
-            name: "plan", 
-            mode: "subagent" as const 
-          }
+      const planDemoteConfig = replacePlan && agentConfig["coder"]
+        ? {
+          ...agentConfig["coder"],
+          name: "plan",
+          mode: "subagent" as const
+        }
         : undefined;
 
       config.agent = {
         ...agentConfig,
         ...Object.fromEntries(
-          Object.entries(builtinAgents).filter(([k]) => k !== "sisyphus")
+          Object.entries(builtinAgents).filter(([k]) => k !== "orchestrator")
         ),
         ...userAgents,
         ...projectAgents,
@@ -361,29 +361,29 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
     };
 
     type AgentWithPermission = { permission?: Record<string, unknown> };
-    
-    if (agentResult.librarian) {
-      const agent = agentResult.librarian as AgentWithPermission;
+
+    if (agentResult.researcher) {
+      const agent = agentResult.researcher as AgentWithPermission;
       agent.permission = { ...agent.permission, "grep_app_*": "allow" };
     }
-    if (agentResult["multimodal-looker"]) {
-      const agent = agentResult["multimodal-looker"] as AgentWithPermission;
+    if (agentResult["vision"]) {
+      const agent = agentResult["vision"] as AgentWithPermission;
       agent.permission = { ...agent.permission, task: "deny", look_at: "deny" };
     }
-    if (agentResult["atlas"]) {
-      const agent = agentResult["atlas"] as AgentWithPermission;
+    if (agentResult["navigator"]) {
+      const agent = agentResult["navigator"] as AgentWithPermission;
       agent.permission = { ...agent.permission, task: "deny", call_omo_agent: "deny", delegate_task: "allow" };
     }
-    if (agentResult.sisyphus) {
-      const agent = agentResult.sisyphus as AgentWithPermission;
+    if (agentResult.orchestrator) {
+      const agent = agentResult.orchestrator as AgentWithPermission;
       agent.permission = { ...agent.permission, call_omo_agent: "deny", delegate_task: "allow", question: "allow" };
     }
-    if (agentResult["prometheus"]) {
-      const agent = agentResult["prometheus"] as AgentWithPermission;
+    if (agentResult["coder"]) {
+      const agent = agentResult["coder"] as AgentWithPermission;
       agent.permission = { ...agent.permission, call_omo_agent: "deny", delegate_task: "allow", question: "allow" };
     }
-    if (agentResult["sisyphus-junior"]) {
-      const agent = agentResult["sisyphus-junior"] as AgentWithPermission;
+    if (agentResult["worker"]) {
+      const agent = agentResult["worker"] as AgentWithPermission;
       agent.permission = { ...agent.permission, delegate_task: "allow" };
     }
 

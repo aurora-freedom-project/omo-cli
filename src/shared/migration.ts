@@ -1,58 +1,71 @@
 import * as fs from "fs"
 import { log } from "./logger"
 
-// Migration map: old keys → new keys (for backward compatibility)
+// Migration map: old keys → new canonical keys (for backward compatibility)
 export const AGENT_NAME_MAP: Record<string, string> = {
-  // Sisyphus variants → "sisyphus"
-  omo: "sisyphus",
-  OmO: "sisyphus",
-  Sisyphus: "sisyphus",
-  sisyphus: "sisyphus",
+  // Sisyphus variants → "orchestrator"
+  omo: "orchestrator",
+  OmO: "orchestrator",
+  Sisyphus: "orchestrator",
+  sisyphus: "orchestrator",
 
-  // Prometheus variants → "prometheus"
-  "OmO-Plan": "prometheus",
-  "omo-plan": "prometheus",
-  "Planner-Sisyphus": "prometheus",
-  "planner-sisyphus": "prometheus",
-  "Prometheus (Planner)": "prometheus",
-  prometheus: "prometheus",
+  // Prometheus variants → "coder"
+  "OmO-Plan": "coder",
+  "omo-plan": "coder",
+  "Planner-Sisyphus": "coder",
+  "planner-sisyphus": "coder",
+  "Prometheus (Planner)": "coder",
+  prometheus: "coder",
 
-  // Atlas variants → "atlas"
-  "orchestrator-sisyphus": "atlas",
-  Atlas: "atlas",
-  atlas: "atlas",
+  // Atlas variants → "navigator"
+  "orchestrator-sisyphus": "navigator",
+  Atlas: "navigator",
+  atlas: "navigator",
 
-  // Metis variants → "metis"
-  "plan-consultant": "metis",
-  "Metis (Plan Consultant)": "metis",
-  metis: "metis",
+  // Metis variants → "planner"
+  "plan-consultant": "planner",
+  "Metis (Plan Consultant)": "planner",
+  metis: "planner",
 
-  // Momus variants → "momus"
-  "Momus (Plan Reviewer)": "momus",
-  momus: "momus",
+  // Momus variants → "reviewer"
+  "Momus (Plan Reviewer)": "reviewer",
+  momus: "reviewer",
 
-  // Sisyphus-Junior → "sisyphus-junior"
-  "Sisyphus-Junior": "sisyphus-junior",
-  "sisyphus-junior": "sisyphus-junior",
+  // Sisyphus-Junior → "worker"
+  "Sisyphus-Junior": "worker",
+  "sisyphus-junior": "worker",
 
-  // Already lowercase - passthrough
+  // Other legacy → new names
+  oracle: "advisor",
+  librarian: "researcher",
+  explore: "explorer",
+  "multimodal-looker": "vision",
+
+  // Already new names - passthrough
   build: "build",
-  oracle: "oracle",
-  librarian: "librarian",
-  explore: "explore",
-  "multimodal-looker": "multimodal-looker",
+  orchestrator: "orchestrator",
+  coder: "coder",
+  navigator: "navigator",
+  planner: "planner",
+  reviewer: "reviewer",
+  worker: "worker",
+  advisor: "advisor",
+  researcher: "researcher",
+  explorer: "explorer",
+  vision: "vision",
 }
 
 export const BUILTIN_AGENT_NAMES = new Set([
-  "sisyphus",           // was "Sisyphus"
-  "oracle",
-  "librarian",
-  "explore",
-  "multimodal-looker",
-  "metis",              // was "Metis (Plan Consultant)"
-  "momus",              // was "Momus (Plan Reviewer)"
-  "prometheus",         // was "Prometheus (Planner)"
-  "atlas",              // was "Atlas"
+  "orchestrator",
+  "advisor",
+  "researcher",
+  "explorer",
+  "vision",
+  "planner",
+  "reviewer",
+  "coder",
+  "navigator",
+  "worker",
   "build",
 ])
 
@@ -61,7 +74,7 @@ export const BUILTIN_AGENT_NAMES = new Set([
 export const HOOK_NAME_MAP: Record<string, string | null> = {
   // Legacy names (backward compatibility)
   "anthropic-auto-compact": "anthropic-context-window-limit-recovery",
-  "sisyphus-orchestrator": "atlas",
+  "sisyphus-orchestrator": "navigator",
 
   // Removed hooks (v3.0.0) - will be filtered out and user warned
   "preemptive-compaction": null,
@@ -182,7 +195,7 @@ export function migrateConfigFile(configPath: string, rawConfig: Record<string, 
 
 
   if (rawConfig.omo_agent) {
-    rawConfig.sisyphus_agent = rawConfig.omo_agent
+    rawConfig.orchestrator_agent = rawConfig.omo_agent
     delete rawConfig.omo_agent
     needsWrite = true
   }

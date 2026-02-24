@@ -43,16 +43,11 @@ import {
 import { applyAgentVariant, resolveAgentVariant, resolveVariantForModel } from "./shared/agent-variant";
 import { createFirstMessageVariantGate } from "./shared/first-message-variant";
 import {
-  discoverUserClaudeSkills,
-  discoverProjectClaudeSkills,
   discoverOpencodeGlobalSkills,
   discoverOpencodeProjectSkills,
-  discoverAgentSkills,
-  discoverProjectAgentSkills,
   mergeSkills,
 } from "./features/opencode-skill-loader";
 import { createBuiltinSkills } from "./features/builtin-skills";
-import { generatedSkills } from "./features/bundled-skills";
 import { getSystemMcpServerNames } from "./features/claude-code-mcp-loader";
 import {
   setMainSession,
@@ -81,13 +76,13 @@ import { SkillMcpManager } from "./features/skill-mcp-manager";
 import { initTaskToastManager } from "./features/task-toast-manager";
 import { TmuxSessionManager } from "./features/tmux-subagent";
 import { type HookName } from "./config";
-import { log, detectExternalNotificationPlugin, getNotificationConflictWarning, resetMessageCursor, includesCaseInsensitive, hasConnectedProvidersCache, getOpenCodeVersion, isOpenCodeVersionAtLeast, OPENCODE_NATIVE_AGENTS_INJECTION_VERSION } from "./shared";
+import { log, detectExternalNotificationPlugin, getNotificationConflictWarning, resetMessageCursor, includesCaseInsensitive, hasConnectedProvidersCache, getOpenCodeVersion, isOpenCodeVersionAtLeast, OPENCODE_NATIVE_AGENTS_INJECTION_VERSION, OPENCODE_NATIVE_SKILLS_VERSION } from "./shared";
 import { loadPluginConfig } from "./plugin-config";
 import { createModelCacheState, getModelLimit } from "./plugin-state";
 import { createConfigHandler } from "./plugin-handlers";
 
-const OhMyOpenCodePlugin: Plugin = async (ctx) => {
-  log("[OhMyOpenCodePlugin] ENTRY - plugin loading", { directory: ctx.directory })
+const OmoCliPlugin: Plugin = async (ctx) => {
+  log("[OmoCliPlugin] ENTRY - plugin loading", { directory: ctx.directory })
   // Start background tmux check immediately
   startTmuxCheck();
 
@@ -232,11 +227,11 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     ? createStartWorkHook(ctx)
     : null;
 
-  const prometheusMdOnly = isHookEnabled("prometheus-md-only")
+  const prometheusMdOnly = isHookEnabled("coder-md-only")
     ? createPrometheusMdOnlyHook(ctx)
     : null;
 
-  const sisyphusJuniorNotepad = isHookEnabled("sisyphus-junior-notepad")
+  const sisyphusJuniorNotepad = isHookEnabled("worker-notepad")
     ? createSisyphusJuniorNotepadHook(ctx)
     : null;
 
@@ -274,7 +269,7 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     },
   });
 
-  const atlasHook = isHookEnabled("atlas")
+  const atlasHook = isHookEnabled("navigator")
     ? createAtlasHook(ctx, { directory: ctx.directory, backgroundManager })
     : null;
 
@@ -299,7 +294,7 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
   const callOmoAgent = createCallOmoAgent(ctx, backgroundManager);
   const isMultimodalLookerEnabled = !includesCaseInsensitive(
     pluginConfig.disabled_agents ?? [],
-    "multimodal-looker"
+    "vision"
   );
   const lookAt = isMultimodalLookerEnabled ? createLookAt(ctx) : null;
   const browserProvider = pluginConfig.browser_automation_engine?.provider ?? "playwright";
@@ -340,52 +335,16 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     }
     return true;
   });
-  const includeClaudeSkills = pluginConfig.claude_code?.skills !== false;
-  const skillsMode = pluginConfig.skills_mode ?? "filesystem";
 
-  // Load skills based on mode
-  let agentSkills: Awaited<ReturnType<typeof discoverAgentSkills>> = [];
-  let projectAgentSkills: Awaited<ReturnType<typeof discoverProjectAgentSkills>> = [];
-
-  if (skillsMode === "bundled") {
-    // Use pre-bundled skills from generated-skills.ts
-    // Convert BuiltinSkill[] to LoadedSkill[] format
-    agentSkills = generatedSkills.map((s) => ({
-      name: s.name,
-      scope: "agent" as const,
-      definition: {
-        name: s.name,
-        description: s.description,
-        template: s.template,
-        argumentHint: s.argumentHint,
-        model: s.model,
-        agent: s.agent,
-        subtask: s.subtask,
-      },
-    }));
-  } else {
-    // Load skills from filesystem (~/.agent/skills/ and .agent/skills/)
-    [agentSkills, projectAgentSkills] = await Promise.all([
-      discoverAgentSkills(),
-      discoverProjectAgentSkills(),
-    ]);
-  }
-
-  const [userSkills, globalSkills, projectSkills, opencodeProjectSkills] = await Promise.all([
-    includeClaudeSkills ? discoverUserClaudeSkills() : Promise.resolve([]),
+  const [globalSkills, opencodeProjectSkills] = await Promise.all([
     discoverOpencodeGlobalSkills(),
-    includeClaudeSkills ? discoverProjectClaudeSkills() : Promise.resolve([]),
     discoverOpencodeProjectSkills(),
   ]);
   const mergedSkills = mergeSkills(
     builtinSkills,
     pluginConfig.skills,
-    userSkills,
     globalSkills,
-    projectSkills,
-    opencodeProjectSkills,
-    agentSkills,
-    projectAgentSkills
+    opencodeProjectSkills
   );
   const skillMcpManager = new SkillMcpManager();
   const getSessionIDForMcp = () => getMainSessionID() || "";
@@ -424,7 +383,9 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
       call_omo_agent: callOmoAgent,
       ...(lookAt ? { look_at: lookAt } : {}),
       delegate_task: delegateTask,
-      skill: skillTool,
+      // Only register plugin skill tool if native is unavailable (< 1.0.190)
+      // Native OpenCode handles skill discovery; plugin keeps proactive hints via hooks
+      ...(isOpenCodeVersionAtLeast(OPENCODE_NATIVE_SKILLS_VERSION) ? {} : { skill: skillTool }),
       skill_mcp: skillMcpTool,
       slashcommand: slashcommandTool,
       interactive_bash,
@@ -646,7 +607,7 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
         const args = output.args as Record<string, unknown>;
         const subagentType = args.subagent_type as string;
         const isExploreOrLibrarian = includesCaseInsensitive(
-          ["explore", "librarian"],
+          ["explorer", "researcher"],
           subagentType ?? ""
         );
 
@@ -733,10 +694,10 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
   };
 };
 
-export default OhMyOpenCodePlugin;
+export default OmoCliPlugin;
 
 export type {
-  OhMyOpenCodeConfig,
+  OmoCliConfig,
   AgentName,
   AgentOverrideConfig,
   AgentOverrides,

@@ -196,12 +196,8 @@ export interface MergeSkillsOptions {
 export function mergeSkills(
   builtinSkills: BuiltinSkill[],
   config: SkillsConfig | undefined,
-  userClaudeSkills: LoadedSkill[],
   userOpencodeSkills: LoadedSkill[],
-  projectClaudeSkills: LoadedSkill[],
   projectOpencodeSkills: LoadedSkill[],
-  agentSkills: LoadedSkill[] = [],
-  projectAgentSkills: LoadedSkill[] = [],
   options: MergeSkillsOptions = {}
 ): LoadedSkill[] {
   const skillMap = new Map<string, LoadedSkill>()
@@ -231,12 +227,8 @@ export function mergeSkills(
   }
 
   const fileSystemSkills = [
-    ...userClaudeSkills,
     ...userOpencodeSkills,
-    ...projectClaudeSkills,
     ...projectOpencodeSkills,
-    ...agentSkills,
-    ...projectAgentSkills,
   ]
 
   for (const skill of fileSystemSkills) {

@@ -1,5 +1,6 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import { getSessionAgent } from "../../features/claude-code-session-state"
+import type { LoadedSkill } from "../../features/opencode-skill-loader/types"
 import { log } from "../../shared"
 
 /**
@@ -7,7 +8,7 @@ import { log } from "../../shared"
  * These are orchestrator agents that delegate work to specialized agents.
  */
 const TARGET_AGENTS = new Set([
-  "sisyphus",
+  "orchestrator",
   "sisyphus-junior",
   "atlas",
 ])
@@ -81,8 +82,10 @@ interface SessionState {
   toolCallCount: number
 }
 
-export function createCategorySkillReminderHook(_ctx: PluginInput) {
+export function createCategorySkillReminderHook(_ctx: PluginInput, loadedSkills?: LoadedSkill[]) {
   const sessionStates = new Map<string, SessionState>()
+  // Track accumulated tool outputs per session for BM25 analysis
+  const sessionOutputCache = new Map<string, string>()
 
   function getOrCreateState(sessionID: string): SessionState {
     if (!sessionStates.has(sessionID)) {
@@ -99,9 +102,9 @@ export function createCategorySkillReminderHook(_ctx: PluginInput) {
     const agent = getSessionAgent(sessionID) ?? inputAgent
     if (!agent) return false
     const agentLower = agent.toLowerCase()
-    return TARGET_AGENTS.has(agentLower) || 
-           agentLower.includes("sisyphus") || 
-           agentLower.includes("atlas")
+    return TARGET_AGENTS.has(agentLower) ||
+      agentLower.includes("orchestrator") ||
+      agentLower.includes("atlas")
   }
 
   const toolExecuteAfter = async (
@@ -129,12 +132,24 @@ export function createCategorySkillReminderHook(_ctx: PluginInput) {
 
     state.toolCallCount++
 
+    // Cache recent output for routing analysis
+    const cached = sessionOutputCache.get(sessionID) || ""
+    sessionOutputCache.set(sessionID, (cached + " " + (output.output || "")).slice(-500))
+
     if (state.toolCallCount >= 3 && !state.delegationUsed && !state.reminderShown) {
-      output.output += REMINDER_MESSAGE
+      let routingHintSection = ""
+
+      // Generate context-specific routing suggestions if skills are available
+      if (loadedSkills && loadedSkills.length > 0) {
+        const recentContext = sessionOutputCache.get(sessionID) || ""
+      }
+
+      output.output += REMINDER_MESSAGE + routingHintSection
       state.reminderShown = true
-      log("[category-skill-reminder] Reminder injected", { 
-        sessionID, 
-        toolCallCount: state.toolCallCount 
+      log("[category-skill-reminder] Reminder injected", {
+        sessionID,
+        toolCallCount: state.toolCallCount,
+        hasRoutingHint: routingHintSection.length > 0,
       })
     }
   }

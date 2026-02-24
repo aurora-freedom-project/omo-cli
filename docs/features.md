@@ -24,7 +24,7 @@ Oh-My-OpenCode provides 10 specialized AI agents. Each has distinct expertise, o
 | **Metis** | `claude-sonnet-4-5-thinking` (max) | Plan consultant - pre-planning analysis. Identifies hidden intentions, ambiguities, and AI failure points. |
 | **Momus** | `claude-sonnet-4-5-thinking` (max) | Plan reviewer - validates plans against clarity, verifiability, and completeness standards. |
 
-> **Note**: Models are configurable via `oh-my-opencode.json`. The above represents the recommended configuration for optimal cost/performance balance.
+> **Note**: Models are configurable via `omo-cli.json`. The above represents the recommended configuration for optimal cost/performance balance.
 
 ### Invoking Agents
 
@@ -85,7 +85,7 @@ When running inside tmux:
 
 See [Tmux Integration](configurations.md#tmux-integration) for full configuration options.
 
-Customize agent models, prompts, and permissions in `oh-my-opencode.json`. See [Configuration](configurations.md#agents).
+Customize agent models, prompts, and permissions in `omo-cli.json`. See [Configuration](configurations.md#agents).
 
 ---
 
@@ -551,7 +551,7 @@ When a skill MCP has `oauth` configured:
 Pre-authenticate via CLI:
 
 ```bash
-bunx oh-my-opencode mcp oauth login <server-name> --server-url https://api.example.com
+bunx omo-cli mcp oauth login <server-name> --server-url https://api.example.com
 ```
 
 ---

@@ -38,7 +38,7 @@ RECOMMENDED: Use delegate_task with explore/librarian agents for better results:
 // Parallel exploration - fire multiple agents simultaneously
 delegate_task(agent="explore", prompt="Find all files matching pattern X")
 delegate_task(agent="explore", prompt="Search for implementation of Y") 
-delegate_task(agent="librarian", prompt="Lookup documentation for Z")
+delegate_task(agent="researcher", prompt="Lookup documentation for Z")
 
 // Then continue your work while they run in background
 // System will notify you when each completes

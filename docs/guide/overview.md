@@ -96,7 +96,7 @@ Oh My OpenCode automatically configures models based on your available providers
 
 **1. At Installation Time (Interactive Installer)**
 
-When you run `bunx oh-my-opencode install`, the installer asks which providers you have:
+When you run `bunx omo-cli install`, the installer asks which providers you have:
 - Claude Pro/Max subscription?
 - OpenAI/ChatGPT Plus?
 - Google Gemini?
@@ -104,7 +104,7 @@ When you run `bunx oh-my-opencode install`, the installer asks which providers y
 - OpenCode Zen?
 - Z.ai Coding Plan?
 
-Based on your answers, it generates `~/.config/opencode/oh-my-opencode.json` with optimal model assignments for each agent and category.
+Based on your answers, it generates `~/.config/opencode/omo-cli.json` with optimal model assignments for each agent and category.
 
 **2. At Runtime (Fallback Chain)**
 
@@ -125,7 +125,7 @@ Here's a real-world config for a user with **Claude, OpenAI, Gemini, and Z.ai** 
 
 ```jsonc
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/omo-cli/master/assets/omo-cli.schema.json",
   "agents": {
     // Override specific agents only - rest use fallback chain
     "atlas": { "model": "anthropic/claude-sonnet-4-5", "variant": "max" },

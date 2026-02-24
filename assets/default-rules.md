@@ -1,4 +1,4 @@
-# Development Rules - oh-my-opencode
+# Development Rules - omo-cli
 
 ## Core Principles
 

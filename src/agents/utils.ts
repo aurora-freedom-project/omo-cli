@@ -1,14 +1,14 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { BuiltinAgentName, AgentOverrideConfig, AgentOverrides, AgentFactory, AgentPromptMetadata } from "./types"
 import type { CategoriesConfig, CategoryConfig, GitMasterConfig } from "../config/schema"
-import { createSisyphusAgent } from "./sisyphus"
-import { createOracleAgent, ORACLE_PROMPT_METADATA } from "./oracle"
-import { createLibrarianAgent, LIBRARIAN_PROMPT_METADATA } from "./librarian"
-import { createExploreAgent, EXPLORE_PROMPT_METADATA } from "./explore"
-import { createMultimodalLookerAgent, MULTIMODAL_LOOKER_PROMPT_METADATA } from "./multimodal-looker"
-import { createMetisAgent } from "./metis"
-import { createAtlasAgent } from "./atlas"
-import { createMomusAgent } from "./momus"
+import { createOrchestratorAgent } from "./orchestrator"
+import { createAdvisorAgent, ADVISOR_PROMPT_METADATA } from "./advisor"
+import { createResearcherAgent, RESEARCHER_PROMPT_METADATA } from "./researcher"
+import { createExplorerAgent, EXPLORER_PROMPT_METADATA } from "./explorer"
+import { createVisionAgent, VISION_PROMPT_METADATA } from "./vision"
+import { createPlannerAgent } from "./planner"
+import { createNavigatorAgent } from "./navigator"
+import { createReviewerAgent } from "./reviewer"
 import type { AvailableAgent, AvailableCategory, AvailableSkill } from "./dynamic-agent-prompt-builder"
 import { deepMerge, fetchAvailableModels, resolveModelWithFallback, AGENT_MODEL_REQUIREMENTS, findCaseInsensitive, includesCaseInsensitive, readConnectedProvidersCache } from "../shared"
 import { DEFAULT_CATEGORIES, CATEGORY_DESCRIPTIONS } from "../tools/delegate-task/constants"
@@ -19,17 +19,27 @@ import type { BrowserAutomationProvider } from "../config/schema"
 
 type AgentSource = AgentFactory | AgentConfig
 
-const agentSources: Record<BuiltinAgentName, AgentSource> = {
-  sisyphus: createSisyphusAgent,
-  oracle: createOracleAgent,
-  librarian: createLibrarianAgent,
-  explore: createExploreAgent,
-  "multimodal-looker": createMultimodalLookerAgent,
-  metis: createMetisAgent,
-  momus: createMomusAgent,
-  // Note: Atlas is handled specially in createBuiltinAgents()
+const agentSources: Partial<Record<BuiltinAgentName, AgentSource>> = {
+  sisyphus: createOrchestratorAgent,
+  oracle: createAdvisorAgent,
+  librarian: createResearcherAgent,
+  explore: createExplorerAgent,
+  "multimodal-looker": createVisionAgent,
+  metis: createPlannerAgent,
+  momus: createReviewerAgent,
+  // Note: Atlas/Navigator is handled specially in createBuiltinAgents()
   // because it needs OrchestratorContext, not just a model string
-  atlas: createAtlasAgent as unknown as AgentFactory,
+  atlas: createNavigatorAgent as unknown as AgentFactory,
+  // New name aliases
+  orchestrator: createOrchestratorAgent,
+  advisor: createAdvisorAgent,
+  researcher: createResearcherAgent,
+  explorer: createExplorerAgent,
+  vision: createVisionAgent,
+  planner: createPlannerAgent,
+  reviewer: createReviewerAgent,
+  navigator: createNavigatorAgent as unknown as AgentFactory,
+  coder: createOrchestratorAgent, // coder uses deep implementation factory
 }
 
 /**
@@ -37,10 +47,14 @@ const agentSources: Record<BuiltinAgentName, AgentSource> = {
  * (Delegation Table, Tool Selection, Key Triggers, etc.)
  */
 const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
-  oracle: ORACLE_PROMPT_METADATA,
-  librarian: LIBRARIAN_PROMPT_METADATA,
-  explore: EXPLORE_PROMPT_METADATA,
-  "multimodal-looker": MULTIMODAL_LOOKER_PROMPT_METADATA,
+  oracle: ADVISOR_PROMPT_METADATA,
+  advisor: ADVISOR_PROMPT_METADATA,
+  librarian: RESEARCHER_PROMPT_METADATA,
+  researcher: RESEARCHER_PROMPT_METADATA,
+  explore: EXPLORER_PROMPT_METADATA,
+  explorer: EXPLORER_PROMPT_METADATA,
+  "multimodal-looker": VISION_PROMPT_METADATA,
+  vision: VISION_PROMPT_METADATA,
 }
 
 function isFactory(source: AgentSource): source is AgentFactory {
@@ -90,7 +104,7 @@ export function buildAgent(
  * Creates OmO-specific environment context (time, timezone, locale).
  * Note: Working directory, platform, and date are already provided by OpenCode's system.ts,
  * so we only include fields that OpenCode doesn't provide to avoid duplication.
- * See: https://github.com/code-yeongyu/oh-my-opencode/issues/379
+ * See: https://github.com/code-yeongyu/omo-cli/issues/379
  */
 export function createEnvContext(): string {
   const now = new Date()
@@ -218,7 +232,7 @@ export async function createBuiltinAgents(
   for (const [name, source] of Object.entries(agentSources)) {
     const agentName = name as BuiltinAgentName
 
-    if (agentName === "sisyphus") continue
+    if (agentName === "orchestrator") continue
     if (agentName === "atlas") continue
     if (includesCaseInsensitive(disabledAgents, agentName)) continue
 
@@ -248,7 +262,7 @@ export async function createBuiltinAgents(
       config = applyCategoryOverride(config, overrideCategory, mergedCategories)
     }
 
-    if (agentName === "librarian" && directory && config.prompt) {
+    if (agentName === "researcher" && directory && config.prompt) {
       const envContext = createEnvContext()
       config = { ...config, prompt: config.prompt + envContext }
     }
@@ -270,9 +284,9 @@ export async function createBuiltinAgents(
     }
   }
 
-  if (!disabledAgents.includes("sisyphus")) {
-    const sisyphusOverride = agentOverrides["sisyphus"]
-    const sisyphusRequirement = AGENT_MODEL_REQUIREMENTS["sisyphus"]
+  if (!disabledAgents.includes("orchestrator")) {
+    const sisyphusOverride = agentOverrides["orchestrator"]
+    const sisyphusRequirement = AGENT_MODEL_REQUIREMENTS["orchestrator"]
 
     const sisyphusResolution = resolveModelWithFallback({
       uiSelectedModel,
@@ -285,7 +299,7 @@ export async function createBuiltinAgents(
     if (sisyphusResolution) {
       const { model: sisyphusModel, variant: sisyphusResolvedVariant } = sisyphusResolution
 
-      let sisyphusConfig = createSisyphusAgent(
+      let sisyphusConfig = createOrchestratorAgent(
         sisyphusModel,
         availableAgents,
         undefined,
@@ -311,13 +325,13 @@ export async function createBuiltinAgents(
         sisyphusConfig = mergeAgentConfig(sisyphusConfig, sisyphusOverride)
       }
 
-      result["sisyphus"] = sisyphusConfig
+      result["orchestrator"] = sisyphusConfig
     }
   }
 
-  if (!disabledAgents.includes("atlas")) {
-    const orchestratorOverride = agentOverrides["atlas"]
-    const atlasRequirement = AGENT_MODEL_REQUIREMENTS["atlas"]
+  if (!disabledAgents.includes("navigator")) {
+    const orchestratorOverride = agentOverrides["navigator"]
+    const atlasRequirement = AGENT_MODEL_REQUIREMENTS["navigator"]
 
     const atlasResolution = resolveModelWithFallback({
       uiSelectedModel,
@@ -330,7 +344,7 @@ export async function createBuiltinAgents(
     if (atlasResolution) {
       const { model: atlasModel, variant: atlasResolvedVariant } = atlasResolution
 
-      let orchestratorConfig = createAtlasAgent({
+      let orchestratorConfig = createNavigatorAgent({
         model: atlasModel,
         availableAgents,
         availableSkills,
@@ -350,8 +364,8 @@ export async function createBuiltinAgents(
         orchestratorConfig = mergeAgentConfig(orchestratorConfig, orchestratorOverride)
       }
 
-      // Atlas is a background agent - hide from Tab selector
-      result["atlas"] = { ...orchestratorConfig, hidden: true }
+      // Navigator is a background agent - hide from Tab selector
+      result["navigator"] = { ...orchestratorConfig, hidden: true }
     }
   }
 

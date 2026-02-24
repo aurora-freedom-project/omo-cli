@@ -53,7 +53,7 @@ export function resolveModelWithFallback(
 		return { model: normalizedUiModel, source: "override" }
 	}
 
-	// Step 2: Config Override (from oh-my-opencode.json)
+	// Step 2: Config Override (from omo-cli.json)
 	const normalizedUserModel = normalizeModel(userModel)
 	if (normalizedUserModel) {
 		log("Model resolved via config override", { model: normalizedUserModel })

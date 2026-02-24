@@ -223,7 +223,7 @@ MUTUALLY EXCLUSIVE: Provide EITHER category OR subagent_type, not both (unless c
 - category: Use predefined category → Spawns Sisyphus-Junior with category config
   Available categories:
 ${categoryList}
-- subagent_type: Use specific agent directly (e.g., "oracle", "explore")
+- subagent_type: Use specific agent directly (e.g., "advisor", "explorer")
 - run_in_background: true=async (returns task_id), false=sync (waits for result). Default: false. Use background=true ONLY for parallel exploration with 5+ independent queries.
 - session_id: Existing Task session to continue (from previous task output). Continues agent with FULL CONTEXT PRESERVED - saves tokens, maintains continuity.
 - command: The command that triggered this task (optional, for slash command tracking).
@@ -287,11 +287,11 @@ Prompts MUST be in English.`
         resolvedParentAgent: parentAgent,
       })
       const parentModel = prevMessage?.model?.providerID && prevMessage?.model?.modelID
-        ? { 
-            providerID: prevMessage.model.providerID, 
-            modelID: prevMessage.model.modelID,
-            ...(prevMessage.model.variant ? { variant: prevMessage.model.variant } : {})
-          }
+        ? {
+          providerID: prevMessage.model.providerID,
+          modelID: prevMessage.model.modelID,
+          ...(prevMessage.model.variant ? { variant: prevMessage.model.variant } : {})
+        }
         : undefined
 
       if (args.session_id) {
@@ -496,109 +496,110 @@ To continue this session: session_id="${args.session_id}"`
         return `Invalid arguments: Must provide either category or subagent_type.`
       }
 
-       // Fetch OpenCode config at boundary to get system default model
-       let systemDefaultModel: string | undefined
-       try {
-         const openCodeConfig = await client.config.get()
-         systemDefaultModel = (openCodeConfig as { data?: { model?: string } })?.data?.model
-       } catch {
-         // Config fetch failed, proceed without system default
-         systemDefaultModel = undefined
-       }
+      // Fetch OpenCode config at boundary to get system default model
+      let systemDefaultModel: string | undefined
+      try {
+        const openCodeConfig = await client.config.get()
+        systemDefaultModel = (openCodeConfig as { data?: { model?: string } })?.data?.model
+      } catch {
+        // Config fetch failed, proceed without system default
+        systemDefaultModel = undefined
+      }
 
-       let agentToUse: string
-       let categoryModel: { providerID: string; modelID: string; variant?: string } | undefined
-       let categoryPromptAppend: string | undefined
+      let agentToUse: string
+      let categoryModel: { providerID: string; modelID: string; variant?: string } | undefined
+      let categoryPromptAppend: string | undefined
 
-       const inheritedModel = parentModel
-         ? `${parentModel.providerID}/${parentModel.modelID}`
-         : undefined
+      const inheritedModel = parentModel
+        ? `${parentModel.providerID}/${parentModel.modelID}`
+        : undefined
 
-       let modelInfo: ModelFallbackInfo | undefined
+      let modelInfo: ModelFallbackInfo | undefined
 
-       if (args.category) {
-          const connectedProviders = readConnectedProvidersCache()
-          const availableModels = await fetchAvailableModels(client, {
-            connectedProviders: connectedProviders ?? undefined
+      if (args.category) {
+        const connectedProviders = readConnectedProvidersCache()
+        const availableModels = await fetchAvailableModels(client, {
+          connectedProviders: connectedProviders ?? undefined
+        })
+
+        const resolved = resolveCategoryConfig(args.category, {
+          userCategories,
+          inheritedModel,
+          systemDefaultModel,
+        })
+        if (!resolved) {
+          return `Unknown category: "${args.category}". Available: ${Object.keys({ ...DEFAULT_CATEGORIES, ...userCategories }).join(", ")}`
+        }
+
+        const requirement = CATEGORY_MODEL_REQUIREMENTS[args.category]
+        let actualModel: string | undefined
+
+        if (!requirement) {
+          actualModel = resolved.model
+          if (actualModel) {
+            modelInfo = { model: actualModel, type: "system-default", source: "system-default" }
+          }
+        } else {
+          const resolution = resolveModelWithFallback({
+            userModel: userCategories?.[args.category]?.model ?? sisyphusJuniorModel,
+            fallbackChain: requirement.fallbackChain,
+            availableModels,
+            systemDefaultModel,
           })
 
-         const resolved = resolveCategoryConfig(args.category, {
-           userCategories,
-           inheritedModel,
-           systemDefaultModel,
-         })
-         if (!resolved) {
-           return `Unknown category: "${args.category}". Available: ${Object.keys({ ...DEFAULT_CATEGORIES, ...userCategories }).join(", ")}`
-         }
+          if (resolution) {
+            const { model: resolvedModel, source, variant: resolvedVariant } = resolution
+            actualModel = resolvedModel
 
-         const requirement = CATEGORY_MODEL_REQUIREMENTS[args.category]
-         let actualModel: string | undefined
+            if (!parseModelString(actualModel)) {
+              return `Invalid model format "${actualModel}". Expected "provider/model" format (e.g., "anthropic/claude-sonnet-4-5").`
+            }
 
-         if (!requirement) {
-           actualModel = resolved.model
-           if (actualModel) {
-             modelInfo = { model: actualModel, type: "system-default", source: "system-default" }
-           }
-          } else {
-          const resolution = resolveModelWithFallback({
-              userModel: userCategories?.[args.category]?.model ?? sisyphusJuniorModel,
-              fallbackChain: requirement.fallbackChain,
-              availableModels,
-              systemDefaultModel,
-            })
+            let type: "user-defined" | "inherited" | "category-default" | "system-default"
+            switch (source) {
+              case "override":
+                type = "user-defined"
+                break
+              case "provider-fallback":
+                type = "category-default"
+                break
+              case "system-default":
+                type = "system-default"
+                break
+            }
 
-           if (resolution) {
-             const { model: resolvedModel, source, variant: resolvedVariant } = resolution
-             actualModel = resolvedModel
+            modelInfo = { model: actualModel, type, source }
 
-             if (!parseModelString(actualModel)) {
-               return `Invalid model format "${actualModel}". Expected "provider/model" format (e.g., "anthropic/claude-sonnet-4-5").`
-             }
-
-             let type: "user-defined" | "inherited" | "category-default" | "system-default"
-             switch (source) {
-                case "override":
-                  type = "user-defined"
-                  break
-                case "provider-fallback":
-                  type = "category-default"
-                  break
-                case "system-default":
-                  type = "system-default"
-                  break
-             }
-
-             modelInfo = { model: actualModel, type, source }
-             
-             const parsedModel = parseModelString(actualModel)
-             const variantToUse = userCategories?.[args.category]?.variant ?? resolvedVariant ?? resolved.config.variant
-             categoryModel = parsedModel
-               ? (variantToUse ? { ...parsedModel, variant: variantToUse } : parsedModel)
-               : undefined
-           }
-         }
-
-         agentToUse = SISYPHUS_JUNIOR_AGENT
-          if (!categoryModel && actualModel) {
             const parsedModel = parseModelString(actualModel)
-            categoryModel = parsedModel ?? undefined
+            const variantToUse = userCategories?.[args.category]?.variant ?? resolvedVariant ?? resolved.config.variant
+            categoryModel = parsedModel
+              ? (variantToUse ? { ...parsedModel, variant: variantToUse } : parsedModel)
+              : undefined
           }
-          categoryPromptAppend = resolved.promptAppend || undefined
+        }
 
-          if (!categoryModel && !actualModel) {
-            const categoryNames = Object.keys({ ...DEFAULT_CATEGORIES, ...userCategories })
-            return `Model not configured for category "${args.category}".
+        agentToUse = SISYPHUS_JUNIOR_AGENT
+        if (!categoryModel && actualModel) {
+          const parsedModel = parseModelString(actualModel)
+          categoryModel = parsedModel ?? undefined
+        }
+        categoryPromptAppend = resolved.promptAppend || undefined
+
+        if (!categoryModel && !actualModel) {
+          const categoryNames = Object.keys({ ...DEFAULT_CATEGORIES, ...userCategories })
+          return `Model not configured for category "${args.category}".
 
 Configure in one of:
 1. OpenCode: Set "model" in opencode.json
-2. Oh-My-OpenCode: Set category model in oh-my-opencode.json
+2. Omo-CLI: Set category model in omo-cli.json
+    "categories": { "${args.category}": { "model": "..." } }
 3. Provider: Connect a provider with available models
 
 Current category: ${args.category}
 Available categories: ${categoryNames.join(", ")}`
-          }
+        }
 
-          const isUnstableAgent = resolved.config.is_unstable_agent === true || (actualModel?.toLowerCase().includes("gemini") ?? false)
+        const isUnstableAgent = resolved.config.is_unstable_agent === true || (actualModel?.toLowerCase().includes("gemini") ?? false)
         // Handle both boolean false and string "false" due to potential serialization
         const isRunInBackgroundExplicitlyFalse = args.run_in_background === false || args.run_in_background === "false" as unknown as boolean
 
@@ -781,7 +782,7 @@ Create the work plan directly - that's your job as the planning agent.`
         agentToUse = agentName
 
         // Validate agent exists and is callable (not a primary agent)
-        // Uses case-insensitive matching to allow "Oracle", "oracle", "ORACLE" etc.
+        // Uses case-insensitive matching to allow "Advisor", "advisor", "ADVISOR" etc.
         try {
           const agentsResult = await client.app.agents()
           type AgentInfo = { name: string; mode?: "subagent" | "primary" | "all"; model?: { providerID: string; modelID: string } }
@@ -811,7 +812,7 @@ Create the work plan directly - that's your job as the planning agent.`
           // Extract registered agent's model to pass explicitly to session.prompt.
           // This ensures the model is always in the correct object format ({providerID, modelID})
           // regardless of how OpenCode handles string→object conversion for plugin-registered agents.
-          // See: https://github.com/code-yeongyu/oh-my-opencode/issues/1225
+          // See: https://github.com/code-yeongyu/omo-cli/issues/1225
           if (matchedAgent.model) {
             categoryModel = matchedAgent.model
           }

@@ -2,7 +2,7 @@ import type { CommandDefinition } from "../claude-code-command-loader/types"
 import type { SkillMcpConfig } from "../skill-mcp-manager/types"
 
 // Skill scopes:
-// - agent: ~/.agent/skills/ (shared by both Claude Code CLI and OpenCode CLI)
+// - agent: ~/.agents/skills/ (native OpenCode path, falls back to ~/.agent/skills/)
 // - user: ~/.claude/skills/ (Claude Code user-level)
 // - project: ./.claude/skills/ (Claude Code project-level)
 // - opencode: ~/.config/opencode/skills/ (OpenCode user-level)

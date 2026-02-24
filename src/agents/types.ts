@@ -57,6 +57,17 @@ export function isGptModel(model: string): boolean {
 }
 
 export type BuiltinAgentName =
+  // New native-friendly names
+  | "orchestrator"
+  | "coder"
+  | "advisor"
+  | "researcher"
+  | "explorer"
+  | "vision"
+  | "planner"
+  | "reviewer"
+  | "navigator"
+  // Legacy names (backwards compat — internal code still uses these)
   | "sisyphus"
   | "oracle"
   | "librarian"
@@ -68,6 +79,8 @@ export type BuiltinAgentName =
 
 export type OverridableAgentName =
   | "build"
+  | "worker"
+  | "builder"
   | BuiltinAgentName
 
 export type AgentName = BuiltinAgentName

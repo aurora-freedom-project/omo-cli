@@ -1,13 +1,13 @@
 ---
 name: publish
-description: MUST USE for publishing oh-my-opencode to npm via GitHub Actions. Handles version bumping, changelog, workflow trigger, and verification.
+description: MUST USE for publishing omo-cli to npm via GitHub Actions. Handles version bumping, changelog, workflow trigger, and verification.
 argument-hint: <patch|minor|major>
 allowed-tools: Bash(gh:*) Bash(npm:*) Bash(git:*) Bash(node:*) TodoWrite TodoRead
 ---
 
 # Publish Skill
 
-> **Expertise**: Release management for oh-my-opencode npm package via GitHub Actions workflows.
+> **Expertise**: Release management for omo-cli npm package via GitHub Actions workflows.
 
 You are the release manager. Execute the FULL publish workflow following a strict phase-based approach.
 
@@ -30,7 +30,7 @@ Before ANYTHING, gather context:
 
 ```bash
 # Published version
-npm view oh-my-opencode version
+npm view omo-cli version
 
 # Local version
 node -p "require('./package.json').version"
@@ -39,7 +39,7 @@ node -p "require('./package.json').version"
 git status --porcelain
 
 # Commits since release (ANALYZE THE DIFFS, not just messages)
-npm view oh-my-opencode version | xargs -I{} git log "v{}"..HEAD --oneline
+npm view omo-cli version | xargs -I{} git log "v{}"..HEAD --oneline
 
 # Unpushed commits
 git log origin/master..HEAD --oneline
@@ -182,7 +182,7 @@ gh release edit "v${NEW_VERSION}" --notes-file /tmp/release-notes-v${NEW_VERSION
 
 ### Verify npm
 ```bash
-npm view oh-my-opencode version
+npm view omo-cli version
 ```
 Compare with expected. If not matching after 2 minutes, warn about propagation delay.
 
@@ -196,20 +196,20 @@ Poll every 30 seconds until completion.
 ```bash
 PLATFORMS="darwin-arm64 darwin-x64 linux-x64 linux-arm64 linux-x64-musl linux-arm64-musl windows-x64"
 for PLATFORM in $PLATFORMS; do
-  npm view "oh-my-opencode-${PLATFORM}" version
+  npm view "omo-cli-${PLATFORM}" version
 done
 ```
 
 Expected packages:
 | Package | Platform |
 |---------|----------|
-| `oh-my-opencode-darwin-arm64` | macOS Apple Silicon |
-| `oh-my-opencode-darwin-x64` | macOS Intel |
-| `oh-my-opencode-linux-x64` | Linux x64 (glibc) |
-| `oh-my-opencode-linux-arm64` | Linux ARM64 (glibc) |
-| `oh-my-opencode-linux-x64-musl` | Linux x64 (musl/Alpine) |
-| `oh-my-opencode-linux-arm64-musl` | Linux ARM64 (musl/Alpine) |
-| `oh-my-opencode-windows-x64` | Windows x64 |
+| `omo-cli-darwin-arm64` | macOS Apple Silicon |
+| `omo-cli-darwin-x64` | macOS Intel |
+| `omo-cli-linux-x64` | Linux x64 (glibc) |
+| `omo-cli-linux-arm64` | Linux ARM64 (glibc) |
+| `omo-cli-linux-x64-musl` | Linux x64 (musl/Alpine) |
+| `omo-cli-linux-arm64-musl` | Linux ARM64 (musl/Alpine) |
+| `omo-cli-windows-x64` | Windows x64 |
 
 ---
 
@@ -218,8 +218,8 @@ Expected packages:
 ### Final Confirmation
 Report to user with:
 - New version number
-- GitHub release URL: `https://github.com/code-yeongyu/oh-my-opencode/releases/tag/v{version}`
-- npm package URL: `https://www.npmjs.com/package/oh-my-opencode`
+- GitHub release URL: `https://github.com/code-yeongyu/omo-cli/releases/tag/v{version}`
+- npm package URL: `https://www.npmjs.com/package/omo-cli`
 - Platform packages status table
 
 ---

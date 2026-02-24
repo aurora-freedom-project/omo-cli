@@ -1,10 +1,10 @@
 import { describe, test, expect, spyOn, beforeEach, afterEach } from "bun:test"
 import { resolveCategoryConfig, createConfigHandler } from "./config-handler"
 import type { CategoryConfig } from "../config/schema"
-import type { OhMyOpenCodeConfig } from "../config"
+import type { OmoCliConfig } from "../config"
 
 import * as agents from "../agents"
-import * as sisyphusJunior from "../agents/sisyphus-junior"
+import * as sisyphusJunior from "../agents/worker"
 import * as commandLoader from "../features/claude-code-command-loader"
 import * as builtinCommands from "../features/builtin-commands"
 import * as skillLoader from "../features/opencode-skill-loader"
@@ -19,11 +19,11 @@ import * as modelResolver from "../shared/model-resolver"
 
 beforeEach(() => {
   spyOn(agents, "createBuiltinAgents" as any).mockResolvedValue({
-    sisyphus: { name: "sisyphus", prompt: "test", mode: "primary" },
+    orchestrator: { name: "orchestrator", prompt: "test", mode: "primary" },
     oracle: { name: "oracle", prompt: "test", mode: "subagent" },
   })
 
-  spyOn(sisyphusJunior, "createSisyphusJuniorAgentWithOverrides" as any).mockReturnValue({
+  spyOn(sisyphusJunior, "createWorkerAgentWithOverrides" as any).mockReturnValue({
     name: "sisyphus-junior",
     prompt: "test",
     mode: "subagent",
@@ -62,7 +62,7 @@ beforeEach(() => {
 
   spyOn(mcpModule, "createBuiltinMcps" as any).mockReturnValue({})
 
-  spyOn(shared, "log" as any).mockImplementation(() => {})
+  spyOn(shared, "log" as any).mockImplementation(() => { })
   spyOn(shared, "fetchAvailableModels" as any).mockResolvedValue(new Set(["anthropic/claude-opus-4-5"]))
   spyOn(shared, "readConnectedProvidersCache" as any).mockReturnValue(null)
 
@@ -78,37 +78,37 @@ beforeEach(() => {
 
 afterEach(() => {
   (agents.createBuiltinAgents as any)?.mockRestore?.()
-  ;(sisyphusJunior.createSisyphusJuniorAgentWithOverrides as any)?.mockRestore?.()
-  ;(commandLoader.loadUserCommands as any)?.mockRestore?.()
-  ;(commandLoader.loadProjectCommands as any)?.mockRestore?.()
-  ;(commandLoader.loadOpencodeGlobalCommands as any)?.mockRestore?.()
-  ;(commandLoader.loadOpencodeProjectCommands as any)?.mockRestore?.()
-  ;(builtinCommands.loadBuiltinCommands as any)?.mockRestore?.()
-  ;(skillLoader.loadUserSkills as any)?.mockRestore?.()
-  ;(skillLoader.loadProjectSkills as any)?.mockRestore?.()
-  ;(skillLoader.loadOpencodeGlobalSkills as any)?.mockRestore?.()
-  ;(skillLoader.loadOpencodeProjectSkills as any)?.mockRestore?.()
-  ;(skillLoader.discoverUserClaudeSkills as any)?.mockRestore?.()
-  ;(skillLoader.discoverProjectClaudeSkills as any)?.mockRestore?.()
-  ;(skillLoader.discoverOpencodeGlobalSkills as any)?.mockRestore?.()
-  ;(skillLoader.discoverOpencodeProjectSkills as any)?.mockRestore?.()
-  ;(agentLoader.loadUserAgents as any)?.mockRestore?.()
-  ;(agentLoader.loadProjectAgents as any)?.mockRestore?.()
-  ;(mcpLoader.loadMcpConfigs as any)?.mockRestore?.()
-  ;(pluginLoader.loadAllPluginComponents as any)?.mockRestore?.()
-  ;(mcpModule.createBuiltinMcps as any)?.mockRestore?.()
-  ;(shared.log as any)?.mockRestore?.()
-  ;(shared.fetchAvailableModels as any)?.mockRestore?.()
-  ;(shared.readConnectedProvidersCache as any)?.mockRestore?.()
-  ;(configDir.getOpenCodeConfigPaths as any)?.mockRestore?.()
-  ;(permissionCompat.migrateAgentConfig as any)?.mockRestore?.()
-  ;(modelResolver.resolveModelWithFallback as any)?.mockRestore?.()
+    ; (sisyphusJunior.createWorkerAgentWithOverrides as any)?.mockRestore?.()
+    ; (commandLoader.loadUserCommands as any)?.mockRestore?.()
+    ; (commandLoader.loadProjectCommands as any)?.mockRestore?.()
+    ; (commandLoader.loadOpencodeGlobalCommands as any)?.mockRestore?.()
+    ; (commandLoader.loadOpencodeProjectCommands as any)?.mockRestore?.()
+    ; (builtinCommands.loadBuiltinCommands as any)?.mockRestore?.()
+    ; (skillLoader.loadUserSkills as any)?.mockRestore?.()
+    ; (skillLoader.loadProjectSkills as any)?.mockRestore?.()
+    ; (skillLoader.loadOpencodeGlobalSkills as any)?.mockRestore?.()
+    ; (skillLoader.loadOpencodeProjectSkills as any)?.mockRestore?.()
+    ; (skillLoader.discoverUserClaudeSkills as any)?.mockRestore?.()
+    ; (skillLoader.discoverProjectClaudeSkills as any)?.mockRestore?.()
+    ; (skillLoader.discoverOpencodeGlobalSkills as any)?.mockRestore?.()
+    ; (skillLoader.discoverOpencodeProjectSkills as any)?.mockRestore?.()
+    ; (agentLoader.loadUserAgents as any)?.mockRestore?.()
+    ; (agentLoader.loadProjectAgents as any)?.mockRestore?.()
+    ; (mcpLoader.loadMcpConfigs as any)?.mockRestore?.()
+    ; (pluginLoader.loadAllPluginComponents as any)?.mockRestore?.()
+    ; (mcpModule.createBuiltinMcps as any)?.mockRestore?.()
+    ; (shared.log as any)?.mockRestore?.()
+    ; (shared.fetchAvailableModels as any)?.mockRestore?.()
+    ; (shared.readConnectedProvidersCache as any)?.mockRestore?.()
+    ; (configDir.getOpenCodeConfigPaths as any)?.mockRestore?.()
+    ; (permissionCompat.migrateAgentConfig as any)?.mockRestore?.()
+    ; (modelResolver.resolveModelWithFallback as any)?.mockRestore?.()
 })
 
 describe("Plan agent demote behavior", () => {
   test("plan agent should be demoted to subagent mode when replacePlan is true", async () => {
     // #given
-    const pluginConfig: OhMyOpenCodeConfig = {
+    const pluginConfig: OmoCliConfig = {
       sisyphus_agent: {
         planner_enabled: true,
         replace_plan: true,
@@ -145,7 +145,7 @@ describe("Plan agent demote behavior", () => {
 
   test("prometheus should have mode 'all' to be callable via delegate_task", async () => {
     // #given
-    const pluginConfig: OhMyOpenCodeConfig = {
+    const pluginConfig: OmoCliConfig = {
       sisyphus_agent: {
         planner_enabled: true,
       },
@@ -168,8 +168,8 @@ describe("Plan agent demote behavior", () => {
 
     // #then
     const agents = config.agent as Record<string, { mode?: string }>
-    expect(agents.prometheus).toBeDefined()
-    expect(agents.prometheus.mode).toBe("all")
+    expect(agents.coder).toBeDefined()
+    expect(agents.coder.mode).toBe("all")
   })
 })
 
@@ -276,7 +276,7 @@ describe("Prometheus category config resolution", () => {
 describe("Prometheus direct override priority over category", () => {
   test("direct reasoningEffort takes priority over category reasoningEffort", async () => {
     // #given - category has reasoningEffort=xhigh, direct override says "low"
-    const pluginConfig: OhMyOpenCodeConfig = {
+    const pluginConfig: OmoCliConfig = {
       sisyphus_agent: {
         planner_enabled: true,
       },
@@ -287,7 +287,7 @@ describe("Prometheus direct override priority over category", () => {
         },
       },
       agents: {
-        prometheus: {
+        coder: {
           category: "test-planning",
           reasoningEffort: "low",
         },
@@ -311,13 +311,13 @@ describe("Prometheus direct override priority over category", () => {
 
     // #then - direct override's reasoningEffort wins
     const agents = config.agent as Record<string, { reasoningEffort?: string }>
-    expect(agents.prometheus).toBeDefined()
-    expect(agents.prometheus.reasoningEffort).toBe("low")
+    expect(agents.coder).toBeDefined()
+    expect(agents.coder.reasoningEffort).toBe("low")
   })
 
   test("category reasoningEffort applied when no direct override", async () => {
     // #given - category has reasoningEffort but no direct override
-    const pluginConfig: OhMyOpenCodeConfig = {
+    const pluginConfig: OmoCliConfig = {
       sisyphus_agent: {
         planner_enabled: true,
       },
@@ -328,7 +328,7 @@ describe("Prometheus direct override priority over category", () => {
         },
       },
       agents: {
-        prometheus: {
+        coder: {
           category: "reasoning-cat",
         },
       },
@@ -351,13 +351,13 @@ describe("Prometheus direct override priority over category", () => {
 
     // #then - category's reasoningEffort is applied
     const agents = config.agent as Record<string, { reasoningEffort?: string }>
-    expect(agents.prometheus).toBeDefined()
-    expect(agents.prometheus.reasoningEffort).toBe("high")
+    expect(agents.coder).toBeDefined()
+    expect(agents.coder.reasoningEffort).toBe("high")
   })
 
   test("direct temperature takes priority over category temperature", async () => {
     // #given
-    const pluginConfig: OhMyOpenCodeConfig = {
+    const pluginConfig: OmoCliConfig = {
       sisyphus_agent: {
         planner_enabled: true,
       },
@@ -368,7 +368,7 @@ describe("Prometheus direct override priority over category", () => {
         },
       },
       agents: {
-        prometheus: {
+        coder: {
           category: "temp-cat",
           temperature: 0.1,
         },
@@ -392,7 +392,7 @@ describe("Prometheus direct override priority over category", () => {
 
     // #then - direct temperature wins over category
     const agents = config.agent as Record<string, { temperature?: number }>
-    expect(agents.prometheus).toBeDefined()
-    expect(agents.prometheus.temperature).toBe(0.1)
+    expect(agents.coder).toBeDefined()
+    expect(agents.coder.temperature).toBe(0.1)
   })
 })
