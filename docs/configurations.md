@@ -16,7 +16,7 @@ It asks about your providers (Claude, OpenAI, Gemini, etc.) and generates optima
 
 ```jsonc
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/omo-cli/master/assets/omo-cli.schema.json",
+  "$schema": "https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/master/assets/omo-cli.schema.json",
   
   // Override specific agent models
   "agents": {
@@ -50,7 +50,7 @@ Schema autocomplete supported:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/omo-cli/master/assets/omo-cli.schema.json"
+  "$schema": "https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/master/assets/omo-cli.schema.json"
 }
 ```
 
@@ -67,7 +67,7 @@ When both `omo-cli.jsonc` and `omo-cli.json` files exist, `.jsonc` takes priorit
 
 ```jsonc
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/omo-cli/master/assets/omo-cli.schema.json",
+  "$schema": "https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/master/assets/omo-cli.schema.json",
 
   /* Agent overrides - customize models for specific tasks */
   "agents": {
@@ -143,7 +143,7 @@ If you encounter `JSON Parse error: Unexpected EOF`:
 
 The proper long-term fix requires Claude Code SDK to parse NDJSON responses correctly. Until then, use `stream: false` as a workaround.
 
-**Tracking**: https://github.com/code-yeongyu/omo-cli/issues/1124
+**Tracking**: https://github.com/aurora-freedom-project/omo-cli/issues/1124
 
 ## Agents
 

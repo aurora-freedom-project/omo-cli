@@ -218,7 +218,7 @@ Expected packages:
 ### Final Confirmation
 Report to user with:
 - New version number
-- GitHub release URL: `https://github.com/code-yeongyu/omo-cli/releases/tag/v{version}`
+- GitHub release URL: `https://github.com/aurora-freedom-project/omo-cli/releases/tag/v{version}`
 - npm package URL: `https://www.npmjs.com/package/omo-cli`
 - Platform packages status table
 

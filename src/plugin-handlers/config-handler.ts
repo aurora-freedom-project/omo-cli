@@ -305,7 +305,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
               if (key === "plan" && replacePlan) return false;
               // Filter out agents that omo-cli provides to prevent
               // OpenCode defaults from overwriting user config in omo-cli.json
-              // See: https://github.com/code-yeongyu/omo-cli/issues/472
+              // See: https://github.com/aurora-freedom-project/omo-cli/issues/472
               if (key in builtinAgents) return false;
               return true;
             })

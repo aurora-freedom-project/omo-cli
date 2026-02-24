@@ -38,7 +38,7 @@ function findCommentCheckerPathSync(): string | null {
 
   try {
     const require = createRequire(import.meta.url)
-    const cliPkgPath = require.resolve("@code-yeongyu/comment-checker/package.json")
+    const cliPkgPath = require.resolve("@aurora-freedom-project/comment-checker/package.json")
     const cliDir = dirname(cliPkgPath)
     const binaryPath = join(cliDir, "bin", binaryName)
 
@@ -150,7 +150,7 @@ export interface CheckResult {
  */
 export async function runCommentChecker(input: HookInput, cliPath?: string, customPrompt?: string): Promise<CheckResult> {
   const binaryPath = cliPath ?? resolvedCliPath ?? getCommentCheckerPathSync()
-  
+
   if (!binaryPath) {
     debugLog("comment-checker binary not found")
     return { hasComments: false, message: "" }
@@ -169,7 +169,7 @@ export async function runCommentChecker(input: HookInput, cliPath?: string, cust
     if (customPrompt) {
       args.push("--prompt", customPrompt)
     }
-    
+
     const proc = spawn(args, {
       stdin: "pipe",
       stdout: "pipe",

@@ -58,11 +58,11 @@ async function updatePackageVersion(pkgPath: string, newVersion: string): Promis
 
 async function updateAllPackageVersions(newVersion: string): Promise<void> {
   console.log("\nSyncing version across all packages...")
-  
+
   // Update main package.json
   const mainPkgPath = new URL("../package.json", import.meta.url).pathname
   await updatePackageVersion(mainPkgPath, newVersion)
-  
+
   // Update optionalDependencies versions in main package.json
   let mainPkg = await Bun.file(mainPkgPath).text()
   for (const platform of PLATFORM_PACKAGES) {
@@ -73,7 +73,7 @@ async function updateAllPackageVersions(newVersion: string): Promise<void> {
     )
   }
   await Bun.write(mainPkgPath, mainPkg)
-  
+
   // Update each platform package.json
   for (const platform of PLATFORM_PACKAGES) {
     const pkgPath = new URL(`../packages/${platform}/package.json`, import.meta.url).pathname
@@ -137,11 +137,11 @@ async function generateChangelog(previous: string, currentVersion?: string): Pro
 async function getContributors(previous: string): Promise<string[]> {
   const notes: string[] = []
 
-  const team = ["actions-user", "github-actions[bot]", "code-yeongyu"]
+  const team = ["actions-user", "github-actions[bot]", "aurora-freedom-project"]
 
   try {
     const compare =
-      await $`gh api "/repos/code-yeongyu/omo-cli/compare/v${previous}...HEAD" --jq '.commits[] | {login: .author.login, message: .commit.message}'`.text()
+      await $`gh api "/repos/aurora-freedom-project/omo-cli/compare/v${previous}...HEAD" --jq '.commits[] | {login: .author.login, message: .commit.message}'`.text()
     const contributors = new Map<string, string[]>()
 
     for (const line of compare.split("\n").filter(Boolean)) {
@@ -210,13 +210,13 @@ async function publishPackage(cwd: string, distTag: string | null, useProvenance
   const tagArgs = distTag ? ["--tag", distTag] : []
   const provenanceArgs = process.env.CI && useProvenance ? ["--provenance"] : []
   const env = useProvenance ? {} : { NPM_CONFIG_PROVENANCE: "false" }
-  
+
   try {
     await $`npm publish --access public --ignore-scripts ${provenanceArgs} ${tagArgs}`.cwd(cwd).env({ ...process.env, ...env })
     return { success: true }
   } catch (error: any) {
     const stderr = error?.stderr?.toString() || error?.message || ""
-    
+
     // Only treat as "already published" if we're certain the package exists
     // E409/EPUBLISHCONFLICT = definitive "version already exists"
     if (
@@ -227,7 +227,7 @@ async function publishPackage(cwd: string, distTag: string | null, useProvenance
     ) {
       return { success: true, alreadyPublished: true }
     }
-    
+
     // E403 can mean "already exists" OR "no permission" - verify by checking npm registry
     if (stderr.includes("E403")) {
       if (pkgName && version) {
@@ -239,7 +239,7 @@ async function publishPackage(cwd: string, distTag: string | null, useProvenance
       // If we can't verify or it doesn't exist, it's a real error
       return { success: false, error: stderr }
     }
-    
+
     // 404 errors are NEVER "already published" - they indicate the package doesn't exist
     // or OIDC token issues. Always treat as failure.
     return { success: false, error: stderr }
@@ -249,37 +249,37 @@ async function publishPackage(cwd: string, distTag: string | null, useProvenance
 async function publishAllPackages(version: string): Promise<void> {
   const distTag = getDistTag(version)
   const skipPlatform = process.env.SKIP_PLATFORM_PACKAGES === "true"
-  
+
   if (skipPlatform) {
     console.log("\n⏭️  Skipping platform packages (SKIP_PLATFORM_PACKAGES=true)")
   } else {
     console.log("\n📦 Publishing platform packages in batches (to avoid OIDC token expiration)...")
-    
+
     // Publish in batches of 2 to avoid OIDC token expiration
     // npm processes requests sequentially even when sent in parallel,
     // so too many parallel requests can cause token expiration
     const BATCH_SIZE = 2
     const failures: string[] = []
-    
+
     for (let i = 0; i < PLATFORM_PACKAGES.length; i += BATCH_SIZE) {
       const batch = PLATFORM_PACKAGES.slice(i, i + BATCH_SIZE)
       const batchNum = Math.floor(i / BATCH_SIZE) + 1
       const totalBatches = Math.ceil(PLATFORM_PACKAGES.length / BATCH_SIZE)
-      
+
       console.log(`\n  Batch ${batchNum}/${totalBatches}: ${batch.join(", ")}`)
-      
+
       const publishPromises = batch.map(async (platform) => {
         const pkgDir = join(process.cwd(), "packages", platform)
         const pkgName = `omo-cli-${platform}`
-        
+
         console.log(`    Starting ${pkgName}...`)
         const result = await publishPackage(pkgDir, distTag, false, pkgName, version)
-        
+
         return { platform, pkgName, result }
       })
-      
+
       const results = await Promise.all(publishPromises)
-      
+
       for (const { pkgName, result } of results) {
         if (result.success) {
           if (result.alreadyPublished) {
@@ -293,16 +293,16 @@ async function publishAllPackages(version: string): Promise<void> {
         }
       }
     }
-    
+
     if (failures.length > 0) {
       throw new Error(`Failed to publish: ${failures.join(", ")}`)
     }
   }
-  
+
   // Publish main package last
   console.log(`\n📦 Publishing main package...`)
   const mainResult = await publishPackage(process.cwd(), distTag, true, PACKAGE_NAME, version)
-  
+
   if (mainResult.success) {
     if (mainResult.alreadyPublished) {
       console.log(`  ✓ ${PACKAGE_NAME}@${version} (already published)`)
@@ -317,10 +317,10 @@ async function publishAllPackages(version: string): Promise<void> {
 
 async function buildPackages(): Promise<void> {
   const skipPlatform = process.env.SKIP_PLATFORM_PACKAGES === "true"
-  
+
   console.log("\nBuilding packages...")
   await $`bun run clean && bun run build`
-  
+
   if (skipPlatform) {
     console.log("⏭️  Skipping platform binaries (SKIP_PLATFORM_PACKAGES=true)")
   } else {
@@ -335,7 +335,7 @@ async function gitTagAndRelease(newVersion: string, notes: string[]): Promise<vo
   console.log("\nCommitting and tagging...")
   await $`git config user.email "github-actions[bot]@users.noreply.github.com"`
   await $`git config user.name "github-actions[bot]"`
-  
+
   // Add all package.json files
   await $`git add package.json assets/omo-cli.schema.json`
   for (const platform of PLATFORM_PACKAGES) {
@@ -359,7 +359,7 @@ async function gitTagAndRelease(newVersion: string, notes: string[]): Promise<vo
   // Push tags first (critical for release), then try branch push (non-critical)
   console.log("Pushing tags...")
   await $`git push origin --tags`
-  
+
   console.log("Pushing branch...")
   const branchPush = await $`git push origin HEAD`.nothrow()
   if (branchPush.exitCode !== 0) {

@@ -5,7 +5,7 @@
 >
 > OmoCli is **free and open-source**. Do **not** download installers or enter payment details on third-party sites that claim to be "official."
 >
-> ✅ Official downloads: https://github.com/code-yeongyu/omo-cli/releases
+> ✅ Official downloads: https://github.com/aurora-freedom-project/omo-cli/releases
 
 > [!NOTE]
 >
@@ -16,9 +16,9 @@
 
 <div align="center">
 
-[![OMO CLI](./.github/assets/hero.jpg)](https://github.com/code-yeongyu/omo-cli#omo-cli)
+[![OMO CLI](./.github/assets/hero.jpg)](https://github.com/aurora-freedom-project/omo-cli#omo-cli)
 
-[![Preview](./.github/assets/omo.png)](https://github.com/code-yeongyu/omo-cli#omo-cli)
+[![Preview](./.github/assets/omo.png)](https://github.com/aurora-freedom-project/omo-cli#omo-cli)
 
 </div>
 
@@ -26,10 +26,10 @@
 
 <div align="center">
 
-[![GitHub Release](https://img.shields.io/github/v/release/code-yeongyu/omo-cli?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/code-yeongyu/omo-cli/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/aurora-freedom-project/omo-cli?color=369eff&labelColor=black&logo=github&style=flat-square)](https://github.com/aurora-freedom-project/omo-cli/releases)
 [![npm downloads](https://img.shields.io/npm/dt/omo-cli?color=ff6b35&labelColor=black&style=flat-square)](https://www.npmjs.com/package/omo-cli)
-[![GitHub Stars](https://img.shields.io/github/stars/code-yeongyu/omo-cli?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/code-yeongyu/omo-cli/stargazers)
-[![License](https://img.shields.io/badge/license-SUL--1.0-white?labelColor=black&style=flat-square)](https://github.com/code-yeongyu/omo-cli/blob/master/LICENSE.md)
+[![GitHub Stars](https://img.shields.io/github/stars/aurora-freedom-project/omo-cli?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/aurora-freedom-project/omo-cli/stargazers)
+[![License](https://img.shields.io/badge/license-SUL--1.0-white?labelColor=black&style=flat-square)](https://github.com/aurora-freedom-project/omo-cli/blob/master/LICENSE.md)
 
 </div>
 

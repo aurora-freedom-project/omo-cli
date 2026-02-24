@@ -125,7 +125,7 @@ Here's a real-world config for a user with **Claude, OpenAI, Gemini, and Z.ai** 
 
 ```jsonc
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/omo-cli/master/assets/omo-cli.schema.json",
+  "$schema": "https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/master/assets/omo-cli.schema.json",
   "agents": {
     // Override specific agents only - rest use fallback chain
     "atlas": { "model": "anthropic/claude-sonnet-4-5", "variant": "max" },

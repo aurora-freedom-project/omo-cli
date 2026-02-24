@@ -323,7 +323,7 @@ export function writeOmoConfig(installConfig: InstallConfig): ConfigMergeResult 
     // This is just a fallback to ensure the file exists.
     if (!existsSync(omoConfigPath)) {
       const newConfig = {
-        $schema: "https://raw.githubusercontent.com/code-yeongyu/omo-cli/master/assets/omo-cli.schema.json",
+        $schema: "https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/master/assets/omo-cli.schema.json",
         agents: {},
         categories: {},
         skills_mode: installConfig.skillsMode ?? "bundled",

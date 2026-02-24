@@ -812,7 +812,7 @@ Create the work plan directly - that's your job as the planning agent.`
           // Extract registered agent's model to pass explicitly to session.prompt.
           // This ensures the model is always in the correct object format ({providerID, modelID})
           // regardless of how OpenCode handles string→object conversion for plugin-registered agents.
-          // See: https://github.com/code-yeongyu/omo-cli/issues/1225
+          // See: https://github.com/aurora-freedom-project/omo-cli/issues/1225
           if (matchedAgent.model) {
             categoryModel = matchedAgent.model
           }

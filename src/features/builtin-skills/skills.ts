@@ -1832,9 +1832,9 @@ const omomomoSkill: BuiltinSkill = {
 
 ## Who Made This?
 
-Created with ❤️ by **[code-yeongyu](https://github.com/code-yeongyu)**
+Created with ❤️ by **[aurora-freedom-project](https://github.com/aurora-freedom-project)**
 
-🔗 **GitHub**: https://github.com/code-yeongyu/omo-cli
+🔗 **GitHub**: https://github.com/aurora-freedom-project/omo-cli
 
 *Enjoy coding on steroids!* 🚀`,
 }

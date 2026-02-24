@@ -15,7 +15,7 @@ function debugLog(...args: unknown[]) {
   }
 }
 
-const REPO = "code-yeongyu/go-claude-code-comment-checker"
+const REPO = "aurora-freedom-project/go-claude-code-comment-checker"
 
 interface PlatformInfo {
   os: string
@@ -64,12 +64,12 @@ export function getCachedBinaryPath(): string | null {
 }
 
 /**
- * Get the version from the installed @code-yeongyu/comment-checker package.
+ * Get the version from the installed @aurora-freedom-project/comment-checker package.
  */
 function getPackageVersion(): string {
   try {
     const require = createRequire(import.meta.url)
-    const pkg = require("@code-yeongyu/comment-checker/package.json")
+    const pkg = require("@aurora-freedom-project/comment-checker/package.json")
     return pkg.version
   } catch {
     // Fallback to hardcoded version if package not found
@@ -82,14 +82,14 @@ function getPackageVersion(): string {
  */
 async function extractTarGz(archivePath: string, destDir: string): Promise<void> {
   debugLog("Extracting tar.gz:", archivePath, "to", destDir)
-  
+
   const proc = spawn(["tar", "-xzf", archivePath, "-C", destDir], {
     stdout: "pipe",
     stderr: "pipe",
   })
-  
+
   const exitCode = await proc.exited
-  
+
   if (exitCode !== 0) {
     const stderr = await new Response(proc.stderr).text()
     throw new Error(`tar extraction failed (exit ${exitCode}): ${stderr}`)
@@ -105,71 +105,71 @@ async function extractTarGz(archivePath: string, destDir: string): Promise<void>
 export async function downloadCommentChecker(): Promise<string | null> {
   const platformKey = `${process.platform}-${process.arch}`
   const platformInfo = PLATFORM_MAP[platformKey]
-  
+
   if (!platformInfo) {
     debugLog(`Unsupported platform: ${platformKey}`)
     return null
   }
-  
+
   const cacheDir = getCacheDir()
   const binaryName = getBinaryName()
   const binaryPath = join(cacheDir, binaryName)
-  
+
   // Already exists in cache
   if (existsSync(binaryPath)) {
     debugLog("Binary already cached at:", binaryPath)
     return binaryPath
   }
-  
+
   const version = getPackageVersion()
   const { os, arch, ext } = platformInfo
   const assetName = `comment-checker_v${version}_${os}_${arch}.${ext}`
   const downloadUrl = `https://github.com/${REPO}/releases/download/v${version}/${assetName}`
-  
+
   debugLog(`Downloading from: ${downloadUrl}`)
   console.log(`[omo-cli] Downloading comment-checker binary...`)
-  
+
   try {
     // Ensure cache directory exists
     if (!existsSync(cacheDir)) {
       mkdirSync(cacheDir, { recursive: true })
     }
-    
+
     // Download with fetch() - Bun handles redirects automatically
     const response = await fetch(downloadUrl, { redirect: "follow" })
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
-    
+
     const archivePath = join(cacheDir, assetName)
     const arrayBuffer = await response.arrayBuffer()
     await Bun.write(archivePath, arrayBuffer)
-    
+
     debugLog(`Downloaded archive to: ${archivePath}`)
-    
+
     // Extract based on file type
     if (ext === "tar.gz") {
       await extractTarGz(archivePath, cacheDir)
     } else {
       await extractZip(archivePath, cacheDir)
     }
-    
+
     // Clean up archive
     if (existsSync(archivePath)) {
       unlinkSync(archivePath)
     }
-    
+
     // Set execute permission on Unix
     if (process.platform !== "win32" && existsSync(binaryPath)) {
       chmodSync(binaryPath, 0o755)
     }
-    
+
     debugLog(`Successfully downloaded binary to: ${binaryPath}`)
     console.log(`[omo-cli] comment-checker binary ready.`)
-    
+
     return binaryPath
-    
+
   } catch (err) {
     debugLog(`Failed to download: ${err}`)
     console.error(`[omo-cli] Failed to download comment-checker: ${err instanceof Error ? err.message : err}`)
@@ -190,7 +190,7 @@ export async function ensureCommentCheckerBinary(): Promise<string | null> {
     debugLog("Using cached binary:", cachedPath)
     return cachedPath
   }
-  
+
   // Download if not cached
   return downloadCommentChecker()
 }

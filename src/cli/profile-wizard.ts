@@ -218,7 +218,7 @@ export async function runProfileWizard(): Promise<string | null> {
 
     // 5. Generate config
     const config = {
-        $schema: "https://raw.githubusercontent.com/code-yeongyu/omo-cli/master/assets/omo-cli.schema.json",
+        $schema: "https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/master/assets/omo-cli.schema.json",
         agents,
         categories,
         background_task: { defaultConcurrency: parseInt(concurrency as string, 10) },

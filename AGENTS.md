@@ -157,4 +157,4 @@ Three-tier system:
 
 - **OpenCode**: Requires >= 1.0.150
 - **Flaky tests**: ralph-loop (CI timeout), session-state (parallel pollution)
-- **Trusted deps**: @ast-grep/cli, @ast-grep/napi, @code-yeongyu/comment-checker
+- **Trusted deps**: @ast-grep/cli, @ast-grep/napi, @aurora-freedom-project/comment-checker
