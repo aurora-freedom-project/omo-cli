@@ -127,7 +127,6 @@ describe("profile-manager", () => {
                 expect(categoryKeys).toEqual(expectedCategories.sort())
 
                 expect(config.background_task).toBeDefined()
-                expect(config.skills_mode).toBeDefined()
             }
         })
 

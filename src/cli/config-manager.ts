@@ -306,7 +306,6 @@ function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial
   return result
 }
 
-import type { SkillsMode } from "./types"
 
 export function writeOmoConfig(installConfig: InstallConfig): ConfigMergeResult {
   try {
@@ -326,7 +325,6 @@ export function writeOmoConfig(installConfig: InstallConfig): ConfigMergeResult 
         $schema: "https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/master/assets/omo-cli.schema.json",
         agents: {},
         categories: {},
-        skills_mode: installConfig.skillsMode ?? "bundled",
       }
       writeFileSync(omoConfigPath, JSON.stringify(newConfig, null, 2) + "\n")
     }

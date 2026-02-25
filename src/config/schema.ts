@@ -469,7 +469,7 @@ export const PrivacyConfigSchema = z.object({
   /** Require explicit confirmation before accessing sensitive files */
   require_confirmation: z.boolean().default(false),
 })
-export const SkillsModeSchema = z.enum(["bundled", "filesystem"]).default("filesystem")
+
 
 export const OmoCliConfigSchema = z.object({
   $schema: z.string().optional(),
@@ -497,12 +497,6 @@ export const OmoCliConfigSchema = z.object({
   coding_level: CodingLevelSchema.optional(),
   /** Privacy awareness configuration */
   privacy: PrivacyConfigSchema.optional(),
-  /**
-   * Skills loading mode:
-   * - "bundled": Load 600+ pre-bundled skills (larger plugin, always available)
-   * - "filesystem": Load skills from ~/.agents/skills/ and project .agents/skills/ (default, falls back to ~/.agent/skills/)
-   */
-  skills_mode: SkillsModeSchema.optional(),
 })
 
 export type OmoCliConfig = z.infer<typeof OmoCliConfigSchema>

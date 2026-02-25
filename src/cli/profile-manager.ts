@@ -17,7 +17,6 @@ interface OmoConfig {
     agents?: Record<string, { model: string; variant?: string; stream?: boolean }>
     categories?: Record<string, { model: string; variant?: string; stream?: boolean }>
     background_task?: { defaultConcurrency: number }
-    skills_mode?: "bundled" | "filesystem"
 }
 
 // ---------------------------------------------------------------------------
@@ -192,9 +191,8 @@ function deriveProfileSummary(config: OmoConfig | null): string {
 
     const providerList = Array.from(models).join(" + ")
     const concurrency = config.background_task?.defaultConcurrency ?? "?"
-    const skills = config.skills_mode ?? "bundled"
 
-    return `${providerList} | concurrency: ${concurrency} | skills: ${skills}`
+    return `${providerList} | concurrency: ${concurrency}`
 }
 
 import type { InstallConfig } from "./types"
@@ -257,10 +255,6 @@ export function deriveInstallConfigFromProfile(name: string): InstallConfig {
             if (model.startsWith("zai-coding-plan/")) {
                 res.hasZaiCodingPlan = true
             }
-        }
-
-        if (config.skills_mode) {
-            res.skillsMode = config.skills_mode
         }
 
         return res

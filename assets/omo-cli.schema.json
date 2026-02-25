@@ -6863,14 +6863,6 @@
           "type": "boolean"
         }
       }
-    },
-    "skills_mode": {
-      "default": "filesystem",
-      "type": "string",
-      "enum": [
-        "bundled",
-        "filesystem"
-      ]
     }
   }
 }

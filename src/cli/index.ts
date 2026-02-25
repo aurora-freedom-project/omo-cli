@@ -30,7 +30,6 @@ program
   .description("Install and configure omo-cli using profiles")
   .option("--no-tui", "Run in non-interactive mode (requires --profile)")
   .option("-p, --profile <name>", "Apply a profile by name (e.g., mike)")
-  .option("--skills-mode <mode>", "Skills loading mode: bundled (626+ pre-bundled) or filesystem (default)")
   .option("--skip-auth", "Skip authentication setup hints")
   .addHelpText("after", `
 Examples:
@@ -45,7 +44,6 @@ You can view or create profiles using 'omo-cli profile' commands.
       tui: options.tui !== false,
       profile: options.profile,
       skipAuth: options.skipAuth ?? false,
-      skillsMode: options.skillsMode,
     }
     const exitCode = await install(args)
     process.exit(exitCode)

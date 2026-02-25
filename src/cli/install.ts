@@ -156,18 +156,6 @@ async function runTuiMode(detected: DetectedConfig, args: InstallArgs): Promise<
     return null
   }
 
-  if (args.skillsMode) {
-    const { readFileSync, writeFileSync } = await import("node:fs")
-    try {
-      const content = readFileSync(result.path, "utf-8")
-      const configJson = JSON.parse(content)
-      configJson.skills_mode = args.skillsMode
-      writeFileSync(result.path, JSON.stringify(configJson, null, 2) + "\n")
-    } catch {
-      // failed to update skills mode, ignore
-    }
-  }
-
   p.log.success(`Applied profile '${color.cyan(selectedProfile as string)}' to ${color.dim(result.path)}`)
 
   // Profile applied — derive config for downstream steps
@@ -235,18 +223,6 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
     return 1
   }
 
-  if (args.skillsMode) {
-    const { readFileSync, writeFileSync } = await import("node:fs")
-    try {
-      const content = readFileSync(applyParams.path, "utf-8")
-      const configJson = JSON.parse(content)
-      configJson.skills_mode = args.skillsMode
-      writeFileSync(applyParams.path, JSON.stringify(configJson, null, 2) + "\n")
-    } catch {
-      // failed to update skills mode, ignore
-    }
-  }
-
   printSuccess(`Profile '${color.cyan(args.profile)}' applied to ${color.dim(applyParams.path)}`)
 
   printStep(step++, totalSteps, "Adding omo-cli plugin...")
@@ -278,7 +254,7 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   }
 
   // Automatic skill import for Mike's Full Setup
-  if (args.profile === "mike" || config.skillsMode === "bundled") {
+  if (args.profile === "mike" || args.profile === "mike-local") {
     printStep(step++, totalSteps, "Synchronizing full skill library (700+ skills)...")
 
     await new Promise<void>((resolve) => {
@@ -423,8 +399,9 @@ export async function install(args: InstallArgs): Promise<number> {
   s.start("Verifying omo-cli configuration")
   s.stop(`Config verified for chosen profile.`)
 
-  // Automatic skill import for Mike's profile or bundled mode
-  if (config.skillsMode === "bundled") {
+  // Automatic skill import for Mike's profiles
+  const activeProfile = getActiveProfile()
+  if (activeProfile === "mike" || activeProfile === "mike-local" || args.profile === "mike" || args.profile === "mike-local") {
     s.start("Synchronizing full skill library (700+ skills)...")
 
     await new Promise<void>((resolve) => {
