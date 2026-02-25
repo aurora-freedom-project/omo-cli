@@ -5,7 +5,7 @@ import { run } from "./run"
 import { getLocalVersion } from "./get-local-version"
 import { doctor } from "./doctor"
 import { createMcpOAuthCommand } from "./mcp-oauth"
-import { importSkills, listBundles } from "./import-skills"
+import { importSkills } from "./import-skills"
 import { runSecurityScan } from "./skills-scanner"
 import { runCategorization } from "./skills-categorizer"
 import { adaptTier, adaptAllTiers } from "./skills-adapter"
@@ -145,23 +145,18 @@ program
 program
   .command("import-skills")
   .description("Import skills from antigravity-awesome-skills library (560+ skills)")
-  .option("-b, --bundle <name>", "Import a skill bundle (essentials, web-dev, security, devops, etc.)")
   .option("-s, --skills <names...>", "Import specific skills by name")
-  .option("-t, --target <path>", "Target directory (default: ~/.agents/skills)")
-  .option("-l, --list", "List available bundles")
-  .option("-a, --all", "Import ALL skills from repository (616)")
+  .option("-t, --target <path>", "Target directory (default: ~/.opencode/skills)")
   .option("--tier <number>", "Import skills by tier (1-4, requires categorize-skills first)")
   .option("--audit", "Audit skills structure without importing")
-  .option("--valid-only", "With --all: only import valid skills (with proper SKILL.md)")
+  .option("--valid-only", "Only import valid skills (with proper SKILL.md)")
   .addHelpText("after", `
 Examples:
-  $ bunx omo-cli import-skills --list
-  $ bunx omo-cli import-skills --audit
-  $ bunx omo-cli import-skills --tier 1        # Tier 1: 85 SAFE + Excellent
-  $ bunx omo-cli import-skills --tier 2        # Tier 2: 394 SAFE/LOW + Good
-  $ bunx omo-cli import-skills --all
-  $ bunx omo-cli import-skills --all --valid-only
-  $ bunx omo-cli import-skills --bundle essentials
+  $ bunx omo-cli import-skills                  # Import ALL skills (default)
+  $ bunx omo-cli import-skills --valid-only     # Import ALL valid skills
+  $ bunx omo-cli import-skills --audit          # Check skills without importing
+  $ bunx omo-cli import-skills --tier 1         # Tier 1: 85 SAFE + Excellent
+  $ bunx omo-cli import-skills --tier 2         # Tier 2: 394 SAFE/LOW + Good
   $ bunx omo-cli import-skills --skills brainstorming api-design
 
 Available Tiers (run categorize-skills first):
@@ -169,27 +164,11 @@ Available Tiers (run categorize-skills first):
   Tier 2   394 skills  - SAFE/LOW + Good quality
   Tier 3   100 skills  - MEDIUM risk
   Tier 4    36 skills  - HIGH risk (manual review required)
-
-Available Bundles:
-  essentials    Core skills for everyone (brainstorming, planning, clean code)
-  web-dev       Frontend and full-stack web development
-  security      Security testing, auditing, and best practices
-  devops        Infrastructure, deployment, and automation
-  backend       Server-side development and APIs
-  data-ai       Data processing, ML, and AI applications
-  testing       Testing, quality assurance, and automation
 `)
   .action(async (options) => {
-    if (options.list) {
-      listBundles()
-      process.exit(0)
-    }
-
     const success = await importSkills({
-      bundle: options.bundle,
       skills: options.skills,
       targetPath: options.target,
-      all: options.all,
       audit: options.audit,
       validOnly: options.validOnly,
       tier: options.tier ? parseInt(options.tier, 10) : undefined,

@@ -7,21 +7,6 @@ import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import { spawn } from "node:child_process";
 import { parseFrontmatter } from "../shared/frontmatter";
-import bundlesData from "../../assets/skill-bundles.json";
-
-const SKILLS_REPO = "https://github.com/sickn33/antigravity-awesome-skills.git";
-const DEFAULT_SKILLS_PATH = join(homedir(), ".opencode", "skills");
-
-interface Bundle {
-    name: string;
-    description: string;
-    skills: string[];
-}
-
-interface SkillBundles {
-    bundles: Record<string, Bundle>;
-    categories: Record<string, string[]>;
-}
 
 interface SkillIndexEntry {
     id: string;
@@ -46,7 +31,8 @@ interface AuditResult {
     details: SkillValidation[];
 }
 
-const bundles: SkillBundles = bundlesData as SkillBundles;
+const SKILLS_REPO = "https://github.com/sickn33/antigravity-awesome-skills.git";
+const DEFAULT_SKILLS_PATH = join(homedir(), ".opencode", "skills");
 
 /**
  * Run git command
@@ -332,36 +318,7 @@ export async function cloneOrUpdateSkillsRepo(targetPath: string): Promise<boole
     }
 }
 
-/**
- * List available bundles
- */
-export function listBundles(): void {
-    console.log("\n🎁 Available Skill Bundles:\n");
 
-    Object.entries(bundles.bundles).forEach(([key, bundle], index) => {
-        console.log(`${index + 1}. ${bundle.name}`);
-        console.log(`   ${bundle.description}`);
-        console.log(`    Skills: ${bundle.skills.length}`);
-        console.log();
-    });
-}
-
-/**
- * Get bundle by key or list all
- */
-export function getBundleSkills(bundleKey: string): string[] | null {
-    const bundle = bundles.bundles[bundleKey];
-    if (!bundle) {
-        console.error(`❌ Bundle '${bundleKey}' not found`);
-        console.log("\nAvailable bundles:");
-        Object.keys(bundles.bundles).forEach(key => {
-            console.log(`  - ${key}`);
-        });
-        return null;
-    }
-
-    return bundle.skills;
-}
 
 /**
  * Copy specific skills from repo to target
@@ -416,10 +373,8 @@ export function copySkillsToTarget(
  * Main import workflow
  */
 export async function importSkills(options: {
-    bundle?: string;
     skills?: string[];
     targetPath?: string;
-    all?: boolean;
     audit?: boolean;
     validOnly?: boolean;
     tier?: number;
@@ -469,8 +424,10 @@ export async function importSkills(options: {
 
         skillsToImport = JSON.parse(readFileSync(tierPath, 'utf-8'));
         console.log(`\n📦 Importing Tier ${options.tier}: ${skillsToImport.length} skills\n`);
-    } else if (options.all) {
-        // Import all skills
+    } else if (options.skills) {
+        skillsToImport = options.skills;
+    } else {
+        // By default, import all skills
         const allSkills = getAllSkillIds(skillsRepoPath);
         console.log(`\n📦 Found ${allSkills.length} total skills in repository\n`);
 
@@ -487,22 +444,10 @@ export async function importSkills(options: {
         } else {
             skillsToImport = allSkills;
         }
-    } else if (options.bundle) {
-        const bundleSkills = getBundleSkills(options.bundle);
-        if (!bundleSkills) {
-            return false;
-        }
-        skillsToImport = bundleSkills;
-    } else if (options.skills) {
-        skillsToImport = options.skills;
-    } else {
-        console.error("❌ No bundle, skills, or --all specified");
-        listBundles();
-        return false;
     }
 
-    // Step 4: Validate skills against index (for bundle/skills mode)
-    if (!options.all) {
+    // Step 4: Validate skills against index (for specific skills mode)
+    if (options.skills) {
         const availableSkills = loadSkillsIndex(skillsRepoPath);
         const { invalid } = validateSkillNames(skillsToImport, availableSkills);
 
