@@ -98,16 +98,16 @@ omo-cli/
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| Sisyphus | claude-opus-4-5-thinking (max) | Primary orchestrator, Thinking mode enabled |
-| Atlas | claude-opus-4-5-thinking (max) | Master orchestrator, Thinking mode enabled |
-| oracle | claude-opus-4-5-thinking (max) | Consultation, debugging, code review |
-| Prometheus | claude-opus-4-5-thinking (max) | Strategic planning, Thinking mode enabled |
-| metis | claude-sonnet-4-5-thinking (max) | Pre-planning analysis, gap detection |
-| momus | claude-sonnet-4-5-thinking (max) | Plan validation |
-| sisyphus-junior | claude-sonnet-4-5-thinking (max) | Category-spawned executor |
-| multimodal-looker | gemini-3-pro (high) | PDF/image analysis |
-| librarian | minimax-m2.1 (Ollama) | Docs, GitHub search (fast/cheap) |
-| explore | minimax-m2.1 (Ollama) | Fast codebase grep (fast/cheap) |
+| orchestrator | claude-opus-4-5-thinking (max) | Primary orchestrator, Thinking mode enabled |
+| conductor | claude-opus-4-5-thinking (max) | Master orchestrator, Thinking mode enabled |
+| architect | claude-opus-4-5-thinking (max) | Consultation, debugging, code review |
+| planner | claude-opus-4-5-thinking (max) | Strategic planning, Thinking mode enabled |
+| consultant | claude-sonnet-4-5-thinking (max) | Pre-planning analysis, gap detection |
+| reviewer | claude-sonnet-4-5-thinking (max) | Plan validation |
+| worker | claude-sonnet-4-5-thinking (max) | Category-spawned executor |
+| vision | gemini-3-pro (high) | PDF/image analysis |
+| researcher | minimax-m2.1 (Ollama) | Docs, GitHub search (fast/cheap) |
+| explorer | minimax-m2.1 (Ollama) | Fast codebase grep (fast/cheap) |
 
 > **Note**: Models are dynamically resolved via `omo-cli.json`. The above represents the recommended configuration for optimal cost/performance balance.
 

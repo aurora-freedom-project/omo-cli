@@ -54,13 +54,13 @@ You can view or create profiles using 'omo-cli profile' commands.
 program
   .command("run <message>")
   .description("Run opencode with todo/background task completion enforcement")
-  .option("-a, --agent <name>", "Agent to use (default: Sisyphus)")
+  .option("-a, --agent <name>", "Agent to use (default: orchestrator)")
   .option("-d, --directory <path>", "Working directory")
   .option("-t, --timeout <ms>", "Timeout in milliseconds (default: 30 minutes)", parseInt)
   .addHelpText("after", `
 Examples:
   $ bunx omo-cli run "Fix the bug in index.ts"
-  $ bunx omo-cli run --agent Sisyphus "Implement feature X"
+  $ bunx omo-cli run --agent orchestrator "Implement feature X"
   $ bunx omo-cli run --timeout 3600000 "Large refactoring task"
 
 Unlike 'opencode run', this command waits until:
