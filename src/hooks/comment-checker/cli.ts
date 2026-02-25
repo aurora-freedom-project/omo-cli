@@ -38,7 +38,7 @@ function findCommentCheckerPathSync(): string | null {
 
   try {
     const require = createRequire(import.meta.url)
-    const cliPkgPath = require.resolve("@aurora-freedom-project/comment-checker/package.json")
+    const cliPkgPath = require.resolve("@code-yeongyu/comment-checker/package.json")
     const cliDir = dirname(cliPkgPath)
     const binaryPath = join(cliDir, "bin", binaryName)
 

@@ -226,3 +226,20 @@ export async function discoverOpencodeProjectSkills(): Promise<LoadedSkill[]> {
   const opencodeProjectDir = join(process.cwd(), ".opencode", "skills")
   return loadSkillsFromDir(opencodeProjectDir, "opencode-project")
 }
+
+// Legacy Claude Code skill loaders — purged paths, return empty results
+export async function loadUserSkills(): Promise<Record<string, CommandDefinition>> {
+  return {}
+}
+
+export async function loadProjectSkills(): Promise<Record<string, CommandDefinition>> {
+  return {}
+}
+
+export async function discoverUserClaudeSkills(): Promise<LoadedSkill[]> {
+  return []
+}
+
+export async function discoverProjectClaudeSkills(): Promise<LoadedSkill[]> {
+  return []
+}

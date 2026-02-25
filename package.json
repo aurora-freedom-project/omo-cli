@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
-    "omo-cli": "./bin/omo-cli.js"
+    "omo-cli": "./dist/cli/index.js"
   },
   "files": [
     "dist",
@@ -52,7 +52,7 @@
     "@ast-grep/cli": "^0.40.0",
     "@ast-grep/napi": "^0.40.0",
     "@clack/prompts": "^0.11.0",
-    "@aurora-freedom-project/comment-checker": "^0.6.1",
+    "@code-yeongyu/comment-checker": "^0.6.1",
     "@modelcontextprotocol/sdk": "^1.25.1",
     "@opencode-ai/plugin": "^1.1.19",
     "@opencode-ai/sdk": "^1.1.19",
@@ -74,6 +74,6 @@
   "trustedDependencies": [
     "@ast-grep/cli",
     "@ast-grep/napi",
-    "@aurora-freedom-project/comment-checker"
+    "@code-yeongyu/comment-checker"
   ]
 }
