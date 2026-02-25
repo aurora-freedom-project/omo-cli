@@ -15,27 +15,27 @@ interface EntryDefault {
 }
 
 const AGENT_DEFAULTS: Record<string, EntryDefault> = {
-    sisyphus: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
-    prometheus: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
-    atlas: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
-    oracle: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
-    metis: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
-    momus: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
-    "sisyphus-junior": { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
+    orchestrator: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
+    planner: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
+    conductor: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
+    architect: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
+    consultant: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
+    reviewer: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
+    worker: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
     vision: { model: "google/gemini-3-pro-image", variant: "high" },
-    explore: { model: "ollama/minimax-m2.1:cloud", stream: false },
-    librarian: { model: "ollama/minimax-m2.1:cloud", stream: false },
+    explorer: { model: "ollama/minimax-m2.1:cloud", stream: false },
+    researcher: { model: "ollama/minimax-m2.1:cloud", stream: false },
 }
 
 const CATEGORY_DEFAULTS: Record<string, EntryDefault> = {
-    "visual-engineering": { model: "google/gemini-3-pro-image", variant: "high" },
+    frontend: { model: "google/gemini-3-pro-image", variant: "high" },
     quick: { model: "google/antigravity-gemini-3-flash", variant: "minimal" },
-    ultrabrain: { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
-    "business-logic": { model: "ollama/minimax-m2.1:cloud", stream: false },
-    writing: { model: "google/antigravity-gemini-3-flash", variant: "low" },
-    "unspecified-high": { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
-    "unspecified-low": { model: "ollama/minimax-m2.1:cloud", stream: false },
-    artistry: { model: "google/gemini-3-pro-image", variant: "max" },
+    "deep-reasoning": { model: "google/antigravity-claude-sonnet-4-5-thinking", variant: "max" },
+    backend: { model: "ollama/minimax-m2.1:cloud", stream: false },
+    docs: { model: "google/antigravity-gemini-3-flash", variant: "low" },
+    complex: { model: "google/antigravity-claude-opus-4-6-thinking", variant: "max" },
+    simple: { model: "ollama/minimax-m2.1:cloud", stream: false },
+    creative: { model: "google/gemini-3-pro-image", variant: "max" },
 }
 
 const VARIANT_OPTIONS = ["minimal", "low", "high", "max"] as const

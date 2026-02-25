@@ -6,11 +6,11 @@ import { install } from "./install"
 import * as configManager from "./config-manager"
 import type { InstallArgs } from "./types"
 
-// Mock console methods to capture output
-const mockConsoleLog = mock(() => { })
-const mockConsoleError = mock(() => { })
-
 describe("install CLI - binary check behavior", () => {
+  // Mock console methods to capture output
+  const mockConsoleLog = mock(() => { })
+  const mockConsoleError = mock(() => { })
+
   let tempDir: string
   let originalEnv: string | undefined
   let isOpenCodeInstalledSpy: ReturnType<typeof spyOn>

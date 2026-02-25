@@ -300,7 +300,7 @@ User confirms the button works as expected.
 - Ensure acceptance criteria are agent-executable (commands, not human actions)
 `
 
-const metisRestrictions = createAgentToolRestrictions([
+const consultantRestrictions = createAgentToolRestrictions([
   "write",
   "edit",
   "task",
@@ -310,11 +310,11 @@ const metisRestrictions = createAgentToolRestrictions([
 export function createPlannerAgent(model: string): AgentConfig {
   return {
     description:
-      "Pre-planning consultant that analyzes requests to identify hidden intentions, ambiguities, and AI failure points. (Metis - OmoCli)",
+      "Pre-planning consultant that analyzes requests to identify hidden intentions, ambiguities, and AI failure points. (Consultant - OmoCli)",
     mode: "subagent" as const,
     model,
     temperature: 0.3,
-    ...metisRestrictions,
+    ...consultantRestrictions,
     prompt: PLANNER_SYSTEM_PROMPT,
     thinking: { type: "enabled", budgetTokens: 32000 },
   } as AgentConfig
@@ -339,6 +339,6 @@ export const plannerPromptMetadata: AgentPromptMetadata = {
     "Simple, well-defined tasks",
     "User has already provided detailed requirements",
   ],
-  promptAlias: "Metis",
-  keyTrigger: "Ambiguous or complex request → consult Metis before Prometheus",
+  promptAlias: "Consultant",
+  keyTrigger: "Ambiguous or complex request → consult Consultant before Planner",
 }

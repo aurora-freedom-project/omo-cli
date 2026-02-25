@@ -10,7 +10,7 @@ import { parseFrontmatter } from "../shared/frontmatter";
 import bundlesData from "../../assets/skill-bundles.json";
 
 const SKILLS_REPO = "https://github.com/sickn33/antigravity-awesome-skills.git";
-const DEFAULT_SKILLS_PATH = join(homedir(), ".agents", "skills");
+const DEFAULT_SKILLS_PATH = join(homedir(), ".opencode", "skills");
 
 interface Bundle {
     name: string;

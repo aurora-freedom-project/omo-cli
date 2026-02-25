@@ -26,14 +26,22 @@ const AgentPermissionSchema = z.object({
 export const BuiltinAgentNameSchema = z.enum([
   // New native-friendly names
   "orchestrator",
+  "conductor", // New friendly name for Atlas
+  "planner",
+  "consultant", // New friendly name for Metis
+  "reviewer",
+  "architect", // New friendly name for Oracle
+  "worker",
+  "vision",
+  "explorer",
+  "researcher",
+
+  // Alternative/Legacy functional names
   "coder",
   "advisor",
-  "researcher",
-  "explorer",
-  "vision",
-  "planner",
-  "reviewer",
   "navigator",
+  "builder",
+
   // Legacy names (backwards compat — resolved via AGENT_NAME_MAP)
   "sisyphus",
   "prometheus",
@@ -58,12 +66,15 @@ export const OverridableAgentNameSchema = z.enum([
   "build",
   "plan",
   "orchestrator",
+  "conductor",
   "worker",
   "builder",
   "coder",
   "planner",
+  "consultant",
   "reviewer",
   "advisor",
+  "architect",
   "researcher",
   "explorer",
   "vision",
@@ -175,12 +186,15 @@ export const AgentOverridesSchema = z.object({
   build: AgentOverrideConfigSchema.optional(),
   plan: AgentOverrideConfigSchema.optional(),
   orchestrator: AgentOverrideConfigSchema.optional(),
+  conductor: AgentOverrideConfigSchema.optional(),
   worker: AgentOverrideConfigSchema.optional(),
   builder: AgentOverrideConfigSchema.optional(),
   coder: AgentOverrideConfigSchema.optional(),
   planner: AgentOverrideConfigSchema.optional(),
+  consultant: AgentOverrideConfigSchema.optional(),
   reviewer: AgentOverrideConfigSchema.optional(),
   advisor: AgentOverrideConfigSchema.optional(),
+  architect: AgentOverrideConfigSchema.optional(),
   researcher: AgentOverrideConfigSchema.optional(),
   explorer: AgentOverrideConfigSchema.optional(),
   vision: AgentOverrideConfigSchema.optional(),
@@ -237,13 +251,24 @@ export const CategoryConfigSchema = z.object({
 })
 
 export const BuiltinCategoryNameSchema = z.enum([
+  // Friendly names
+  "frontend",
+  "backend",
+  "deep-reasoning",
+  "creative",
+  "quick",
+  "simple",
+  "complex",
+  "docs",
+
+  // Legacy names
   "visual-engineering",
   "ultrabrain",
   "artistry",
-  "quick",
   "unspecified-low",
   "unspecified-high",
   "writing",
+  "business-logic", // Was missing in original enum but used in default config? Let's add it to be safe if it was implicitly allowed or missing.
 ])
 
 export const CategoriesConfigSchema = z.record(z.string(), CategoryConfigSchema)

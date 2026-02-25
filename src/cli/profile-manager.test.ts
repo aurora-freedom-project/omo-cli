@@ -98,8 +98,8 @@ describe("profile-manager", () => {
             const content = readFileSync(result.path, "utf-8")
             const config = JSON.parse(content)
             expect(config.agents).toBeDefined()
-            expect(config.agents.sisyphus).toBeDefined()
-            expect(config.agents.sisyphus.model).toContain("opus-4-6")
+            expect(config.agents.orchestrator).toBeDefined()
+            expect(config.agents.orchestrator.model).toContain("opus-4-6")
         })
     })
 
@@ -107,13 +107,13 @@ describe("profile-manager", () => {
         test("all profiles have identical agent keys", () => {
             const profiles = listProfiles()
             const expectedAgents = [
-                "sisyphus", "prometheus", "atlas", "oracle",
-                "metis", "momus", "sisyphus-junior",
-                "multimodal-looker", "explore", "librarian",
+                "orchestrator", "planner", "conductor", "architect",
+                "consultant", "reviewer", "worker",
+                "vision", "explorer", "researcher",
             ]
             const expectedCategories = [
-                "visual-engineering", "quick", "ultrabrain", "business-logic",
-                "writing", "unspecified-high", "unspecified-low", "artistry",
+                "frontend", "quick", "deep-reasoning", "backend",
+                "docs", "complex", "simple", "creative",
             ]
 
             for (const profile of profiles) {

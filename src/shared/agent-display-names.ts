@@ -6,14 +6,14 @@ export const AGENT_NAME_MAP: Record<string, string> = {
   sisyphus: "orchestrator",
   "sisyphus-junior": "worker",
   "OpenCode-Builder": "builder",
-  prometheus: "coder",
-  metis: "planner",
+  prometheus: "planner",
+  metis: "consultant",
   momus: "reviewer",
-  oracle: "advisor",
+  oracle: "architect",
   librarian: "researcher",
   explore: "explorer",
   "multimodal-looker": "vision",
-  atlas: "navigator",
+  atlas: "conductor",
 }
 
 /** Reverse map: new name → legacy name (for backwards compat lookups) */
@@ -34,28 +34,30 @@ export function normalizeAgentName(name: string): string {
  */
 export const AGENT_DISPLAY_NAMES: Record<string, string> = {
   // New names
-  orchestrator: "Orchestrator (Ultraworker)",
-  navigator: "Navigator (Plan Execution)",
-  coder: "Coder (Deep Implementation)",
-  worker: "Worker (Task Executor)",
-  planner: "Planner (Analysis & Strategy)",
-  reviewer: "Reviewer (Code Quality)",
-  advisor: "Advisor (Architecture)",
-  researcher: "Researcher (Documentation & Search)",
-  explorer: "Explorer (Fast Read-only Scan)",
-  vision: "Vision (Multimodal Analysis)",
-  builder: "Builder (Default Build Agent)",
+  orchestrator: "Orchestrator",
+  conductor: "Conductor",
+  planner: "Planner",
+  consultant: "Consultant",
+  reviewer: "Reviewer",
+  architect: "Architect",
+  worker: "Worker",
+  vision: "Vision",
+  explorer: "Explorer",
+  researcher: "Researcher",
+  coder: "Coder", // Keep coder for generic coder role if used elsewhere, or map appropriately. Wait, the plan was to remove 'coder' as a mapping for prometheus. We should keep it if it's a valid generic agent, otherwise remove. Let's keep it but with a generic description.
+  builder: "Builder",
+
   // Legacy fallbacks
-  sisyphus: "Orchestrator (Ultraworker)",
-  atlas: "Navigator (Plan Execution)",
-  prometheus: "Coder (Deep Implementation)",
-  "sisyphus-junior": "Worker (Task Executor)",
-  metis: "Planner (Analysis & Strategy)",
-  momus: "Reviewer (Code Quality)",
-  oracle: "Advisor (Architecture)",
-  librarian: "Researcher (Documentation & Search)",
-  explore: "Explorer (Fast Read-only Scan)",
-  "multimodal-looker": "Vision (Multimodal Analysis)",
+  sisyphus: "Orchestrator",
+  atlas: "Conductor",
+  prometheus: "Planner",
+  "sisyphus-junior": "Worker",
+  metis: "Consultant",
+  momus: "Reviewer",
+  oracle: "Architect",
+  librarian: "Researcher",
+  explore: "Explorer",
+  "multimodal-looker": "Vision",
 }
 
 /**

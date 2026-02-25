@@ -128,7 +128,7 @@ const x = 1;
 
   describe("formatSystemDirective", () => {
     test("should format directive correctly", () => {
-      expect(formatSystemDirective("TEST")).toBe(`${SYSTEM_DIRECTIVE_PREFIX}TEST]`)
+      expect(formatSystemDirective("TEST")).toBe(`[SYSTEM DIRECTIVE: OMO-CLI - TEST]`)
     })
   })
 
