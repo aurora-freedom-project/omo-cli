@@ -6787,7 +6787,7 @@
         }
       }
     },
-    "sisyphus": {
+    "orchestrator": {
       "type": "object",
       "properties": {
         "tasks": {
@@ -6861,6 +6861,49 @@
         "require_confirmation": {
           "default": false,
           "type": "boolean"
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "port": {
+          "default": 18000,
+          "type": "number"
+        },
+        "auto_capture": {
+          "default": true,
+          "type": "boolean"
+        },
+        "mode": {
+          "default": "managed",
+          "type": "string",
+          "enum": [
+            "managed",
+            "external"
+          ]
+        },
+        "url": {
+          "type": "string"
+        },
+        "user": {
+          "default": "root",
+          "type": "string"
+        },
+        "pass": {
+          "type": "string"
+        },
+        "namespace": {
+          "default": "omo",
+          "type": "string"
+        },
+        "database": {
+          "default": "memory",
+          "type": "string"
         }
       }
     }

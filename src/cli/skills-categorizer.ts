@@ -1,3 +1,4 @@
+import * as p from "@clack/prompts";
 /**
  * cli/skills-categorizer.ts - Categorize and tier skills for progressive import
  * 
@@ -133,33 +134,33 @@ export function generateCategorizationReport(scanReport: ScanReport): Categoriza
 
     // Generate agent recommendations
     const agentPriorities: Record<string, { primary: Set<string>, secondary: Set<string> }> = {
-        'prometheus': { primary: new Set(), secondary: new Set() },
-        'oracle': { primary: new Set(), secondary: new Set() },
-        'librarian': { primary: new Set(), secondary: new Set() },
-        'sisyphus': { primary: new Set(), secondary: new Set() },
-        'sisyphus-junior': { primary: new Set(), secondary: new Set() },
-        'momus': { primary: new Set(), secondary: new Set() },
-        'atlas': { primary: new Set(), secondary: new Set() },
-        'metis': { primary: new Set(), secondary: new Set() },
-        'explore': { primary: new Set(), secondary: new Set() },
+        'planner': { primary: new Set(), secondary: new Set() },
+        'architect': { primary: new Set(), secondary: new Set() },
+        'researcher': { primary: new Set(), secondary: new Set() },
+        'orchestrator': { primary: new Set(), secondary: new Set() },
+        "worker": { primary: new Set(), secondary: new Set() },
+        'reviewer': { primary: new Set(), secondary: new Set() },
+        'conductor': { primary: new Set(), secondary: new Set() },
+        'consultant': { primary: new Set(), secondary: new Set() },
+        'explorer': { primary: new Set(), secondary: new Set() },
     };
 
     // Category → Agent mapping
     const categoryToAgent: Record<string, { primary: string, secondary: string[] }> = {
-        'architecture': { primary: 'prometheus', secondary: ['oracle', 'atlas'] },
-        'security': { primary: 'oracle', secondary: ['momus'] },
-        'devops': { primary: 'sisyphus', secondary: ['sisyphus-junior'] },
-        'testing': { primary: 'momus', secondary: ['sisyphus-junior'] },
-        'documentation': { primary: 'librarian', secondary: ['sisyphus'] },
-        'frontend': { primary: 'sisyphus-junior', secondary: ['sisyphus'] },
-        'backend': { primary: 'sisyphus', secondary: ['sisyphus-junior'] },
-        'ai-ml': { primary: 'prometheus', secondary: ['librarian', 'oracle'] },
-        'data': { primary: 'sisyphus', secondary: ['librarian'] },
-        'mobile': { primary: 'sisyphus-junior', secondary: ['sisyphus'] },
-        'cloud': { primary: 'sisyphus', secondary: ['sisyphus-junior'] },
-        'performance': { primary: 'oracle', secondary: ['momus'] },
-        'workflow': { primary: 'atlas', secondary: ['sisyphus'] },
-        'general': { primary: 'sisyphus', secondary: ['sisyphus-junior'] },
+        'architecture': { primary: 'planner', secondary: ['architect', 'conductor'] },
+        'security': { primary: 'architect', secondary: ['reviewer'] },
+        'devops': { primary: 'orchestrator', secondary: ["worker"] },
+        'testing': { primary: 'reviewer', secondary: ["worker"] },
+        'documentation': { primary: 'researcher', secondary: ['orchestrator'] },
+        'frontend': { primary: "worker", secondary: ['orchestrator'] },
+        'backend': { primary: 'orchestrator', secondary: ["worker"] },
+        'ai-ml': { primary: 'planner', secondary: ['researcher', 'architect'] },
+        'data': { primary: 'orchestrator', secondary: ['researcher'] },
+        'mobile': { primary: "worker", secondary: ['orchestrator'] },
+        'cloud': { primary: 'orchestrator', secondary: ["worker"] },
+        'performance': { primary: 'architect', secondary: ['reviewer'] },
+        'workflow': { primary: 'conductor', secondary: ['orchestrator'] },
+        'general': { primary: 'orchestrator', secondary: ["worker"] },
     };
 
     // Assign skills to agents based on categories
@@ -175,15 +176,15 @@ export function generateCategorizationReport(scanReport: ScanReport): Categoriza
 
     // Convert to report format
     const agentDescriptions: Record<string, string> = {
-        'prometheus': 'Strategic planning, architecture design',
-        'oracle': 'Code review, debugging, security analysis',
-        'librarian': 'Documentation, research, API reference',
-        'sisyphus': 'Primary implementation, backend, DevOps',
-        'sisyphus-junior': 'Task execution, frontend, utilities',
-        'momus': 'Testing, validation, quality assurance',
-        'atlas': 'Project orchestration, workflow management',
-        'metis': 'Pre-planning analysis, requirements gathering',
-        'explore': 'Code search, codebase navigation',
+        'planner': 'Strategic planning, architecture design',
+        'architect': 'Code review, debugging, security analysis',
+        'researcher': 'Documentation, research, API reference',
+        'orchestrator': 'Primary implementation, backend, DevOps',
+        "worker": 'Task execution, frontend, utilities',
+        'reviewer': 'Testing, validation, quality assurance',
+        'conductor': 'Project orchestration, workflow management',
+        'consultant': 'Pre-planning analysis, requirements gathering',
+        'explorer': 'Code search, codebase navigation',
     };
 
     for (const [agent, priorities] of Object.entries(agentPriorities)) {
@@ -202,45 +203,45 @@ export function generateCategorizationReport(scanReport: ScanReport): Categoriza
  * Display categorization summary
  */
 export function displayCategorizationSummary(report: CategorizationReport): void {
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`📦 SKILLS CATEGORIZATION REPORT`);
-    console.log(`${'='.repeat(60)}\n`);
+    p.log.info(`\n${'='.repeat(60)}`);
+    p.log.info(`📦 SKILLS CATEGORIZATION REPORT`);
+    p.log.info(`${'='.repeat(60)}\n`);
 
     // Tier summary
-    console.log(`📊 IMPORT TIERS`);
-    console.log(`${'─'.repeat(40)}`);
-    console.log(`Tier 1 (Core):     ${report.tiers.tier1_core.length} skills - SAFE + Excellent quality`);
-    console.log(`Tier 2 (Standard): ${report.tiers.tier2_standard.length} skills - SAFE/LOW + Good quality`);
-    console.log(`Tier 3 (Extended): ${report.tiers.tier3_extended.length} skills - MEDIUM risk`);
-    console.log(`Tier 4 (Review):   ${report.tiers.tier4_review.length} skills - HIGH risk, manual review`);
-    console.log(`Excluded:          ${report.tiers.excluded.length} skills - Invalid/broken\n`);
+    p.log.info(`📊 IMPORT TIERS`);
+    p.log.info(`${'─'.repeat(40)}`);
+    p.log.info(`Tier 1 (Core):     ${report.tiers.tier1_core.length} skills - SAFE + Excellent quality`);
+    p.log.info(`Tier 2 (Standard): ${report.tiers.tier2_standard.length} skills - SAFE/LOW + Good quality`);
+    p.log.info(`Tier 3 (Extended): ${report.tiers.tier3_extended.length} skills - MEDIUM risk`);
+    p.log.info(`Tier 4 (Review):   ${report.tiers.tier4_review.length} skills - HIGH risk, manual review`);
+    p.log.info(`Excluded:          ${report.tiers.excluded.length} skills - Invalid/broken\n`);
 
     // Category breakdown
-    console.log(`📂 CATEGORY BREAKDOWN`);
-    console.log(`${'─'.repeat(40)}`);
+    p.log.info(`📂 CATEGORY BREAKDOWN`);
+    p.log.info(`${'─'.repeat(40)}`);
     const sortedCategories = Object.entries(report.categories)
         .sort((a, b) => b[1].length - a[1].length);
 
     for (const [category, skills] of sortedCategories) {
-        console.log(`${category.padEnd(20)} ${skills.length} skills`);
+        p.log.info(`${category.padEnd(20)} ${skills.length} skills`);
     }
 
     // Agent assignment summary
-    console.log(`\n🤖 AGENT SKILL ASSIGNMENT`);
-    console.log(`${'─'.repeat(40)}`);
+    p.log.info(`\n🤖 AGENT SKILL ASSIGNMENT`);
+    p.log.info(`${'─'.repeat(40)}`);
     for (const rec of report.agentRecommendations) {
-        console.log(`${rec.agent.padEnd(18)} Primary: ${rec.primarySkills.length.toString().padStart(3)} | Secondary: ${rec.secondarySkills.length}`);
+        p.log.info(`${rec.agent.padEnd(18)} Primary: ${rec.primarySkills.length.toString().padStart(3)} | Secondary: ${rec.secondarySkills.length}`);
     }
 
     // Tier 1 samples
-    console.log(`\n⭐ TIER 1 CORE SKILLS (Top 20)`);
-    console.log(`${'─'.repeat(40)}`);
-    report.tiers.tier1_core.slice(0, 20).forEach(s => console.log(`  • ${s}`));
+    p.log.info(`\n⭐ TIER 1 CORE SKILLS (Top 20)`);
+    p.log.info(`${'─'.repeat(40)}`);
+    report.tiers.tier1_core.slice(0, 20).forEach(s => p.log.info(`  • ${s}`));
     if (report.tiers.tier1_core.length > 20) {
-        console.log(`  ... and ${report.tiers.tier1_core.length - 20} more`);
+        p.log.info(`  ... and ${report.tiers.tier1_core.length - 20} more`);
     }
 
-    console.log(`\n${'='.repeat(60)}\n`);
+    p.log.info(`\n${'='.repeat(60)}\n`);
 }
 
 /**
@@ -248,7 +249,7 @@ export function displayCategorizationSummary(report: CategorizationReport): void
  */
 export function saveCategorizationReport(report: CategorizationReport, outputPath: string): void {
     writeFileSync(outputPath, JSON.stringify(report, null, 2));
-    console.log(`📄 Categorization report saved to: ${outputPath}`);
+    p.log.info(`📄 Categorization report saved to: ${outputPath}`);
 }
 
 /**
@@ -262,15 +263,15 @@ export async function runCategorization(options: {
     const outputPath = options.outputPath || join(process.cwd(), "skills_categorization_report.json");
 
     if (!existsSync(scanReportPath)) {
-        console.error(`❌ Scan report not found at ${scanReportPath}`);
-        console.log("Run 'scan-skills' first to generate the security report.");
+        p.log.error(`❌ Scan report not found at ${scanReportPath}`);
+        p.log.info("Run 'scan-skills' first to generate the security report.");
         return null;
     }
 
-    console.log(`\n📖 Loading scan report from ${scanReportPath}...`);
+    p.log.info(`\n📖 Loading scan report from ${scanReportPath}...`);
     const scanReport: ScanReport = JSON.parse(readFileSync(scanReportPath, 'utf-8'));
 
-    console.log(`🔄 Categorizing ${scanReport.totalSkills} skills...`);
+    p.log.info(`🔄 Categorizing ${scanReport.totalSkills} skills...`);
     const report = generateCategorizationReport(scanReport);
 
     displayCategorizationSummary(report);
@@ -288,7 +289,7 @@ export async function runCategorization(options: {
     writeFileSync(join(tiersDir, "tier3_extended.json"), JSON.stringify(report.tiers.tier3_extended, null, 2));
     writeFileSync(join(tiersDir, "tier4_review.json"), JSON.stringify(report.tiers.tier4_review, null, 2));
 
-    console.log(`📁 Tier import lists saved to: ${tiersDir}/`);
+    p.log.info(`📁 Tier import lists saved to: ${tiersDir}/`);
 
     return report;
 }

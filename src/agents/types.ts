@@ -59,14 +59,14 @@ export function isGptModel(model: string): boolean {
 export type BuiltinAgentName =
   // New native-friendly names
   | "orchestrator"
-  | "coder"
-  | "advisor"
+  | "planner"
+  | "architect"
   | "researcher"
   | "explorer"
   | "vision"
-  | "planner"
+  | "consultant"
   | "reviewer"
-  | "navigator"
+  | "conductor"
   // Legacy names (backwards compat — internal code still uses these)
   | "sisyphus"
   | "oracle"

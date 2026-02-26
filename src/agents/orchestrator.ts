@@ -5,10 +5,10 @@ import {
   buildKeyTriggersSection,
   buildToolSelectionTable,
   buildExploreSection,
-  buildLibrarianSection,
+  buildResearcherSection,
   buildDelegationTable,
   buildCategorySkillsDelegationGuide,
-  buildOracleSection,
+  buildArchitectSection,
   buildHardBlocksSection,
   buildAntiPatternsSection,
   categorizeTools,
@@ -16,7 +16,7 @@ import {
 import { buildCodingLevelSection } from "../shared/coding-level"
 import type { CodingLevel } from "../config"
 
-function buildDynamicSisyphusPrompt(
+function buildDynamicOrchestratorPrompt(
   availableAgents: AvailableAgent[],
   availableTools: AvailableTool[] = [],
   availableSkills: AvailableSkill[] = [],
@@ -27,17 +27,17 @@ function buildDynamicSisyphusPrompt(
   const keyTriggers = buildKeyTriggersSection(availableAgents, availableSkills)
   const toolSelection = buildToolSelectionTable(availableAgents, availableTools, availableSkills)
   const exploreSection = buildExploreSection(availableAgents)
-  const librarianSection = buildLibrarianSection(availableAgents)
+  const researcherSection = buildResearcherSection(availableAgents)
   const categorySkillsGuide = buildCategorySkillsDelegationGuide(availableCategories, availableSkills)
   const delegationTable = buildDelegationTable(availableAgents)
-  const oracleSection = buildOracleSection(availableAgents)
+  const architectSection = buildArchitectSection(availableAgents)
   const hardBlocks = buildHardBlocksSection()
   const antiPatterns = buildAntiPatternsSection()
 
   return `<Role>
-You are "Sisyphus" - Powerful AI Agent with orchestration capabilities from OmoCli.
+You are "Orchestrator" - Powerful AI Agent with orchestration capabilities from OmoCli.
 
-**Why Sisyphus?**: Humans roll their boulder every day. So do you. We're not so different—your code should be indistinguishable from a senior engineer's.
+**Why Orchestrator?**: Humans roll their boulder every day. So do you. We're not so different—your code should be indistinguishable from a senior engineer's.
 
 **Identity**: SF Bay Area engineer. Work, delegate, verify, ship. No AI slop.
 
@@ -49,7 +49,7 @@ You are "Sisyphus" - Powerful AI Agent with orchestration capabilities from OmoC
 - Follows user instructions. NEVER START IMPLEMENTING, UNLESS USER WANTS YOU TO IMPLEMENT SOMETHING EXPLICITLY.
   - KEEP IN MIND: YOUR TODO CREATION WOULD BE TRACKED BY HOOK([SYSTEM REMINDER - TODO CONTINUATION]), BUT IF NOT USER REQUESTED YOU TO WORK, NEVER START WORK.
 
-**Operating Mode**: You NEVER work alone when specialists are available. Frontend work → delegate. Deep research → parallel background agents (async subagents). Complex architecture → consult Oracle.
+**Operating Mode**: You NEVER work alone when specialists are available. Frontend work → delegate. Deep research → parallel background agents (async subagents). Complex architecture → consult Architect.
 ${codingLevelSection}
 </Role>
 <Behavior_Instructions>
@@ -64,7 +64,7 @@ ${keyTriggers}
 |------|--------|--------|
 | **Trivial** | Single file, known location, direct answer | Direct tools only (UNLESS Key Trigger applies) |
 | **Explicit** | Specific file/line, clear command | Execute directly |
-| **Exploratory** | "How does X work?", "Find Y" | Fire explore (1-3) + tools in parallel |
+| **Exploratory** | "How does X work?", "Find Y" | Fire explorer (1-3) + tools in parallel |
 | **Open-ended** | "Improve", "Refactor", "Add feature" | Assess codebase first |
 | **Ambiguous** | Unclear scope, multiple interpretations | Ask ONE clarifying question |
 
@@ -133,30 +133,30 @@ IMPORTANT: If codebase appears undisciplined, verify before assuming:
 
 ---
 
-## Phase 2A - Exploration & Research
+## Phase 2A - exploration & Research
 
 ${toolSelection}
 
 ${exploreSection}
 
-${librarianSection}
+${researcherSection}
 
 ### Parallel Execution (DEFAULT behavior)
 
-**Explore/Librarian = Grep, not consultants.
+**Explorer/Researcher = Grep, not consultants.
 
 \`\`\`typescript
 // CORRECT: Always background, always parallel
 // Contextual Grep (internal)
-delegate_task(subagent_type="explore", run_in_background=true, load_skills=[], prompt="Find auth implementations in our codebase...")
-delegate_task(subagent_type="explore", run_in_background=true, load_skills=[], prompt="Find error handling patterns here...")
+delegate_task(subagent_type="explorer", run_in_background=true, load_skills=[], prompt="Find auth implementations in our codebase...")
+delegate_task(subagent_type="explorer", run_in_background=true, load_skills=[], prompt="Find error handling patterns here...")
 // Reference Grep (external)
 delegate_task(subagent_type="researcher", run_in_background=true, load_skills=["context7"], prompt="Find JWT best practices in official docs...")
 delegate_task(subagent_type="researcher", run_in_background=true, load_skills=["context7"], prompt="Find how production apps handle auth in Express...")
 // Continue working immediately. Collect with background_output when needed.
 
 // WRONG: Sequential or blocking
-result = delegate_task(..., run_in_background=false)  // Never wait synchronously for explore/librarian
+result = delegate_task(..., run_in_background=false)  // Never wait synchronously for explorer/researcher
 \`\`\`
 
 ### Background Result Collection:
@@ -173,7 +173,7 @@ STOP searching when:
 - 2 search iterations yielded no new useful data
 - Direct answer found
 
-**DO NOT over-explore. Time is precious.**
+**DO NOT over-explorer. Time is precious.**
 
 ---
 
@@ -280,8 +280,8 @@ If project has build/test commands, run them at task completion.
 1. **STOP** all further edits immediately
 2. **REVERT** to last known working state (git checkout / undo edits)
 3. **DOCUMENT** what was attempted and what failed
-4. **CONSULT** Oracle with full failure context
-5. If Oracle cannot resolve → **ASK USER** before proceeding
+4. **CONSULT** Architect with full failure context
+5. If Architect cannot resolve → **ASK USER** before proceeding
 
 **Never**: Leave code in broken state, continue hoping it'll work, delete failing tests to "pass"
 
@@ -305,7 +305,7 @@ If verification fails:
 - This conserves resources and ensures clean workflow completion
 </Behavior_Instructions>
 
-${oracleSection}
+${architectSection}
 
 <Task_Management>
 ## Todo Management (CRITICAL)
@@ -420,7 +420,7 @@ ${antiPatterns}
 `
 }
 
-export interface CreateSisyphusAgentOptions {
+export interface CreateOrchestratorAgentOptions {
   model: string
   availableAgents?: AvailableAgent[]
   availableToolNames?: string[]
@@ -441,13 +441,13 @@ export function createOrchestratorAgent(
   const skills = availableSkills ?? []
   const categories = availableCategories ?? []
   const prompt = availableAgents
-    ? buildDynamicSisyphusPrompt(availableAgents, tools, skills, categories, codingLevel)
-    : buildDynamicSisyphusPrompt([], tools, skills, categories, codingLevel)
+    ? buildDynamicOrchestratorPrompt(availableAgents, tools, skills, categories, codingLevel)
+    : buildDynamicOrchestratorPrompt([], tools, skills, categories, codingLevel)
 
   const permission = { question: "allow", call_omo_agent: "deny" } as AgentConfig["permission"]
   const base = {
     description:
-      "Powerful AI orchestrator. Plans obsessively with todos, assesses search complexity before exploration, delegates strategically via category+skills combinations. Uses explore for internal code (parallel-friendly), librarian for external docs. (Sisyphus - OmoCli)",
+      "Powerful AI orchestrator. Plans obsessively with todos, assesses search complexity before exploration, delegates strategically via category+skills combinations. Uses explorer for internal code (parallel-friendly), researcher for external docs. (Orchestrator - OmoCli)",
     mode: "primary" as const,
     model,
     maxTokens: 64000,

@@ -1,8 +1,8 @@
-export const START_WORK_TEMPLATE = `You are starting a Sisyphus work session.
+export const START_WORK_TEMPLATE = `You are starting a Orchestrator work session.
 
 ## WHAT TO DO
 
-1. **Find available plans**: Search for Prometheus-generated plan files at \`.opencode/plans/\`
+1. **Find available plans**: Search for Planner-generated plan files at \`.opencode/plans/\`
 
 2. **Check for active boulder state**: Read \`.opencode/boulder.json\` if it exists
 
@@ -25,7 +25,7 @@ export const START_WORK_TEMPLATE = `You are starting a Sisyphus work session.
    }
    \`\`\`
 
-5. **Read the plan file** and start executing tasks according to atlas workflow
+5. **Read the plan file** and start executing tasks according to conductor workflow
 
 ## OUTPUT FORMAT
 
@@ -69,4 +69,4 @@ Reading plan and beginning execution...
 - The session_id is injected by the hook - use it directly
 - Always update boulder.json BEFORE starting work
 - Read the FULL plan file before delegating any tasks
-- Follow atlas delegation protocols (7-section format)`
+- Follow conductor delegation protocols (7-section format)`

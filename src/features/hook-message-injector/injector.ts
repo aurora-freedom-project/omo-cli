@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { MESSAGE_STORAGE, PART_STORAGE } from "./constants"
+import { log } from "../../shared/logger"
 import type { MessageMeta, OriginalMessageContext, TextPart, ToolPermission } from "./types"
 
 export interface StoredMessage {
@@ -115,9 +116,8 @@ export function injectHookMessage(
   hookContent: string,
   originalMessage: OriginalMessageContext
 ): boolean {
-  // Validate hook content to prevent empty message injection
   if (!hookContent || hookContent.trim().length === 0) {
-    console.warn("[hook-message-injector] Attempted to inject empty hook content, skipping injection", {
+    log("[hook-message-injector] Attempted to inject empty hook content, skipping injection", {
       sessionID,
       hasAgent: !!originalMessage.agent,
       hasModel: !!(originalMessage.model?.providerID && originalMessage.model?.modelID)
@@ -141,17 +141,17 @@ export function injectHookMessage(
   const resolvedAgent = originalMessage.agent ?? fallback?.agent ?? "general"
   const resolvedModel =
     originalMessage.model?.providerID && originalMessage.model?.modelID
-      ? { 
-          providerID: originalMessage.model.providerID, 
-          modelID: originalMessage.model.modelID,
-          ...(originalMessage.model.variant ? { variant: originalMessage.model.variant } : {})
-        }
+      ? {
+        providerID: originalMessage.model.providerID,
+        modelID: originalMessage.model.modelID,
+        ...(originalMessage.model.variant ? { variant: originalMessage.model.variant } : {})
+      }
       : fallback?.model?.providerID && fallback?.model?.modelID
-        ? { 
-            providerID: fallback.model.providerID, 
-            modelID: fallback.model.modelID,
-            ...(fallback.model.variant ? { variant: fallback.model.variant } : {})
-          }
+        ? {
+          providerID: fallback.model.providerID,
+          modelID: fallback.model.modelID,
+          ...(fallback.model.variant ? { variant: fallback.model.variant } : {})
+        }
         : undefined
   const resolvedTools = originalMessage.tools ?? fallback?.tools
 
@@ -167,9 +167,9 @@ export function injectHookMessage(
     path:
       originalMessage.path?.cwd
         ? {
-            cwd: originalMessage.path.cwd,
-            root: originalMessage.path.root ?? "/",
-          }
+          cwd: originalMessage.path.cwd,
+          root: originalMessage.path.root ?? "/",
+        }
         : undefined,
     tools: resolvedTools,
   }

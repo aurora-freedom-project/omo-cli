@@ -9,8 +9,8 @@ import { log } from "../../shared"
  */
 const TARGET_AGENTS = new Set([
   "orchestrator",
-  "sisyphus-junior",
-  "atlas",
+  "worker",
+  "conductor",
 ])
 
 /**
@@ -104,7 +104,7 @@ export function createCategorySkillReminderHook(_ctx: PluginInput, loadedSkills?
     const agentLower = agent.toLowerCase()
     return TARGET_AGENTS.has(agentLower) ||
       agentLower.includes("orchestrator") ||
-      agentLower.includes("atlas")
+      agentLower.includes("conductor")
   }
 
   const toolExecuteAfter = async (

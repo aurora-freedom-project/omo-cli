@@ -3,40 +3,40 @@ import { log } from "./logger"
 
 // Migration map: old keys → new canonical keys (for backward compatibility)
 export const AGENT_NAME_MAP: Record<string, string> = {
-  // Sisyphus variants → "orchestrator"
+  // Orchestrator variants → "orchestrator"
   omo: "orchestrator",
   OmO: "orchestrator",
   Sisyphus: "orchestrator",
   sisyphus: "orchestrator",
 
-  // Prometheus variants → "coder"
-  "OmO-Plan": "coder",
-  "omo-plan": "coder",
-  "Planner-Sisyphus": "coder",
-  "planner-sisyphus": "coder",
-  "Prometheus (Planner)": "coder",
-  prometheus: "coder",
+  // Planner variants → "planner"
+  "OmO-Plan": "planner",
+  "omo-plan": "planner",
+  "Planner-Sisyphus": "planner",
+  "planner-sisyphus": "planner",
+  "Prometheus (Planner)": "planner",
+  prometheus: "planner",
 
-  // Atlas variants → "navigator"
-  "orchestrator-sisyphus": "navigator",
-  Atlas: "navigator",
-  atlas: "navigator",
+  // Conductor variants → "conductor"
+  "orchestrator-sisyphus": "conductor",
+  Atlas: "conductor",
+  atlas: "conductor",
 
-  // Metis variants → "planner"
-  "plan-consultant": "planner",
-  "Metis (Plan Consultant)": "planner",
-  metis: "planner",
+  // Consultant variants → "consultant"
+  "plan-consultant": "consultant",
+  "Metis (Plan Consultant)": "consultant",
+  metis: "consultant",
 
-  // Momus variants → "reviewer"
+  // Reviewer variants → "reviewer"
   "Momus (Plan Reviewer)": "reviewer",
   momus: "reviewer",
 
-  // Sisyphus-Junior → "worker"
-  "Sisyphus-Junior": "worker",
+  // Orchestrator-Junior → "worker"
+  "Orchestrator-Junior": "worker",
   "sisyphus-junior": "worker",
 
   // Other legacy → new names
-  oracle: "advisor",
+  oracle: "architect",
   librarian: "researcher",
   explore: "explorer",
   "multimodal-looker": "vision",
@@ -53,6 +53,9 @@ export const AGENT_NAME_MAP: Record<string, string> = {
   researcher: "researcher",
   explorer: "explorer",
   vision: "vision",
+  architect: "architect",
+  conductor: "conductor",
+  consultant: "consultant",
 }
 
 export const BUILTIN_AGENT_NAMES = new Set([
@@ -74,7 +77,7 @@ export const BUILTIN_AGENT_NAMES = new Set([
 export const HOOK_NAME_MAP: Record<string, string | null> = {
   // Legacy names (backward compatibility)
   "anthropic-auto-compact": "anthropic-context-window-limit-recovery",
-  "sisyphus-orchestrator": "navigator",
+  "orchestrator-orchestrator": "conductor",
 
   // Removed hooks (v3.0.0) - will be filtered out and user warned
   "preemptive-compaction": null,

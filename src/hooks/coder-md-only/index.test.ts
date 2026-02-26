@@ -1,13 +1,13 @@
 import { describe, expect, test, beforeEach, afterEach, mock } from "bun:test"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { createPrometheusMdOnlyHook } from "./index"
+import { createPlannerMdOnlyHook } from "./index"
 import { MESSAGE_STORAGE } from "../../features/hook-message-injector"
 import { SYSTEM_DIRECTIVE_PREFIX, formatSystemDirective, SystemDirectiveTypes } from "../../shared/system-directive"
 import { clearSessionAgent } from "../../features/claude-code-session-state"
 
-describe("prometheus-md-only", () => {
-  const TEST_SESSION_ID = "test-session-prometheus"
+describe("planner-md-only", () => {
+  const TEST_SESSION_ID = "test-session-planner"
   let testMessageDir: string
 
   function createMockPluginInput() {
@@ -41,14 +41,14 @@ describe("prometheus-md-only", () => {
     }
   })
 
-   describe("with Prometheus agent in message storage", () => {
+   describe("with Planner agent in message storage", () => {
      beforeEach(() => {
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
+       setupMessageStorage(TEST_SESSION_ID, "planner")
      })
 
-    test("should block Prometheus from writing non-.md files", async () => {
+    test("should block Planner from writing non-.md files", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Write",
         sessionID: TEST_SESSION_ID,
@@ -64,9 +64,9 @@ describe("prometheus-md-only", () => {
       ).rejects.toThrow("can only write/edit .md files")
     })
 
-    test("should allow Prometheus to write .md files inside .opencode/", async () => {
+    test("should allow Planner to write .md files inside .opencode/", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Write",
         sessionID: TEST_SESSION_ID,
@@ -82,9 +82,9 @@ describe("prometheus-md-only", () => {
       ).resolves.toBeUndefined()
     })
 
-    test("should inject workflow reminder when Prometheus writes to .opencode/plans/", async () => {
+    test("should inject workflow reminder when Planner writes to .opencode/plans/", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Write",
         sessionID: TEST_SESSION_ID,
@@ -106,7 +106,7 @@ describe("prometheus-md-only", () => {
 
     test("should NOT inject workflow reminder for .opencode/drafts/", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Write",
         sessionID: TEST_SESSION_ID,
@@ -123,9 +123,9 @@ describe("prometheus-md-only", () => {
       expect(output.message).toBeUndefined()
     })
 
-    test("should block Prometheus from writing .md files outside .opencode/", async () => {
+    test("should block Planner from writing .md files outside .opencode/", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Write",
         sessionID: TEST_SESSION_ID,
@@ -143,7 +143,7 @@ describe("prometheus-md-only", () => {
 
     test("should block Edit tool for non-.md files", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Edit",
         sessionID: TEST_SESSION_ID,
@@ -161,7 +161,7 @@ describe("prometheus-md-only", () => {
 
     test("should not affect non-Write/Edit tools", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Read",
         sessionID: TEST_SESSION_ID,
@@ -179,7 +179,7 @@ describe("prometheus-md-only", () => {
 
     test("should handle missing filePath gracefully", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Write",
         sessionID: TEST_SESSION_ID,
@@ -195,9 +195,9 @@ describe("prometheus-md-only", () => {
       ).resolves.toBeUndefined()
     })
 
-    test("should inject read-only warning when Prometheus calls delegate_task", async () => {
+    test("should inject read-only warning when Planner calls delegate_task", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "delegate_task",
         sessionID: TEST_SESSION_ID,
@@ -215,9 +215,9 @@ describe("prometheus-md-only", () => {
       expect(output.args.prompt).toContain("DO NOT modify any files")
     })
 
-    test("should inject read-only warning when Prometheus calls task", async () => {
+    test("should inject read-only warning when Planner calls task", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "task",
         sessionID: TEST_SESSION_ID,
@@ -234,9 +234,9 @@ describe("prometheus-md-only", () => {
       expect(output.args.prompt).toContain(SYSTEM_DIRECTIVE_PREFIX)
     })
 
-    test("should inject read-only warning when Prometheus calls call_omo_agent", async () => {
+    test("should inject read-only warning when Planner calls call_omo_agent", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "call_omo_agent",
         sessionID: TEST_SESSION_ID,
@@ -255,7 +255,7 @@ describe("prometheus-md-only", () => {
 
     test("should not double-inject warning if already present", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "delegate_task",
         sessionID: TEST_SESSION_ID,
@@ -275,14 +275,14 @@ describe("prometheus-md-only", () => {
     })
   })
 
-  describe("with non-Prometheus agent in message storage", () => {
+  describe("with non-Planner agent in message storage", () => {
     beforeEach(() => {
-      setupMessageStorage(TEST_SESSION_ID, "sisyphus")
+      setupMessageStorage(TEST_SESSION_ID, "orchestrator")
     })
 
-    test("should not affect non-Prometheus agents", async () => {
+    test("should not affect non-Planner agents", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Write",
         sessionID: TEST_SESSION_ID,
@@ -298,9 +298,9 @@ describe("prometheus-md-only", () => {
       ).resolves.toBeUndefined()
     })
 
-    test("should not inject warning for non-Prometheus agents calling delegate_task", async () => {
+    test("should not inject warning for non-Planner agents calling delegate_task", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "delegate_task",
         sessionID: TEST_SESSION_ID,
@@ -323,7 +323,7 @@ describe("prometheus-md-only", () => {
   describe("without message storage", () => {
     test("should handle missing session gracefully (no agent found)", async () => {
       // #given
-      const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+      const hook = createPlannerMdOnlyHook(createMockPluginInput())
       const input = {
         tool: "Write",
         sessionID: "non-existent-session",
@@ -342,20 +342,20 @@ describe("prometheus-md-only", () => {
 
   describe("cross-platform path validation", () => {
     beforeEach(() => {
-      setupMessageStorage(TEST_SESSION_ID, "Prometheus (Planner)")
+      setupMessageStorage(TEST_SESSION_ID, "Planner (Planner)")
     })
 
      test("should allow Windows-style backslash paths under .opencode/", async () => {
        // #given
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
          callID: "call-1",
        }
        const output = {
-         args: { filePath: ".sisyphus\\plans\\work-plan.md" },
+         args: { filePath: ".orchestrator\\plans\\work-plan.md" },
        }
 
        // #when / #then
@@ -366,15 +366,15 @@ describe("prometheus-md-only", () => {
 
      test("should allow mixed separator paths under .opencode/", async () => {
        // #given
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
          callID: "call-1",
        }
        const output = {
-         args: { filePath: ".sisyphus\\plans/work-plan.MD" },
+         args: { filePath: ".orchestrator\\plans/work-plan.MD" },
        }
 
        // #when / #then
@@ -385,8 +385,8 @@ describe("prometheus-md-only", () => {
 
      test("should allow uppercase .MD extension", async () => {
        // #given
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
@@ -402,10 +402,10 @@ describe("prometheus-md-only", () => {
        ).resolves.toBeUndefined()
      })
 
-     test("should block paths outside workspace root even if containing .sisyphus", async () => {
+     test("should block paths outside workspace root even if containing .orchestrator", async () => {
        // #given
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
@@ -421,10 +421,10 @@ describe("prometheus-md-only", () => {
        ).rejects.toThrow("can only write/edit .md files inside .opencode/")
      })
 
-     test("should allow nested .sisyphus directories (ctx.directory may be parent)", async () => {
+     test("should allow nested .orchestrator directories (ctx.directory may be parent)", async () => {
        // #given - when ctx.directory is parent of actual project, path includes project name
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
@@ -434,7 +434,7 @@ describe("prometheus-md-only", () => {
          args: { filePath: "src/.opencode/plans/x.md" },
        }
 
-       // #when / #then - should allow because .sisyphus is in path
+       // #when / #then - should allow because .orchestrator is in path
        await expect(
          hook["tool.execute.before"](input, output)
        ).resolves.toBeUndefined()
@@ -442,8 +442,8 @@ describe("prometheus-md-only", () => {
 
      test("should block path traversal attempts", async () => {
        // #given
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
@@ -461,8 +461,8 @@ describe("prometheus-md-only", () => {
 
      test("should allow case-insensitive .SISYPHUS directory", async () => {
        // #given
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
@@ -478,18 +478,18 @@ describe("prometheus-md-only", () => {
        ).resolves.toBeUndefined()
      })
 
-     test("should allow nested project path with .sisyphus (Windows real-world case)", async () => {
+     test("should allow nested project path with .orchestrator (Windows real-world case)", async () => {
        // #given - simulates when ctx.directory is parent of actual project
-       // User reported: xauusd-dxy-plan\.sisyphus\drafts\supabase-email-templates.md
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       // User reported: xauusd-dxy-plan\.orchestrator\drafts\supabase-email-templates.md
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
          callID: "call-1",
        }
        const output = {
-         args: { filePath: "xauusd-dxy-plan\\.sisyphus\\drafts\\supabase-email-templates.md" },
+         args: { filePath: "xauusd-dxy-plan\\.orchestrator\\drafts\\supabase-email-templates.md" },
        }
 
        // #when / #then
@@ -500,15 +500,15 @@ describe("prometheus-md-only", () => {
 
      test("should allow nested project path with mixed separators", async () => {
        // #given
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,
          callID: "call-1",
        }
        const output = {
-         args: { filePath: "my-project/.sisyphus\\plans/task.md" },
+         args: { filePath: "my-project/.orchestrator\\plans/task.md" },
        }
 
        // #when / #then
@@ -517,10 +517,10 @@ describe("prometheus-md-only", () => {
        ).resolves.toBeUndefined()
      })
 
-     test("should block nested project path without .sisyphus", async () => {
+     test("should block nested project path without .orchestrator", async () => {
        // #given
-       setupMessageStorage(TEST_SESSION_ID, "prometheus")
-       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
+       setupMessageStorage(TEST_SESSION_ID, "planner")
+       const hook = createPlannerMdOnlyHook(createMockPluginInput())
        const input = {
          tool: "Write",
          sessionID: TEST_SESSION_ID,

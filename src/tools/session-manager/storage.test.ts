@@ -163,7 +163,7 @@ describe("session-manager storage", () => {
       JSON.stringify({
         id: "msg_002",
         role: "assistant",
-        agent: "oracle",
+        agent: "architect",
         time: { created: now },
       })
     )
@@ -176,7 +176,7 @@ describe("session-manager storage", () => {
     expect(info?.id).toBe(sessionID)
     expect(info?.message_count).toBe(2)
     expect(info?.agents_used).toContain("build")
-    expect(info?.agents_used).toContain("oracle")
+    expect(info?.agents_used).toContain("architect")
   })
 })
 

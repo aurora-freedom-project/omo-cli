@@ -1,3 +1,4 @@
+import * as p from "@clack/prompts";
 /**
  * cli/skills-scanner.ts - Security and quality scanner for skills
  * 
@@ -57,15 +58,15 @@ const QUALITY_INDICATORS = {
 
 // Agent categories based on content
 const AGENT_KEYWORDS = {
-    prometheus: ['architecture', 'design', 'planning', 'strategy', 'system design', 'blueprint'],
-    oracle: ['review', 'debug', 'analyze', 'consult', 'diagnose', 'troubleshoot'],
-    librarian: ['documentation', 'docs', 'research', 'reference', 'api', 'readme'],
-    explore: ['search', 'find', 'grep', 'locate', 'navigate'],
-    momus: ['validate', 'review', 'critique', 'test', 'verify', 'quality'],
-    sisyphus: ['implement', 'create', 'build', 'develop', 'code'],
-    'sisyphus-junior': ['task', 'execute', 'run', 'script', 'automate'],
-    atlas: ['orchestrate', 'coordinate', 'manage', 'todo', 'project'],
-    metis: ['analyze', 'gap', 'requirements', 'pre-planning'],
+    planner: ['architecture', 'design', 'planning', 'strategy', 'system design', 'blueprint'],
+    architect: ['review', 'debug', 'analyze', 'consult', 'diagnose', 'troubleshoot'],
+    researcher: ['documentation', 'docs', 'research', 'reference', 'api', 'readme'],
+    explorer: ['search', 'find', 'grep', 'locate', 'navigate'],
+    reviewer: ['validate', 'review', 'critique', 'test', 'verify', 'quality'],
+    orchestrator: ['implement', 'create', 'build', 'develop', 'code'],
+    "worker": ['task', 'execute', 'run', 'script', 'automate'],
+    conductor: ['orchestrate', 'coordinate', 'manage', 'todo', 'project'],
+    consultant: ['analyze', 'gap', 'requirements', 'pre-planning'],
 };
 
 export interface SkillScanResult {
@@ -231,7 +232,7 @@ export function scanSkill(skillPath: string): SkillScanResult {
 
         // If no specific agent matched, suggest general agents
         if (result.suggestedAgents.length === 0) {
-            result.suggestedAgents.push('sisyphus');
+            result.suggestedAgents.push('orchestrator');
         }
 
         // Complexity assessment
@@ -268,7 +269,7 @@ export function scanAllSkills(repoPath: string): ScanReport {
     };
 
     if (!existsSync(skillsDir)) {
-        console.error("❌ Skills directory not found");
+        p.log.error("❌ Skills directory not found");
         return report;
     }
 
@@ -278,7 +279,7 @@ export function scanAllSkills(repoPath: string): ScanReport {
 
     report.totalSkills = skillDirs.length;
 
-    console.log(`\n🔍 Scanning ${skillDirs.length} skills...\n`);
+    p.log.info(`\n🔍 Scanning ${skillDirs.length} skills...\n`);
 
     for (const skillName of skillDirs) {
         const result = scanSkill(join(skillsDir, skillName));
@@ -314,56 +315,56 @@ export function scanAllSkills(repoPath: string): ScanReport {
  * Display scan report summary
  */
 export function displayScanReport(report: ScanReport): void {
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`📊 SKILLS SECURITY & QUALITY REPORT`);
-    console.log(`${'='.repeat(60)}\n`);
+    p.log.info(`\n${'='.repeat(60)}`);
+    p.log.info(`📊 SKILLS SECURITY & QUALITY REPORT`);
+    p.log.info(`${'='.repeat(60)}\n`);
 
-    console.log(`📅 Timestamp: ${report.timestamp}`);
-    console.log(`📦 Total Skills: ${report.totalSkills}\n`);
+    p.log.info(`📅 Timestamp: ${report.timestamp}`);
+    p.log.info(`📦 Total Skills: ${report.totalSkills}\n`);
 
     // Security summary
-    console.log(`🛡️  SECURITY SUMMARY`);
-    console.log(`${'─'.repeat(40)}`);
-    console.log(`🔴 HIGH Risk:   ${report.summary.highRisk} skills`);
-    console.log(`🟠 MEDIUM Risk: ${report.summary.mediumRisk} skills`);
-    console.log(`🟡 LOW Risk:    ${report.summary.lowRisk} skills`);
-    console.log(`🟢 SAFE:        ${report.summary.safe} skills\n`);
+    p.log.info(`🛡️  SECURITY SUMMARY`);
+    p.log.info(`${'─'.repeat(40)}`);
+    p.log.info(`🔴 HIGH Risk:   ${report.summary.highRisk} skills`);
+    p.log.info(`🟠 MEDIUM Risk: ${report.summary.mediumRisk} skills`);
+    p.log.info(`🟡 LOW Risk:    ${report.summary.lowRisk} skills`);
+    p.log.info(`🟢 SAFE:        ${report.summary.safe} skills\n`);
 
     // Quality summary
-    console.log(`📈 QUALITY SUMMARY`);
-    console.log(`${'─'.repeat(40)}`);
-    console.log(`⭐ Excellent (80-100): ${report.qualityDistribution.excellent}`);
-    console.log(`👍 Good (60-79):       ${report.qualityDistribution.good}`);
-    console.log(`👌 Fair (40-59):       ${report.qualityDistribution.fair}`);
-    console.log(`👎 Poor (0-39):        ${report.qualityDistribution.poor}\n`);
+    p.log.info(`📈 QUALITY SUMMARY`);
+    p.log.info(`${'─'.repeat(40)}`);
+    p.log.info(`⭐ Excellent (80-100): ${report.qualityDistribution.excellent}`);
+    p.log.info(`👍 Good (60-79):       ${report.qualityDistribution.good}`);
+    p.log.info(`👌 Fair (40-59):       ${report.qualityDistribution.fair}`);
+    p.log.info(`👎 Poor (0-39):        ${report.qualityDistribution.poor}\n`);
 
     // Agent distribution
-    console.log(`🤖 AGENT MAPPING`);
-    console.log(`${'─'.repeat(40)}`);
+    p.log.info(`🤖 AGENT MAPPING`);
+    p.log.info(`${'─'.repeat(40)}`);
     for (const [agent, skills] of Object.entries(report.agentMapping)) {
-        console.log(`${agent.padEnd(20)} ${skills.length} skills`);
+        p.log.info(`${agent.padEnd(20)} ${skills.length} skills`);
     }
 
     // HIGH risk details
     if (report.summary.highRisk > 0) {
-        console.log(`\n🔴 HIGH RISK SKILLS (Require Manual Review)`);
-        console.log(`${'─'.repeat(40)}`);
+        p.log.info(`\n🔴 HIGH RISK SKILLS (Require Manual Review)`);
+        p.log.info(`${'─'.repeat(40)}`);
         report.skills
             .filter(s => s.riskLevel === 'high')
             .slice(0, 20)
             .forEach(s => {
-                console.log(`  • ${s.id}`);
+                p.log.info(`  • ${s.id}`);
                 s.securityIssues.slice(0, 2).forEach(issue => {
-                    console.log(`    └─ ${issue}`);
+                    p.log.info(`    └─ ${issue}`);
                 });
             });
 
         if (report.summary.highRisk > 20) {
-            console.log(`  ... and ${report.summary.highRisk - 20} more`);
+            p.log.info(`  ... and ${report.summary.highRisk - 20} more`);
         }
     }
 
-    console.log(`\n${'='.repeat(60)}\n`);
+    p.log.info(`\n${'='.repeat(60)}\n`);
 }
 
 /**
@@ -371,7 +372,7 @@ export function displayScanReport(report: ScanReport): void {
  */
 export function saveReport(report: ScanReport, outputPath: string): void {
     writeFileSync(outputPath, JSON.stringify(report, null, 2));
-    console.log(`📄 Report saved to: ${outputPath}`);
+    p.log.info(`📄 Report saved to: ${outputPath}`);
 }
 
 /**
@@ -386,8 +387,8 @@ export async function runSecurityScan(options: {
     const outputPath = options.outputPath || join(process.cwd(), "skills_security_report.json");
 
     if (!existsSync(repoPath)) {
-        console.error(`❌ Repository not found at ${repoPath}`);
-        console.log("Run 'import-skills --audit' first to clone the repository.");
+        p.log.error(`❌ Repository not found at ${repoPath}`);
+        p.log.info("Run 'import-skills --audit' first to clone the repository.");
         process.exit(1);
     }
 
@@ -397,8 +398,8 @@ export async function runSecurityScan(options: {
 
     if (options.showDetails) {
         // Show all skills sorted by risk then quality
-        console.log(`\n📋 DETAILED SKILL LIST`);
-        console.log(`${'─'.repeat(60)}`);
+        p.log.info(`\n📋 DETAILED SKILL LIST`);
+        p.log.info(`${'─'.repeat(60)}`);
 
         const sorted = [...report.skills].sort((a, b) => {
             const riskOrder = { high: 0, medium: 1, low: 2, safe: 3 };
@@ -411,11 +412,11 @@ export async function runSecurityScan(options: {
         for (const skill of sorted.slice(0, 50)) {
             const risk = { high: '🔴', medium: '🟠', low: '🟡', safe: '🟢' }[skill.riskLevel];
             const agents = skill.suggestedAgents.join(', ');
-            console.log(`${risk} ${skill.id.padEnd(30)} Q:${skill.qualityScore.toString().padStart(3)} → ${agents}`);
+            p.log.info(`${risk} ${skill.id.padEnd(30)} Q:${skill.qualityScore.toString().padStart(3)} → ${agents}`);
         }
 
         if (sorted.length > 50) {
-            console.log(`... and ${sorted.length - 50} more skills`);
+            p.log.info(`... and ${sorted.length - 50} more skills`);
         }
     }
 

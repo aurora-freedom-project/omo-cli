@@ -1,3 +1,4 @@
+/// <reference types="bun-types" />
 import { describe, test, expect } from "bun:test"
 import { createBuiltinSkills } from "./skills"
 
@@ -75,7 +76,7 @@ describe("createBuiltinSkills", () => {
 		}
 	})
 
-	test("returns exactly 8 skills regardless of provider", () => {
+	test("returns exactly 9 skills regardless of provider", () => {
 		// #given
 
 		// #when
@@ -83,7 +84,7 @@ describe("createBuiltinSkills", () => {
 		const agentBrowserSkills = createBuiltinSkills({ browserProvider: "agent-browser" })
 
 		// #then
-		expect(defaultSkills).toHaveLength(8)
-		expect(agentBrowserSkills).toHaveLength(8)
+		expect(defaultSkills).toHaveLength(9)
+		expect(agentBrowserSkills).toHaveLength(9)
 	})
 })

@@ -248,66 +248,7 @@ async function recoverThinkingDisabledViolation(
   return anySuccess
 }
 
-const PLACEHOLDER_TEXT = "[user interrupted]"
 
-async function recoverEmptyContentMessage(
-  _client: Client,
-  sessionID: string,
-  failedAssistantMsg: MessageData,
-  _directory: string,
-  error: unknown
-): Promise<boolean> {
-  const targetIndex = extractMessageIndex(error)
-  const failedID = failedAssistantMsg.info?.id
-  let anySuccess = false
-
-  const messagesWithEmptyText = findMessagesWithEmptyTextParts(sessionID)
-  for (const messageID of messagesWithEmptyText) {
-    if (replaceEmptyTextParts(messageID, PLACEHOLDER_TEXT)) {
-      anySuccess = true
-    }
-  }
-
-  const thinkingOnlyIDs = findMessagesWithThinkingOnly(sessionID)
-  for (const messageID of thinkingOnlyIDs) {
-    if (injectTextPart(sessionID, messageID, PLACEHOLDER_TEXT)) {
-      anySuccess = true
-    }
-  }
-
-  if (targetIndex !== null) {
-    const targetMessageID = findEmptyMessageByIndex(sessionID, targetIndex)
-    if (targetMessageID) {
-      if (replaceEmptyTextParts(targetMessageID, PLACEHOLDER_TEXT)) {
-        return true
-      }
-      if (injectTextPart(sessionID, targetMessageID, PLACEHOLDER_TEXT)) {
-        return true
-      }
-    }
-  }
-
-  if (failedID) {
-    if (replaceEmptyTextParts(failedID, PLACEHOLDER_TEXT)) {
-      return true
-    }
-    if (injectTextPart(sessionID, failedID, PLACEHOLDER_TEXT)) {
-      return true
-    }
-  }
-
-  const emptyMessageIDs = findEmptyMessages(sessionID)
-  for (const messageID of emptyMessageIDs) {
-    if (replaceEmptyTextParts(messageID, PLACEHOLDER_TEXT)) {
-      anySuccess = true
-    }
-    if (injectTextPart(sessionID, messageID, PLACEHOLDER_TEXT)) {
-      anySuccess = true
-    }
-  }
-
-  return anySuccess
-}
 
 // NOTE: fallbackRevertStrategy was removed (2025-12-08)
 // Reason: Function was defined but never called - no error recovery paths used it.
@@ -357,7 +298,7 @@ export function createSessionRecoveryHook(ctx: PluginInput, options?: SessionRec
         onAbortCallback(sessionID)  // Mark recovering BEFORE abort
       }
 
-      await ctx.client.session.abort({ path: { id: sessionID } }).catch(() => {})
+      await ctx.client.session.abort({ path: { id: sessionID } }).catch(() => { })
 
       const messagesResp = await ctx.client.session.messages({
         path: { id: sessionID },
@@ -390,7 +331,7 @@ export function createSessionRecoveryHook(ctx: PluginInput, options?: SessionRec
             duration: 3000,
           },
         })
-        .catch(() => {})
+        .catch(() => { })
 
       let success = false
 
@@ -413,17 +354,17 @@ export function createSessionRecoveryHook(ctx: PluginInput, options?: SessionRec
       }
 
       return success
-  } catch (err) {
-    console.error("[session-recovery] Recovery failed:", err)
-    return false
-  } finally {
-    processingErrors.delete(assistantMsgID)
+    } catch (err) {
+      console.error("[session-recovery] Recovery failed:", err)
+      return false
+    } finally {
+      processingErrors.delete(assistantMsgID)
 
-    // Always notify recovery complete, regardless of success or failure
-    if (sessionID && onRecoveryCompleteCallback) {
-      onRecoveryCompleteCallback(sessionID)
+      // Always notify recovery complete, regardless of success or failure
+      if (sessionID && onRecoveryCompleteCallback) {
+        onRecoveryCompleteCallback(sessionID)
+      }
     }
-  }
   }
 
   return {

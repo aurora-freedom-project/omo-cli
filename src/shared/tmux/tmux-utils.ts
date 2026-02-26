@@ -1,4 +1,4 @@
-import { spawn } from "bun"
+
 import type { TmuxConfig, TmuxLayout } from "../../config/schema"
 import type { SpawnPaneResult } from "./types"
 import { getTmuxPath } from "../../tools/interactive-bash/utils"
@@ -66,7 +66,7 @@ export async function getPaneDimensions(paneId: string): Promise<PaneDimensions 
   const tmux = await getTmuxPath()
   if (!tmux) return null
 
-  const proc = spawn([tmux, "display", "-p", "-t", paneId, "#{pane_width},#{window_width}"], {
+  const proc = Bun.spawn([tmux, "display", "-p", "-t", paneId, "#{pane_width},#{window_width}"], {
     stdout: "pipe",
     stderr: "pipe",
   })
@@ -90,9 +90,9 @@ export async function spawnTmuxPane(
   splitDirection: SplitDirection = "-h"
 ): Promise<SpawnPaneResult> {
   const { log } = await import("../logger")
-  
+
   log("[spawnTmuxPane] called", { sessionId, description, serverUrl, configEnabled: config.enabled, targetPaneId, splitDirection })
-  
+
   if (!config.enabled) {
     log("[spawnTmuxPane] SKIP: config.enabled is false")
     return { success: false }
@@ -101,7 +101,7 @@ export async function spawnTmuxPane(
     log("[spawnTmuxPane] SKIP: not inside tmux", { TMUX: process.env.TMUX })
     return { success: false }
   }
-  
+
   const serverRunning = await isServerRunning(serverUrl)
   if (!serverRunning) {
     log("[spawnTmuxPane] SKIP: server not running", { serverUrl })
@@ -113,7 +113,7 @@ export async function spawnTmuxPane(
     log("[spawnTmuxPane] SKIP: tmux not found")
     return { success: false }
   }
-  
+
   log("[spawnTmuxPane] all checks passed, spawning...")
 
   const opencodeCmd = `opencode attach ${serverUrl} --session ${sessionId}`
@@ -129,7 +129,7 @@ export async function spawnTmuxPane(
     opencodeCmd,
   ]
 
-  const proc = spawn([tmux, ...args], { stdout: "pipe", stderr: "pipe" })
+  const proc = Bun.spawn([tmux, ...args], { stdout: "pipe", stderr: "pipe" })
   const exitCode = await proc.exited
   const stdout = await new Response(proc.stdout).text()
   const paneId = stdout.trim()
@@ -139,7 +139,7 @@ export async function spawnTmuxPane(
   }
 
   const title = `omo-subagent-${description.slice(0, 20)}`
-  spawn([tmux, "select-pane", "-t", paneId, "-T", title], {
+  Bun.spawn([tmux, "select-pane", "-t", paneId, "-T", title], {
     stdout: "ignore",
     stderr: "ignore",
   })
@@ -149,7 +149,7 @@ export async function spawnTmuxPane(
 
 export async function closeTmuxPane(paneId: string): Promise<boolean> {
   const { log } = await import("../logger")
-  
+
   if (!isInsideTmux()) {
     log("[closeTmuxPane] SKIP: not inside tmux")
     return false
@@ -162,8 +162,8 @@ export async function closeTmuxPane(paneId: string): Promise<boolean> {
   }
 
   log("[closeTmuxPane] killing pane", { paneId })
-  
-  const proc = spawn([tmux, "kill-pane", "-t", paneId], {
+
+  const proc = Bun.spawn([tmux, "kill-pane", "-t", paneId], {
     stdout: "pipe",
     stderr: "pipe",
   })
@@ -187,9 +187,9 @@ export async function replaceTmuxPane(
   serverUrl: string
 ): Promise<SpawnPaneResult> {
   const { log } = await import("../logger")
-  
+
   log("[replaceTmuxPane] called", { paneId, sessionId, description })
-  
+
   if (!config.enabled) {
     return { success: false }
   }
@@ -204,7 +204,7 @@ export async function replaceTmuxPane(
 
   const opencodeCmd = `opencode attach ${serverUrl} --session ${sessionId}`
 
-  const proc = spawn([tmux, "respawn-pane", "-k", "-t", paneId, opencodeCmd], {
+  const proc = Bun.spawn([tmux, "respawn-pane", "-k", "-t", paneId, opencodeCmd], {
     stdout: "pipe",
     stderr: "pipe",
   })
@@ -217,7 +217,7 @@ export async function replaceTmuxPane(
   }
 
   const title = `omo-subagent-${description.slice(0, 20)}`
-  spawn([tmux, "select-pane", "-t", paneId, "-T", title], {
+  Bun.spawn([tmux, "select-pane", "-t", paneId, "-T", title], {
     stdout: "ignore",
     stderr: "ignore",
   })
@@ -231,13 +231,13 @@ export async function applyLayout(
   layout: TmuxLayout,
   mainPaneSize: number
 ): Promise<void> {
-  const layoutProc = spawn([tmux, "select-layout", layout], { stdout: "ignore", stderr: "ignore" })
+  const layoutProc = Bun.spawn([tmux, "select-layout", layout], { stdout: "ignore", stderr: "ignore" })
   await layoutProc.exited
 
   if (layout.startsWith("main-")) {
     const dimension =
       layout === "main-horizontal" ? "main-pane-height" : "main-pane-width"
-    const sizeProc = spawn([tmux, "set-window-option", dimension, `${mainPaneSize}%`], {
+    const sizeProc = Bun.spawn([tmux, "set-window-option", dimension, `${mainPaneSize}%`], {
       stdout: "ignore",
       stderr: "ignore",
     })
@@ -255,12 +255,12 @@ export async function enforceMainPaneWidth(
 
   const DIVIDER_WIDTH = 1
   const mainWidth = Math.floor((windowWidth - DIVIDER_WIDTH) / 2)
-  
-  const proc = spawn([tmux, "resize-pane", "-t", mainPaneId, "-x", String(mainWidth)], {
+
+  const proc = Bun.spawn([tmux, "resize-pane", "-t", mainPaneId, "-x", String(mainWidth)], {
     stdout: "ignore",
     stderr: "ignore",
   })
   await proc.exited
-  
+
   log("[enforceMainPaneWidth] main pane resized", { mainPaneId, mainWidth, windowWidth })
 }

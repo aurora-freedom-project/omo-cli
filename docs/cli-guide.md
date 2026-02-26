@@ -1,10 +1,10 @@
-# Oh-My-OpenCode CLI Guide
+# omo-cli CLI Guide
 
-This document provides a comprehensive guide to using the Oh-My-OpenCode CLI tools.
+This document provides a comprehensive guide to using the omo-cli CLI tools.
 
 ## 1. Overview
 
-Oh-My-OpenCode provides CLI tools accessible via the `bunx omo-cli` command. The CLI supports various features including plugin installation, environment diagnostics, and session execution.
+omo-cli provides CLI tools accessible via the `bunx omo-cli` command. The CLI supports various features including plugin installation, environment diagnostics, and session execution.
 
 ```bash
 # Basic execution (displays help)
@@ -30,7 +30,7 @@ npx omo-cli
 
 ## 3. `install` - Interactive Setup Wizard
 
-An interactive installation tool for initial Oh-My-OpenCode setup. Provides a beautiful TUI (Text User Interface) based on `@clack/prompts`.
+An interactive installation tool for initial omo-cli setup. Provides a beautiful TUI (Text User Interface) based on `@clack/prompts`.
 
 ### Usage
 
@@ -56,7 +56,7 @@ bunx omo-cli install
 
 ## 4. `doctor` - Environment Diagnostics
 
-Diagnoses your environment to ensure Oh-My-OpenCode is functioning correctly. Performs 17+ health checks.
+Diagnoses your environment to ensure omo-cli is functioning correctly. Performs 17+ health checks.
 
 ### Usage
 
@@ -89,7 +89,7 @@ bunx omo-cli doctor
 omo-cli doctor
 
 ┌──────────────────────────────────────────────────┐
-│  Oh-My-OpenCode Doctor                           │
+│  omo-cli Doctor                           │
 └──────────────────────────────────────────────────┘
 
 Installation

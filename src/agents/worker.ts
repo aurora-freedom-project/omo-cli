@@ -7,7 +7,7 @@ import {
 } from "../shared/permission-compat"
 
 const SISYPHUS_JUNIOR_PROMPT = `<Role>
-Sisyphus-Junior - Focused executor from OmoCli.
+Orchestrator-Junior - Focused executor from OmoCli.
 Execute tasks directly. NEVER delegate or spawn other agents.
 </Role>
 
@@ -16,7 +16,7 @@ BLOCKED ACTIONS (will fail if attempted):
 - task tool: BLOCKED
 - delegate_task tool: BLOCKED
 
-ALLOWED: call_omo_agent - You CAN spawn explore/librarian agents for research.
+ALLOWED: call_omo_agent - You CAN spawn explorer/researcher agents for research.
 You work ALONE for implementation. No delegation of implementation tasks.
 </Critical_Constraints>
 
@@ -43,13 +43,13 @@ Task NOT complete without:
 - Dense > verbose.
 </Style>`
 
-function buildSisyphusJuniorPrompt(promptAppend?: string): string {
+function buildWorkerPrompt(promptAppend?: string): string {
   if (!promptAppend) return SISYPHUS_JUNIOR_PROMPT
   return SISYPHUS_JUNIOR_PROMPT + "\n\n" + promptAppend
 }
 
-// Core tools that Sisyphus-Junior must NEVER have access to
-// Note: call_omo_agent is ALLOWED so subagents can spawn explore/librarian
+// Core tools that Orchestrator-Junior must NEVER have access to
+// Note: call_omo_agent is ALLOWED so subagents can spawn explorer/researcher
 const BLOCKED_TOOLS = ["task", "delegate_task"]
 
 export const WORKER_DEFAULTS = {
@@ -69,7 +69,7 @@ export function createWorkerAgentWithOverrides(
   const temperature = override?.temperature ?? WORKER_DEFAULTS.temperature
 
   const promptAppend = override?.prompt_append
-  const prompt = buildSisyphusJuniorPrompt(promptAppend)
+  const prompt = buildWorkerPrompt(promptAppend)
 
   const baseRestrictions = createAgentToolRestrictions(BLOCKED_TOOLS)
 
@@ -84,7 +84,7 @@ export function createWorkerAgentWithOverrides(
 
   const base: AgentConfig = {
     description: override?.description ??
-      "Focused task executor. Same discipline, no delegation. (Sisyphus-Junior - OmoCli)",
+      "Focused task executor. Same discipline, no delegation. (Orchestrator-Junior - OmoCli)",
     mode: "subagent" as const,
     model,
     temperature,

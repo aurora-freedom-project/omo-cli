@@ -54,7 +54,7 @@ ${REFACTOR_TEMPLATE}
     argumentHint: "<refactoring-target> [--scope=<file|module|project>] [--strategy=<safe|aggressive>]",
   },
   "start-work": {
-    description: "(builtin) Start Sisyphus work session from Prometheus plan",
+    description: "(builtin) Start Orchestrator work session from Planner plan",
     template: `<command-instruction>
 ${START_WORK_TEMPLATE}
 </command-instruction>

@@ -26,11 +26,11 @@ const AgentPermissionSchema = z.object({
 export const BuiltinAgentNameSchema = z.enum([
   // New native-friendly names
   "orchestrator",
-  "conductor", // New friendly name for Atlas
+  "conductor", // New friendly name for Conductor
   "planner",
-  "consultant", // New friendly name for Metis
+  "consultant", // New friendly name for Consultant
   "reviewer",
-  "architect", // New friendly name for Oracle
+  "architect", // New friendly name for Architect
   "worker",
   "vision",
   "explorer",
@@ -384,9 +384,9 @@ export const NotificationConfigSchema = z.object({
 })
 
 export const GitMasterConfigSchema = z.object({
-  /** Add "Ultraworked with Sisyphus" footer to commit messages (default: true) */
+  /** Add "Ultraworked with Orchestrator" footer to commit messages (default: true) */
   commit_footer: z.boolean().default(true),
-  /** Add "Co-authored-by: Sisyphus" trailer to commit messages (default: true) */
+  /** Add "Co-authored-by: Orchestrator" trailer to commit messages (default: true) */
   include_co_authored_by: z.boolean().default(true),
 })
 
@@ -419,7 +419,7 @@ export const TmuxConfigSchema = z.object({
 })
 
 export const SisyphusTasksConfigSchema = z.object({
-  /** Enable Sisyphus Tasks system (default: false) */
+  /** Enable Orchestrator Tasks system (default: false) */
   enabled: z.boolean().default(false),
   /** Storage path for tasks (default: .opencode/tasks) */
   storage_path: z.string().default(".opencode/tasks"),
@@ -428,7 +428,7 @@ export const SisyphusTasksConfigSchema = z.object({
 })
 
 export const SisyphusSwarmConfigSchema = z.object({
-  /** Enable Sisyphus Swarm system (default: false) */
+  /** Enable Orchestrator Swarm system (default: false) */
   enabled: z.boolean().default(false),
   /** Storage path for teams (default: .opencode/teams) */
   storage_path: z.string().default(".opencode/teams"),
@@ -471,6 +471,27 @@ export const PrivacyConfigSchema = z.object({
 })
 
 
+export const MemoryConfigSchema = z.object({
+  /** Enable omo-memory persistent memory via SurrealDB (default: false) */
+  enabled: z.boolean().default(false),
+  /** SurrealDB port for managed mode (default: 18000) */
+  port: z.number().default(18000),
+  /** Auto-capture key decisions from chat messages (default: true) */
+  auto_capture: z.boolean().default(true),
+  /** Connection mode: "managed" spins up omo-surrealdb container, "external" connects to existing service */
+  mode: z.enum(["managed", "external"]).default("managed"),
+  /** SurrealDB RPC URL (only for mode: "external", e.g. "http://localhost:8000/rpc") */
+  url: z.string().optional(),
+  /** SurrealDB username (default: "root") */
+  user: z.string().default("root"),
+  /** SurrealDB password (only for mode: "external") */
+  pass: z.string().optional(),
+  /** SurrealDB namespace for data isolation (default: "omo") */
+  namespace: z.string().default("omo"),
+  /** SurrealDB database name (default: "memory") */
+  database: z.string().default("memory"),
+})
+
 export const OmoCliConfigSchema = z.object({
   $schema: z.string().optional(),
   disabled_mcps: z.array(AnyMcpNameSchema).optional(),
@@ -492,11 +513,13 @@ export const OmoCliConfigSchema = z.object({
   git_master: GitMasterConfigSchema.optional(),
   browser_automation_engine: BrowserAutomationConfigSchema.optional(),
   tmux: TmuxConfigSchema.optional(),
-  sisyphus: SisyphusConfigSchema.optional(),
+  orchestrator: SisyphusConfigSchema.optional(),
   /** Coding level (1-10) - controls verbosity of agent responses */
   coding_level: CodingLevelSchema.optional(),
   /** Privacy awareness configuration */
   privacy: PrivacyConfigSchema.optional(),
+  /** omo-memory: Persistent memory via SurrealDB v3 */
+  memory: MemoryConfigSchema.optional(),
 })
 
 export type OmoCliConfig = z.infer<typeof OmoCliConfigSchema>
@@ -528,5 +551,6 @@ export type SisyphusSwarmConfig = z.infer<typeof SisyphusSwarmConfigSchema>
 export type SisyphusConfig = z.infer<typeof SisyphusConfigSchema>
 export type CodingLevel = z.infer<typeof CodingLevelSchema>
 export type PrivacyConfig = z.infer<typeof PrivacyConfigSchema>
+export type MemoryConfig = z.infer<typeof MemoryConfigSchema>
 
 export { AnyMcpNameSchema, type AnyMcpName, McpNameSchema, type McpName } from "../mcp/types"

@@ -11,7 +11,7 @@ cli/
 ├── index.ts              # Commander.js entry (4 commands)
 ├── install.ts            # Interactive TUI (520 lines)
 ├── config-manager.ts     # JSONC parsing (664 lines)
-├── types.ts              # InstallArgs, InstallConfig
+├── types.ts              # InstallArgs, ProfileSummary
 ├── model-fallback.ts     # Model fallback configuration
 ├── doctor/
 │   ├── index.ts          # Doctor entry

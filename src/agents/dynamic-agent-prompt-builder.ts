@@ -104,35 +104,35 @@ export function buildToolSelectionTable(
   }
 
   rows.push("")
-  rows.push("**Default flow**: explore/librarian (background) + tools → oracle (if required)")
+  rows.push("**Default flow**: explorer/researcher (background) + tools → architect (if required)")
 
   return rows.join("\n")
 }
 
 export function buildExploreSection(agents: AvailableAgent[]): string {
-  const exploreAgent = agents.find((a) => a.name === "explore")
+  const exploreAgent = agents.find((a) => a.name === "explorer")
   if (!exploreAgent) return ""
 
   const useWhen = exploreAgent.metadata.useWhen || []
   const avoidWhen = exploreAgent.metadata.avoidWhen || []
 
-  return `### Explore Agent = Contextual Grep
+  return `### Explorer Agent = Contextual Grep
 
 Use it as a **peer tool**, not a fallback. Fire liberally.
 
-| Use Direct Tools | Use Explore Agent |
+| Use Direct Tools | Use Explorer Agent |
 |------------------|-------------------|
 ${avoidWhen.map((w) => `| ${w} |  |`).join("\n")}
 ${useWhen.map((w) => `|  | ${w} |`).join("\n")}`
 }
 
-export function buildLibrarianSection(agents: AvailableAgent[]): string {
+export function buildResearcherSection(agents: AvailableAgent[]): string {
   const researcherAgent = agents.find((a) => a.name === "researcher")
   if (!researcherAgent) return ""
 
   const useWhen = researcherAgent.metadata.useWhen || []
 
-  return `### Librarian Agent = Reference Grep
+  return `### Researcher Agent = Reference Grep
 
 Search **external references** (docs, OSS, web). Fire proactively when unfamiliar libraries are involved.
 
@@ -145,7 +145,7 @@ Search **external references** (docs, OSS, web). Fire proactively when unfamilia
 | | Library best practices & quirks |
 | | OSS implementation examples |
 
-**Trigger phrases** (fire librarian immediately):
+**Trigger phrases** (fire researcher immediately):
 ${useWhen.map((w) => `- "${w}"`).join("\n")}`
 }
 
@@ -251,33 +251,33 @@ delegate_task(category="...", load_skills=[], prompt="...")  // Empty load_skill
 \`\`\``
 }
 
-export function buildOracleSection(agents: AvailableAgent[]): string {
-  const advisorAgent = agents.find((a) => a.name === "advisor")
+export function buildArchitectSection(agents: AvailableAgent[]): string {
+  const advisorAgent = agents.find((a) => a.name === "architect")
   if (!advisorAgent) return ""
 
   const useWhen = advisorAgent.metadata.useWhen || []
   const avoidWhen = advisorAgent.metadata.avoidWhen || []
 
-  return `<Oracle_Usage>
-## Oracle — Read-Only High-IQ Consultant
+  return `<Architect_Usage>
+## Architect — Read-Only High-IQ Consultant
 
-Oracle is a read-only, expensive, high-quality reasoning model for debugging and architecture. Consultation only.
+Architect is a read-only, expensive, high-quality reasoning model for debugging and architecture. Consultation only.
 
 ### WHEN to Consult:
 
 | Trigger | Action |
 |---------|--------|
-${useWhen.map((w) => `| ${w} | Oracle FIRST, then implement |`).join("\n")}
+${useWhen.map((w) => `| ${w} | Architect FIRST, then implement |`).join("\n")}
 
 ### WHEN NOT to Consult:
 
 ${avoidWhen.map((w) => `- ${w}`).join("\n")}
 
 ### Usage Pattern:
-Briefly announce "Consulting Oracle for [reason]" before invocation.
+Briefly announce "Consulting Architect for [reason]" before invocation.
 
 **Exception**: This is the ONLY case where you announce before acting. For all other work, start immediately without status updates.
-</Oracle_Usage>`
+</Architect_Usage>`
 }
 
 export function buildHardBlocksSection(): string {
@@ -337,7 +337,7 @@ export function buildUltraworkSection(
   }
 
   if (agents.length > 0) {
-    const ultraworkAgentPriority = ["explorer", "researcher", "plan", "advisor"]
+    const ultraworkAgentPriority = ["explorer", "researcher", "plan", "architect"]
     const sortedAgents = [...agents].sort((a, b) => {
       const aIdx = ultraworkAgentPriority.indexOf(a.name)
       const bIdx = ultraworkAgentPriority.indexOf(b.name)

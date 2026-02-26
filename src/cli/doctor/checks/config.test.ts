@@ -76,7 +76,7 @@ describe("config check", () => {
         path: "/home/user/.config/opencode/omo-cli.json",
         format: "json",
         valid: false,
-        errors: ["agents.oracle: Invalid model format"],
+        errors: ["agents.architect: Invalid model format"],
       })
 
       // #when checking validity

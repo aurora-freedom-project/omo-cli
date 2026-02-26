@@ -4,7 +4,7 @@ import type { CategoryConfig } from "../config/schema"
 import type { OmoCliConfig } from "../config"
 
 import * as agents from "../agents"
-import * as sisyphusJunior from "../agents/worker"
+import * as worker from "../agents/worker"
 import * as commandLoader from "../features/claude-code-command-loader"
 import * as builtinCommands from "../features/builtin-commands"
 import * as skillLoader from "../features/opencode-skill-loader"
@@ -20,11 +20,11 @@ import * as modelResolver from "../shared/model-resolver"
 beforeEach(() => {
   spyOn(agents, "createBuiltinAgents" as any).mockResolvedValue({
     orchestrator: { name: "orchestrator", prompt: "test", mode: "primary" },
-    oracle: { name: "oracle", prompt: "test", mode: "subagent" },
+    architect: { name: "architect", prompt: "test", mode: "subagent" },
   })
 
-  spyOn(sisyphusJunior, "createWorkerAgentWithOverrides" as any).mockReturnValue({
-    name: "sisyphus-junior",
+  spyOn(worker, "createWorkerAgentWithOverrides" as any).mockReturnValue({
+    name: "worker",
     prompt: "test",
     mode: "subagent",
   })
@@ -78,7 +78,7 @@ beforeEach(() => {
 
 afterEach(() => {
   (agents.createBuiltinAgents as any)?.mockRestore?.()
-    ; (sisyphusJunior.createWorkerAgentWithOverrides as any)?.mockRestore?.()
+    ; (worker.createWorkerAgentWithOverrides as any)?.mockRestore?.()
     ; (commandLoader.loadUserCommands as any)?.mockRestore?.()
     ; (commandLoader.loadProjectCommands as any)?.mockRestore?.()
     ; (commandLoader.loadOpencodeGlobalCommands as any)?.mockRestore?.()
@@ -109,7 +109,7 @@ describe("Plan agent demote behavior", () => {
   test("plan agent should be demoted to subagent mode when replacePlan is true", async () => {
     // #given
     const pluginConfig: OmoCliConfig = {
-      sisyphus_agent: {
+      orchestrator_agent: {
         planner_enabled: true,
         replace_plan: true,
       },
@@ -143,10 +143,10 @@ describe("Plan agent demote behavior", () => {
     expect(agents.plan.name).toBe("plan")
   })
 
-  test("prometheus should have mode 'all' to be callable via delegate_task", async () => {
+  test("planner should have mode 'all' to be callable via delegate_task", async () => {
     // #given
     const pluginConfig: OmoCliConfig = {
-      sisyphus_agent: {
+      orchestrator_agent: {
         planner_enabled: true,
       },
     }
@@ -173,7 +173,7 @@ describe("Plan agent demote behavior", () => {
   })
 })
 
-describe("Prometheus category config resolution", () => {
+describe("Planner category config resolution", () => {
   test("resolves ultrabrain category config", () => {
     // #given
     const categoryName = "ultrabrain"
@@ -273,11 +273,11 @@ describe("Prometheus category config resolution", () => {
   })
 })
 
-describe("Prometheus direct override priority over category", () => {
+describe("Planner direct override priority over category", () => {
   test("direct reasoningEffort takes priority over category reasoningEffort", async () => {
     // #given - category has reasoningEffort=xhigh, direct override says "low"
     const pluginConfig: OmoCliConfig = {
-      sisyphus_agent: {
+      orchestrator_agent: {
         planner_enabled: true,
       },
       categories: {
@@ -318,7 +318,7 @@ describe("Prometheus direct override priority over category", () => {
   test("category reasoningEffort applied when no direct override", async () => {
     // #given - category has reasoningEffort but no direct override
     const pluginConfig: OmoCliConfig = {
-      sisyphus_agent: {
+      orchestrator_agent: {
         planner_enabled: true,
       },
       categories: {
@@ -358,7 +358,7 @@ describe("Prometheus direct override priority over category", () => {
   test("direct temperature takes priority over category temperature", async () => {
     // #given
     const pluginConfig: OmoCliConfig = {
-      sisyphus_agent: {
+      orchestrator_agent: {
         planner_enabled: true,
       },
       categories: {

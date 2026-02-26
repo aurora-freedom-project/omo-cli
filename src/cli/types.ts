@@ -5,14 +5,10 @@ export interface InstallArgs {
 }
 
 
-export interface InstallConfig {
-  hasClaude: boolean
-  isMax20: boolean
-  hasOpenAI: boolean
-  hasGemini: boolean
-  hasCopilot: boolean
-  hasOpencodeZen: boolean
-  hasZaiCodingPlan: boolean
+export interface ProfileSummary {
+  providers: Set<string>
+  hasClaudeOpus: boolean
+  enableMemory: boolean
 }
 
 export interface ConfigMergeResult {
@@ -23,11 +19,5 @@ export interface ConfigMergeResult {
 
 export interface DetectedConfig {
   isInstalled: boolean
-  hasClaude: boolean
-  isMax20: boolean
-  hasOpenAI: boolean
-  hasGemini: boolean
-  hasCopilot: boolean
-  hasOpencodeZen: boolean
-  hasZaiCodingPlan: boolean
+  providers: Set<string>
 }

@@ -30,16 +30,16 @@ const agentSources: Partial<Record<BuiltinAgentName, AgentSource>> = {
   // Note: Atlas/Navigator is handled specially in createBuiltinAgents()
   // because it needs OrchestratorContext, not just a model string
   atlas: createNavigatorAgent as unknown as AgentFactory,
-  // New name aliases
+  // New native names
   orchestrator: createOrchestratorAgent,
-  advisor: createAdvisorAgent,
+  architect: createAdvisorAgent,
   researcher: createResearcherAgent,
   explorer: createExplorerAgent,
   vision: createVisionAgent,
-  planner: createPlannerAgent,
+  consultant: createPlannerAgent,
   reviewer: createReviewerAgent,
-  navigator: createNavigatorAgent as unknown as AgentFactory,
-  coder: createOrchestratorAgent, // coder uses deep implementation factory
+  conductor: createNavigatorAgent as unknown as AgentFactory,
+  planner: createOrchestratorAgent, // planner uses deep implementation factory
 }
 
 /**
@@ -48,7 +48,7 @@ const agentSources: Partial<Record<BuiltinAgentName, AgentSource>> = {
  */
 const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
   oracle: ADVISOR_PROMPT_METADATA,
-  advisor: ADVISOR_PROMPT_METADATA,
+  architect: ADVISOR_PROMPT_METADATA,
   librarian: RESEARCHER_PROMPT_METADATA,
   researcher: RESEARCHER_PROMPT_METADATA,
   explore: EXPLORER_PROMPT_METADATA,
@@ -285,87 +285,87 @@ export async function createBuiltinAgents(
   }
 
   if (!disabledAgents.includes("orchestrator")) {
-    const sisyphusOverride = agentOverrides["orchestrator"]
-    const sisyphusRequirement = AGENT_MODEL_REQUIREMENTS["orchestrator"]
+    const orchestratorOverride = agentOverrides["orchestrator"]
+    const orchestratorRequirement = AGENT_MODEL_REQUIREMENTS["orchestrator"]
 
-    const sisyphusResolution = resolveModelWithFallback({
+    const orchestratorResolution = resolveModelWithFallback({
       uiSelectedModel,
-      userModel: sisyphusOverride?.model,
-      fallbackChain: sisyphusRequirement?.fallbackChain,
+      userModel: orchestratorOverride?.model,
+      fallbackChain: orchestratorRequirement?.fallbackChain,
       availableModels,
       systemDefaultModel,
     })
 
-    if (sisyphusResolution) {
-      const { model: sisyphusModel, variant: sisyphusResolvedVariant } = sisyphusResolution
+    if (orchestratorResolution) {
+      const { model: orchestratorModel, variant: orchestratorResolvedVariant } = orchestratorResolution
 
-      let sisyphusConfig = createOrchestratorAgent(
-        sisyphusModel,
+      let orchestratorConfig = createOrchestratorAgent(
+        orchestratorModel,
         availableAgents,
         undefined,
         availableSkills,
         availableCategories
       )
 
-      if (sisyphusResolvedVariant) {
-        sisyphusConfig = { ...sisyphusConfig, variant: sisyphusResolvedVariant }
+      if (orchestratorResolvedVariant) {
+        orchestratorConfig = { ...orchestratorConfig, variant: orchestratorResolvedVariant }
       }
 
-      const sisOverrideCategory = (sisyphusOverride as Record<string, unknown> | undefined)?.category as string | undefined
-      if (sisOverrideCategory) {
-        sisyphusConfig = applyCategoryOverride(sisyphusConfig, sisOverrideCategory, mergedCategories)
+      const orchOverrideCategory = (orchestratorOverride as Record<string, unknown> | undefined)?.category as string | undefined
+      if (orchOverrideCategory) {
+        orchestratorConfig = applyCategoryOverride(orchestratorConfig, orchOverrideCategory, mergedCategories)
       }
 
-      if (directory && sisyphusConfig.prompt) {
+      if (directory && orchestratorConfig.prompt) {
         const envContext = createEnvContext()
-        sisyphusConfig = { ...sisyphusConfig, prompt: sisyphusConfig.prompt + envContext }
-      }
-
-      if (sisyphusOverride) {
-        sisyphusConfig = mergeAgentConfig(sisyphusConfig, sisyphusOverride)
-      }
-
-      result["orchestrator"] = sisyphusConfig
-    }
-  }
-
-  if (!disabledAgents.includes("navigator")) {
-    const orchestratorOverride = agentOverrides["navigator"]
-    const atlasRequirement = AGENT_MODEL_REQUIREMENTS["navigator"]
-
-    const atlasResolution = resolveModelWithFallback({
-      uiSelectedModel,
-      userModel: orchestratorOverride?.model,
-      fallbackChain: atlasRequirement?.fallbackChain,
-      availableModels,
-      systemDefaultModel,
-    })
-
-    if (atlasResolution) {
-      const { model: atlasModel, variant: atlasResolvedVariant } = atlasResolution
-
-      let orchestratorConfig = createNavigatorAgent({
-        model: atlasModel,
-        availableAgents,
-        availableSkills,
-        userCategories: categories,
-      })
-
-      if (atlasResolvedVariant) {
-        orchestratorConfig = { ...orchestratorConfig, variant: atlasResolvedVariant }
-      }
-
-      const atlasOverrideCategory = (orchestratorOverride as Record<string, unknown> | undefined)?.category as string | undefined
-      if (atlasOverrideCategory) {
-        orchestratorConfig = applyCategoryOverride(orchestratorConfig, atlasOverrideCategory, mergedCategories)
+        orchestratorConfig = { ...orchestratorConfig, prompt: orchestratorConfig.prompt + envContext }
       }
 
       if (orchestratorOverride) {
         orchestratorConfig = mergeAgentConfig(orchestratorConfig, orchestratorOverride)
       }
 
-      // Navigator is a background agent - hide from Tab selector
-      result["navigator"] = { ...orchestratorConfig, hidden: true }
+      result["orchestrator"] = orchestratorConfig
+    }
+  }
+
+  if (!disabledAgents.includes("conductor") && !disabledAgents.includes("navigator")) {
+    const orchestratorOverride = agentOverrides["conductor"]
+    const conductorRequirement = AGENT_MODEL_REQUIREMENTS["conductor"]
+
+    const conductorResolution = resolveModelWithFallback({
+      uiSelectedModel,
+      userModel: orchestratorOverride?.model,
+      fallbackChain: conductorRequirement?.fallbackChain,
+      availableModels,
+      systemDefaultModel,
+    })
+
+    if (conductorResolution) {
+      const { model: conductorModel, variant: conductorResolvedVariant } = conductorResolution
+
+      let orchestratorConfig = createNavigatorAgent({
+        model: conductorModel,
+        availableAgents,
+        availableSkills,
+        userCategories: categories,
+      })
+
+      if (conductorResolvedVariant) {
+        orchestratorConfig = { ...orchestratorConfig, variant: conductorResolvedVariant }
+      }
+
+      const conductorOverrideCategory = (orchestratorOverride as Record<string, unknown> | undefined)?.category as string | undefined
+      if (conductorOverrideCategory) {
+        orchestratorConfig = applyCategoryOverride(orchestratorConfig, conductorOverrideCategory, mergedCategories)
+      }
+
+      if (orchestratorOverride) {
+        orchestratorConfig = mergeAgentConfig(orchestratorConfig, orchestratorOverride)
+      }
+
+      // Conductor is a background agent - hide from Tab selector
+      result["conductor"] = { ...orchestratorConfig, hidden: true }
     }
   }
 

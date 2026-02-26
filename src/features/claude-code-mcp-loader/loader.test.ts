@@ -1,162 +1,171 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test"
-import { mkdirSync, writeFileSync, rmSync } from "fs"
-import { join } from "path"
-import { tmpdir } from "os"
+import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test"
 
-const TEST_DIR = join(tmpdir(), "mcp-loader-test-" + Date.now())
+const mockExistsSync = mock(() => false)
+const mockReadFileSync = mock(() => "")
 
-describe("getSystemMcpServerNames", () => {
+mock.module("fs", () => ({
+  existsSync: mockExistsSync,
+  readFileSync: mockReadFileSync
+}))
+
+const mockJoin = mock((...args: string[]) => args.join("/"))
+mock.module("path", () => ({ join: mockJoin }))
+
+const mockGetClaudeConfigDir = mock(() => "/test/claude/config")
+mock.module("../../shared", () => ({ getClaudeConfigDir: mockGetClaudeConfigDir }))
+
+const mockLog = mock(() => { })
+mock.module("../../shared/logger", () => ({ log: mockLog }))
+
+const mockTransformMcpServer = mock((name, config) => ({ ...config, transformed: true }))
+mock.module("./transformer", () => ({ transformMcpServer: mockTransformMcpServer }))
+
+import * as loader from "./loader"
+
+describe("features/claude-code-mcp-loader/loader", () => {
+  let bunFileSpy: any
+
   beforeEach(() => {
-    mkdirSync(TEST_DIR, { recursive: true })
+    mockExistsSync.mockClear()
+    mockReadFileSync.mockClear()
+    mockJoin.mockClear()
+    mockGetClaudeConfigDir.mockClear()
+    mockLog.mockClear()
+    mockTransformMcpServer.mockClear()
+
+    bunFileSpy = spyOn(Bun, "file").mockImplementation((path: any) => ({
+      text: async () => ""
+    }) as any)
   })
 
   afterEach(() => {
-    rmSync(TEST_DIR, { recursive: true, force: true })
+    bunFileSpy.mockRestore()
   })
 
-  it("returns empty set when no .mcp.json files exist", async () => {
-    // #given
-    const originalCwd = process.cwd()
-    process.chdir(TEST_DIR)
+  describe("getSystemMcpServerNames", () => {
+    test("returns empty set if no configs exist", () => {
+      mockExistsSync.mockReturnValue(false)
+      expect(loader.getSystemMcpServerNames().size).toBe(0)
+    })
 
-    try {
-      // #when
-      const { getSystemMcpServerNames } = await import("./loader")
-      const names = getSystemMcpServerNames()
+    test("parses files and collects non-disabled server names", () => {
+      const configObj = { mcpServers: { "srv1": {}, "srv2": { disabled: true }, "srv3": {} } }
+      // return true for first file, false for others to limit parsing
+      mockExistsSync.mockImplementation((path: any) => path.includes("claude"))
+      mockReadFileSync.mockReturnValue(JSON.stringify(configObj))
 
-      // #then
-      expect(names).toBeInstanceOf(Set)
-      expect(names.size).toBe(0)
-    } finally {
-      process.chdir(originalCwd)
-    }
-  })
-
-  it("returns server names from project .mcp.json", async () => {
-    // #given
-    const mcpConfig = {
-      mcpServers: {
-        playwright: {
-          command: "npx",
-          args: ["@playwright/mcp@latest"],
-        },
-        sqlite: {
-          command: "uvx",
-          args: ["mcp-server-sqlite"],
-        },
-      },
-    }
-    writeFileSync(join(TEST_DIR, ".mcp.json"), JSON.stringify(mcpConfig))
-
-    const originalCwd = process.cwd()
-    process.chdir(TEST_DIR)
-
-    try {
-      // #when
-      const { getSystemMcpServerNames } = await import("./loader")
-      const names = getSystemMcpServerNames()
-
-      // #then
-      expect(names.has("playwright")).toBe(true)
-      expect(names.has("sqlite")).toBe(true)
+      const names = loader.getSystemMcpServerNames()
       expect(names.size).toBe(2)
-    } finally {
-      process.chdir(originalCwd)
-    }
+      expect(names.has("srv1")).toBe(true)
+      expect(names.has("srv3")).toBe(true)
+    })
+
+    test("ignores malformed json gracefully", () => {
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue("invalid")
+
+      const names = loader.getSystemMcpServerNames()
+      expect(names.size).toBe(0)
+    })
+
+    test("ignores config if mcpServers is null", () => {
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue(JSON.stringify({}))
+
+      const names = loader.getSystemMcpServerNames()
+      expect(names.size).toBe(0)
+    })
   })
 
-  it("returns server names from .claude/.mcp.json", async () => {
-    // #given
-    mkdirSync(join(TEST_DIR, ".claude"), { recursive: true })
-    const mcpConfig = {
-      mcpServers: {
-        memory: {
-          command: "npx",
-          args: ["-y", "@anthropic-ai/mcp-server-memory"],
-        },
-      },
-    }
-    writeFileSync(join(TEST_DIR, ".claude", ".mcp.json"), JSON.stringify(mcpConfig))
+  describe("loadMcpConfigs", () => {
+    test("loads configs correctly across multiple scopes overlapping names", async () => {
+      const userConfig = { mcpServers: { srv1: { a: 1 }, srv2: { b: 2 } } }
+      const projConfig = { mcpServers: { srv1: { disabled: true } } }
 
-    const originalCwd = process.cwd()
-    process.chdir(TEST_DIR)
+      mockExistsSync.mockImplementation((p: any) => true)
 
-    try {
-      // #when
-      const { getSystemMcpServerNames } = await import("./loader")
-      const names = getSystemMcpServerNames()
+      bunFileSpy.mockImplementation((path: string) => ({
+        text: async () => {
+          if (path.includes(".claude/.mcp.json")) return "{}"
+          if (path.includes("claude/config")) return JSON.stringify(userConfig) // user
+          return JSON.stringify(projConfig) // project
+        }
+      }) as any)
 
-      // #then
-      expect(names.has("memory")).toBe(true)
-    } finally {
-      process.chdir(originalCwd)
-    }
+      const res = await loader.loadMcpConfigs()
+
+      // Expected: srv1 loaded from user, then disabled in project.
+      // srv2 loaded from user.
+      expect(res.servers.srv1).toBeUndefined()
+      expect(res.servers.srv2).toBeDefined()
+      expect(res.loadedServers.length).toBe(1)
+      expect(res.loadedServers[0].name).toBe("srv2")
+      expect(res.loadedServers[0].scope).toBe("user")
+    })
+
+    test("overrides previously loaded server fully replacing rather than merging", async () => {
+      const userConfig = { mcpServers: { srv1: { a: 1 } } }
+      const projConfig = { mcpServers: { srv1: { b: 1 } } }
+
+      mockExistsSync.mockReturnValue(true)
+      bunFileSpy.mockImplementation((path: string) => ({
+        text: async () => {
+          if (path.includes(".claude/.mcp.json")) return "{}"
+          if (path.includes("claude/config")) return JSON.stringify(userConfig) // user
+          return JSON.stringify(projConfig) // project
+        }
+      }) as any)
+
+      const res = await loader.loadMcpConfigs()
+      expect(res.loadedServers.length).toBe(1)
+      expect(res.loadedServers[0].name).toBe("srv1")
+      expect(res.loadedServers[0].scope).toBe("project")
+    })
+
+    test("handles transform throwing gracefully", async () => {
+      mockExistsSync.mockImplementation((p: any) => p === "/test/claude/config/.mcp.json") // STRICTLY ONE MATCH
+      const userConfig = { mcpServers: { srv1: { a: 1 } } }
+
+      bunFileSpy.mockImplementation((path: string) => ({
+        text: async () => JSON.stringify(userConfig)
+      }) as any)
+
+      mockTransformMcpServer.mockImplementationOnce(() => { throw new Error("crash") })
+
+      const res = await loader.loadMcpConfigs()
+      expect(res.loadedServers.length).toBe(0)
+      expect(mockLog).toHaveBeenCalledWith('Failed to transform MCP server "srv1"', expect.any(Error))
+    })
+
+    test("handles loadMcpConfigFile missing file securely", async () => {
+      mockExistsSync.mockReturnValue(false)
+      const res = await loader.loadMcpConfigs()
+      expect(res.loadedServers.length).toBe(0)
+    })
+
+    test("handles loadMcpConfigFile throwing due to bad json", async () => {
+      mockExistsSync.mockReturnValue(true)
+      bunFileSpy.mockImplementation(((path: string) => ({
+        text: async () => "invalid json"
+      })) as any)
+
+      const res = await loader.loadMcpConfigs()
+      expect(res.loadedServers.length).toBe(0)
+      expect(mockLog).toHaveBeenCalled()
+    })
   })
 
-  it("excludes disabled MCP servers", async () => {
-    // #given
-    const mcpConfig = {
-      mcpServers: {
-        playwright: {
-          command: "npx",
-          args: ["@playwright/mcp@latest"],
-          disabled: true,
-        },
-        active: {
-          command: "npx",
-          args: ["some-mcp"],
-        },
-      },
-    }
-    writeFileSync(join(TEST_DIR, ".mcp.json"), JSON.stringify(mcpConfig))
+  describe("formatLoadedServersForToast", () => {
+    test("returns empty string if length 0", () => {
+      expect(loader.formatLoadedServersForToast([])).toBe("")
+    })
 
-    const originalCwd = process.cwd()
-    process.chdir(TEST_DIR)
-
-    try {
-      // #when
-      const { getSystemMcpServerNames } = await import("./loader")
-      const names = getSystemMcpServerNames()
-
-      // #then
-      expect(names.has("playwright")).toBe(false)
-      expect(names.has("active")).toBe(true)
-    } finally {
-      process.chdir(originalCwd)
-    }
-  })
-
-  it("merges server names from multiple .mcp.json files", async () => {
-    // #given
-    mkdirSync(join(TEST_DIR, ".claude"), { recursive: true })
-    
-    const projectMcp = {
-      mcpServers: {
-        playwright: { command: "npx", args: ["@playwright/mcp@latest"] },
-      },
-    }
-    const localMcp = {
-      mcpServers: {
-        memory: { command: "npx", args: ["-y", "@anthropic-ai/mcp-server-memory"] },
-      },
-    }
-    
-    writeFileSync(join(TEST_DIR, ".mcp.json"), JSON.stringify(projectMcp))
-    writeFileSync(join(TEST_DIR, ".claude", ".mcp.json"), JSON.stringify(localMcp))
-
-    const originalCwd = process.cwd()
-    process.chdir(TEST_DIR)
-
-    try {
-      // #when
-      const { getSystemMcpServerNames } = await import("./loader")
-      const names = getSystemMcpServerNames()
-
-      // #then
-      expect(names.has("playwright")).toBe(true)
-      expect(names.has("memory")).toBe(true)
-    } finally {
-      process.chdir(originalCwd)
-    }
+    test("formats loaded servers neatly", () => {
+      const servers: any[] = [
+        { name: "srvA", scope: "user" },
+        { name: "srvB", scope: "project" }
+      ]
+      expect(loader.formatLoadedServersForToast(servers)).toBe("srvA (user), srvB (project)")
+    })
   })
 })

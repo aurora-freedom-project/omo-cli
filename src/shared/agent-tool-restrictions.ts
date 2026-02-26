@@ -6,7 +6,7 @@
 
 import { findCaseInsensitive } from "./case-insensitive"
 
-const EXPLORATION_AGENT_DENYLIST: Record<string, boolean> = {
+const exploration_AGENT_DENYLIST: Record<string, boolean> = {
   write: false,
   edit: false,
   task: false,
@@ -15,11 +15,11 @@ const EXPLORATION_AGENT_DENYLIST: Record<string, boolean> = {
 }
 
 const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
-  explore: EXPLORATION_AGENT_DENYLIST,
+  explorer: exploration_AGENT_DENYLIST,
 
-  librarian: EXPLORATION_AGENT_DENYLIST,
+  researcher: exploration_AGENT_DENYLIST,
 
-  oracle: {
+  architect: {
     write: false,
     edit: false,
     task: false,
@@ -30,7 +30,7 @@ const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
     read: true,
   },
 
-  "sisyphus-junior": {
+  "worker": {
     task: false,
     delegate_task: false,
   },

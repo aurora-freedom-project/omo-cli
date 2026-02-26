@@ -49,7 +49,7 @@ jobs:
           # These files use mock.module() which pollutes module cache
           # Run them in separate processes to prevent cross-file contamination
           bun test src/plugin-handlers
-          bun test src/hooks/atlas
+          bun test src/hooks/navigator
           bun test src/hooks/compaction-context-injector
           bun test src/features/tmux-subagent
 
@@ -63,7 +63,7 @@ jobs:
             src/hooks/context-injection \
             src/hooks/provider-toast \
             src/hooks/session-notification \
-            src/hooks/sisyphus \
+            src/hooks/coder-md-only \
             src/hooks/todo-continuation-enforcer \
             src/features/background-agent \
             src/features/builtin-commands \

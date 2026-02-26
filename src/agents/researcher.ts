@@ -5,10 +5,10 @@ import { createAgentToolRestrictions } from "../shared/permission-compat"
 export const RESEARCHER_PROMPT_METADATA: AgentPromptMetadata = {
   category: "exploration",
   cost: "CHEAP",
-  promptAlias: "Librarian",
-  keyTrigger: "External library/source mentioned → fire `librarian` background",
+  promptAlias: "Researcher",
+  keyTrigger: "External library/source mentioned → fire `researcher` background",
   triggers: [
-    { domain: "Librarian", trigger: "Unfamiliar packages / libraries, struggles at weird behaviour (to find existing implementation of opensource)" },
+    { domain: "Researcher", trigger: "Unfamiliar packages / libraries, struggles at weird behaviour (to find existing implementation of opensource)" },
   ],
   useWhen: [
     "How do I use [library]?",
@@ -30,7 +30,7 @@ export function createResearcherAgent(model: string): AgentConfig {
 
   return {
     description:
-      "Specialized codebase understanding agent for multi-repository analysis, searching remote codebases, retrieving official documentation, and finding implementation examples using GitHub CLI, Context7, and Web Search. MUST BE USED when users ask to look up code in remote repositories, explain library internals, or find usage examples in open source. (Librarian - OmoCli)",
+      "Specialized codebase understanding agent for multi-repository analysis, searching remote codebases, retrieving official documentation, and finding implementation examples using GitHub CLI, Context7, and Web Search. MUST BE USED when users ask to look up code in remote repositories, explain library internals, or find usage examples in open source. (Researcher - OmoCli)",
     mode: "subagent" as const,
     model,
     temperature: 0.1,

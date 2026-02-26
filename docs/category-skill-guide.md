@@ -1,6 +1,6 @@
 # Category & Skill System Guide
 
-This document provides a comprehensive guide to the **Category** and **Skill** systems, which form the extensibility core of Oh-My-OpenCode.
+This document provides a comprehensive guide to the **Category** and **Skill** systems, which form the extensibility core of omo-cli.
 
 ## 1. Overview
 

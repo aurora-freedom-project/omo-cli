@@ -1,208 +1,261 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test"
-import {
-  isInsideTmux,
-  isServerRunning,
-  resetServerCheck,
-  spawnTmuxPane,
-  closeTmuxPane,
-  applyLayout,
-} from "./tmux-utils"
+import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test"
 
-describe("isInsideTmux", () => {
-  // Note: These tests modify process.env.TMUX and may conflict when run inside TMUX
-  const runningInTmux = !!process.env.TMUX
+const mockExited = mock(() => Promise.resolve(0))
+const mockStdoutText = mock(() => Promise.resolve(""))
+const mockStderrText = mock(() => Promise.resolve(""))
 
-  test("returns true when TMUX env is set", () => {
-    // #given
-    const originalTmux = process.env.TMUX
-    process.env.TMUX = "/tmp/tmux-1000/default"
+const mockGetTmuxPath = mock(async () => "/usr/bin/tmux")
+mock.module("../../tools/interactive-bash/utils", () => ({ getTmuxPath: mockGetTmuxPath }))
 
-    // #when
-    const result = isInsideTmux()
+const mockLog = mock(() => { })
+mock.module("../logger", () => ({ log: mockLog }))
 
-    // #then
-    expect(result).toBe(true)
+import * as tmux from "./tmux-utils"
 
-    // cleanup
-    if (originalTmux) {
-      process.env.TMUX = originalTmux
-    } else {
-      delete process.env.TMUX
-    }
-  })
-
-  test.skipIf(runningInTmux)("returns false when TMUX env is not set", () => {
-    // #given - cannot reliably test TMUX deletion when running inside tmux
-    const originalTmux = process.env.TMUX
-    delete process.env.TMUX
-
-    // #when
-    const result = isInsideTmux()
-
-    // #then
-    expect(result).toBe(false)
-
-    // cleanup
-    if (originalTmux) {
-      process.env.TMUX = originalTmux
-    }
-  })
-
-  test.skipIf(runningInTmux)("returns false when TMUX env is empty string", () => {
-    // #given - cannot reliably test empty TMUX when running inside tmux
-    const originalTmux = process.env.TMUX
-    process.env.TMUX = ""
-
-    // #when
-    const result = isInsideTmux()
-
-    // #then
-    expect(result).toBe(false)
-
-    // cleanup
-    if (originalTmux) {
-      process.env.TMUX = originalTmux
-    } else {
-      delete process.env.TMUX
-    }
-  })
-})
-
-describe("isServerRunning", () => {
-  const originalFetch = globalThis.fetch
+describe("shared/tmux/tmux-utils", () => {
+  let originalEnv: NodeJS.ProcessEnv
+  let globalFetchSpy: any
+  let spawnSpy: any
 
   beforeEach(() => {
-    resetServerCheck()
+    mockExited.mockClear()
+    mockStdoutText.mockClear()
+    mockStderrText.mockClear()
+    mockGetTmuxPath.mockClear()
+    mockLog.mockClear()
+
+    tmux.resetServerCheck()
+
+    originalEnv = { ...process.env }
+
+    globalFetchSpy = spyOn(globalThis, "fetch").mockImplementation(async () => ({ ok: true }) as any)
+
+    spawnSpy = spyOn(Bun, "spawn").mockImplementation(() => ({
+      exited: mockExited(),
+      stdout: "mock_stdout",
+      stderr: "mock_stderr"
+    }) as any)
+
+    // Mock Response to handle our mocked stream
+    spyOn(globalThis, "Response").mockImplementation((body: any) => ({
+      text: body === "mock_stdout" ? mockStdoutText : mockStderrText
+    }) as any)
   })
 
   afterEach(() => {
-    globalThis.fetch = originalFetch
+    process.env = originalEnv
+    globalFetchSpy.mockRestore()
+    spawnSpy.mockRestore()
+    mock.restore() // bun:test built-in
   })
 
-  test("returns true when server responds OK", async () => {
-    // #given
-    globalThis.fetch = mock(async () => ({ ok: true })) as any
+  describe("isInsideTmux", () => {
+    test("returns false if TMUX empty", () => {
+      delete process.env.TMUX
+      expect(tmux.isInsideTmux()).toBe(false)
+    })
 
-    // #when
-    const result = await isServerRunning("http://localhost:4096")
-
-    // #then
-    expect(result).toBe(true)
+    test("returns true if TMUX exists", () => {
+      process.env.TMUX = "test"
+      expect(tmux.isInsideTmux()).toBe(true)
+    })
   })
 
-  test("returns false when server not reachable", async () => {
-    // #given
-    globalThis.fetch = mock(async () => {
-      throw new Error("ECONNREFUSED")
-    }) as any
+  describe("isServerRunning", () => {
+    test("resolves true from fetch block", async () => {
+      const res = await tmux.isServerRunning("http://localhost:1234")
+      expect(res).toBe(true)
+      expect(globalFetchSpy).toHaveBeenCalled()
 
-    // #when
-    const result = await isServerRunning("http://localhost:4096")
+      // Should cache true response
+      globalFetchSpy.mockClear()
+      const res2 = await tmux.isServerRunning("http://localhost:1234")
+      expect(res2).toBe(true)
+      expect(globalFetchSpy).not.toHaveBeenCalled()
+    })
 
-    // #then
-    expect(result).toBe(false)
+    test("resolves false returning health check fail up to 2 attempts max", async () => {
+      globalFetchSpy.mockImplementation(async () => { throw new Error("conn refused") })
+      const res = await tmux.isServerRunning("http://localhost:9999")
+      expect(res).toBe(false)
+      expect(globalFetchSpy).toHaveBeenCalledTimes(2)
+    })
   })
 
-  test("returns false when fetch returns not ok", async () => {
-    // #given
-    globalThis.fetch = mock(async () => ({ ok: false })) as any
-
-    // #when
-    const result = await isServerRunning("http://localhost:4096")
-
-    // #then
-    expect(result).toBe(false)
+  describe("getCurrentPaneId", () => {
+    test("returns pane id", () => {
+      process.env.TMUX_PANE = "%1"
+      expect(tmux.getCurrentPaneId()).toBe("%1")
+    })
   })
 
-  test("caches successful result", async () => {
-    // #given
-    const fetchMock = mock(async () => ({ ok: true })) as any
-    globalThis.fetch = fetchMock
+  describe("getPaneDimensions", () => {
+    test("returns null if no tmux path", async () => {
+      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      const res = await tmux.getPaneDimensions("%1")
+      expect(res).toBeNull()
+    })
 
-    // #when
-    await isServerRunning("http://localhost:4096")
-    await isServerRunning("http://localhost:4096")
+    test("returns null if exit code != 0", async () => {
+      mockExited.mockResolvedValueOnce(1)
+      const res = await tmux.getPaneDimensions("%1")
+      expect(res).toBeNull()
+    })
 
-    // #then - should only call fetch once due to caching
-    expect(fetchMock.mock.calls.length).toBe(1)
+    test("returns obj dimension if parsed successfully", async () => {
+      mockExited.mockResolvedValueOnce(0)
+      mockStdoutText.mockResolvedValueOnce("80,100")
+      const res = await tmux.getPaneDimensions("%1")
+      expect(res).toEqual({ paneWidth: 80, windowWidth: 100 })
+    })
+
+    test("returns null if parsed dimension arrays contain NaNs", async () => {
+      mockExited.mockResolvedValueOnce(0)
+      mockStdoutText.mockResolvedValueOnce("bad,data")
+      const res = await tmux.getPaneDimensions("%1")
+      expect(res).toBeNull()
+    })
   })
 
-  test("does not cache failed result", async () => {
-    // #given
-    const fetchMock = mock(async () => {
-      throw new Error("ECONNREFUSED")
-    }) as any
-    globalThis.fetch = fetchMock
+  describe("spawnTmuxPane", () => {
+    test("skips if config not enabled", async () => {
+      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: false } as any, "http://localhost:1234")
+      expect(res.success).toBe(false)
+    })
 
-    // #when
-    await isServerRunning("http://localhost:4096")
-    await isServerRunning("http://localhost:4096")
+    test("skips if not inside tmux", async () => {
+      delete process.env.TMUX
+      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: true } as any, "http://localhost:1234")
+      expect(res.success).toBe(false)
+    })
 
-    // #then - should call fetch 4 times (2 attempts per call, 2 calls)
-    expect(fetchMock.mock.calls.length).toBe(4)
+    test("skips if server not running", async () => {
+      process.env.TMUX = "1"
+      globalFetchSpy.mockImplementation(async () => ({ ok: false }))
+      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: true } as any, "http://localhost:1234")
+      expect(res.success).toBe(false)
+    })
+
+    test("skips if tmux not found", async () => {
+      process.env.TMUX = "1"
+      await tmux.isServerRunning("http://localhost:1234")
+      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: true } as any, "http://localhost:1234")
+      expect(res.success).toBe(false)
+    })
+
+    test("returns false if exitcode != 0", async () => {
+      process.env.TMUX = "1"
+      await tmux.isServerRunning("http://localhost:1234")
+
+      mockExited.mockResolvedValueOnce(1)
+      mockStdoutText.mockResolvedValueOnce("")
+
+      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: true } as any, "http://localhost:1234")
+      expect(res.success).toBe(false)
+    })
+
+    test("spawns properly when all steps pass assigning title pane bounds", async () => {
+      process.env.TMUX = "1"
+      await tmux.isServerRunning("http://localhost:1234")
+
+      mockExited.mockResolvedValue(0)
+      mockStdoutText.mockResolvedValueOnce("%2")
+
+      const res = await tmux.spawnTmuxPane("s1", "verylongdescriptionherexyz", { enabled: true } as any, "http://localhost:1234", "%0")
+      expect(res.success).toBe(true)
+      expect(res.paneId).toBe("%2")
+      expect(spawnSpy).toHaveBeenCalledTimes(2)
+    })
   })
 
-  test("uses different cache for different URLs", async () => {
-    // #given
-    const fetchMock = mock(async () => ({ ok: true })) as any
-    globalThis.fetch = fetchMock
+  describe("closeTmuxPane", () => {
+    test("returns false skip not in tmux", async () => {
+      delete process.env.TMUX
+      const res = await tmux.closeTmuxPane("%1")
+      expect(res).toBe(false)
+    })
 
-    // #when
-    await isServerRunning("http://localhost:4096")
-    await isServerRunning("http://localhost:5000")
+    test("returns false skip tmux not found", async () => {
+      process.env.TMUX = "1"
+      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      const res = await tmux.closeTmuxPane("%1")
+      expect(res).toBe(false)
+    })
 
-    // #then - should call fetch twice for different URLs
-    expect(fetchMock.mock.calls.length).toBe(2)
-  })
-})
+    test("resolves bool matching exit code checks string inputs", async () => {
+      process.env.TMUX = "1"
+      mockExited.mockResolvedValueOnce(0)
 
-describe("resetServerCheck", () => {
-  test("clears cache without throwing", () => {
-    // #given, #when, #then
-    expect(() => resetServerCheck()).not.toThrow()
-  })
+      const res = await tmux.closeTmuxPane("%1")
+      expect(res).toBe(true)
 
-  test("allows re-checking after reset", async () => {
-    // #given
-    const originalFetch = globalThis.fetch
-    const fetchMock = mock(async () => ({ ok: true })) as any
-    globalThis.fetch = fetchMock
-
-    // #when
-    await isServerRunning("http://localhost:4096")
-    resetServerCheck()
-    await isServerRunning("http://localhost:4096")
-
-    // #then - should call fetch twice after reset
-    expect(fetchMock.mock.calls.length).toBe(2)
-
-    // cleanup
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe("tmux pane functions", () => {
-  test("spawnTmuxPane is exported as function", async () => {
-    // #given, #when
-    const result = typeof spawnTmuxPane
-
-    // #then
-    expect(result).toBe("function")
+      mockExited.mockResolvedValueOnce(1)
+      mockStderrText.mockResolvedValueOnce("error check var")
+      const res2 = await tmux.closeTmuxPane("%1")
+      expect(res2).toBe(false)
+    })
   })
 
-  test("closeTmuxPane is exported as function", async () => {
-    // #given, #when
-    const result = typeof closeTmuxPane
+  describe("replaceTmuxPane", () => {
+    test("skips enabled", async () => {
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: false } as any, "h")
+      expect(res.success).toBe(false)
+    })
 
-    // #then
-    expect(result).toBe("function")
+    test("skips outside tmux", async () => {
+      delete process.env.TMUX
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: true } as any, "h")
+      expect(res.success).toBe(false)
+    })
+
+    test("skips if no binary path found mapped limit", async () => {
+      process.env.TMUX = "1"
+      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: true } as any, "h")
+      expect(res.success).toBe(false)
+    })
+
+    test("fails if exit code indicates errors binding err stdout strings", async () => {
+      process.env.TMUX = "1"
+      mockExited.mockResolvedValueOnce(1)
+      mockStderrText.mockResolvedValueOnce("err block")
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: true } as any, "h")
+      expect(res.success).toBe(false)
+    })
+
+    test("spawns map to specific id and returns", async () => {
+      process.env.TMUX = "1"
+      mockExited.mockResolvedValue(0)
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: true } as any, "h")
+      expect(res.success).toBe(true)
+      expect(res.paneId).toBe("%1")
+    })
   })
 
-  test("applyLayout is exported as function", async () => {
-    // #given, #when
-    const result = typeof applyLayout
+  describe("applyLayout", () => {
+    test("applies layout dimensions resolving strings mapped directly", async () => {
+      mockExited.mockResolvedValue(0)
+      await tmux.applyLayout("/usr/tmux", "main-horizontal", 50)
+      expect(spawnSpy).toHaveBeenCalledTimes(2) // select-layout + set-window-option
+    })
+    test("applies normal layout dimension limits without main string maps", async () => {
+      mockExited.mockResolvedValue(0)
+      await tmux.applyLayout("/usr/tmux", "tiled", 50)
+      expect(spawnSpy).toHaveBeenCalledTimes(1)
+    })
+  })
 
-    // #then
-    expect(result).toBe("function")
+  describe("enforceMainPaneWidth", () => {
+    test("early returns if no binary limits matched", async () => {
+      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      await tmux.enforceMainPaneWidth("%1", 100)
+      expect(spawnSpy).not.toHaveBeenCalled()
+    })
+
+    test("calculates math correctly resolving resize mapped limits bounds", async () => {
+      await tmux.enforceMainPaneWidth("%1", 101)
+      expect(spawnSpy).toHaveBeenCalledWith(["/usr/bin/tmux", "resize-pane", "-t", "%1", "-x", "50"], expect.anything())
+    })
   })
 })

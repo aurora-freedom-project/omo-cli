@@ -11,10 +11,10 @@ import { getAgentDisplayName } from "../../shared/agent-display-names"
 export * from "./constants"
 
 /**
- * Cross-platform path validator for Prometheus file writes.
+ * Cross-platform path validator for Planner file writes.
  * Uses path.resolve/relative instead of string matching to handle:
- * - Windows backslashes (e.g., .sisyphus\\plans\\x.md)
- * - Mixed separators (e.g., .sisyphus\\plans/x.md)
+ * - Windows backslashes (e.g., .orchestrator\\plans\\x.md)
+ * - Mixed separators (e.g., .orchestrator\\plans/x.md)
  * - Case-insensitive directory/extension matching
  * - Workspace confinement (blocks paths outside root or via traversal)
  * - Nested project paths (e.g., parent/.opencode/... when ctx.directory is parent)
@@ -31,9 +31,9 @@ function isAllowedFile(filePath: string, workspaceRoot: string): boolean {
     return false
   }
 
-  // 4. Check if .opencode/ or .sisyphus\ exists anywhere in the path (case-insensitive)
+  // 4. Check if .opencode/ or .orchestrator\ exists anywhere in the path (case-insensitive)
   // This handles both direct paths (.opencode/x.md) and nested paths (project/.opencode/x.md)
-  if (!/\.sisyphus[/\\]/i.test(rel)) {
+  if (!/\.(opencode|orchestrator|sisyphus)[/\\]/i.test(rel)) {
     return false
   }
 
@@ -74,7 +74,7 @@ function getAgentFromSession(sessionID: string): string | undefined {
   return getSessionAgent(sessionID) ?? getAgentFromMessageFiles(sessionID)
 }
 
-export function createPrometheusMdOnlyHook(ctx: PluginInput) {
+export function createPlannerMdOnlyHook(ctx: PluginInput) {
   return {
     "tool.execute.before": async (
       input: { tool: string; sessionID: string; callID: string },
@@ -88,7 +88,7 @@ export function createPrometheusMdOnlyHook(ctx: PluginInput) {
 
       const toolName = input.tool
 
-      // Inject read-only warning for task tools called by Prometheus
+      // Inject read-only warning for task tools called by Planner
       if (TASK_TOOLS.includes(toolName)) {
         const prompt = output.args.prompt as string | undefined
         if (prompt && !prompt.includes(SYSTEM_DIRECTIVE_PREFIX)) {
@@ -112,7 +112,7 @@ export function createPrometheusMdOnlyHook(ctx: PluginInput) {
       }
 
       if (!isAllowedFile(filePath, ctx.directory)) {
-        log(`[${HOOK_NAME}] Blocked: Prometheus can only write to .opencode/*.md`, {
+        log(`[${HOOK_NAME}] Blocked: Planner can only write to .opencode/*.md`, {
           sessionID: input.sessionID,
           tool: toolName,
           filePath,
@@ -127,7 +127,7 @@ export function createPrometheusMdOnlyHook(ctx: PluginInput) {
       }
 
       const normalizedPath = filePath.toLowerCase().replace(/\\/g, "/")
-      if (normalizedPath.includes(".opencode/plans/") || normalizedPath.includes(".sisyphus\\plans\\")) {
+      if (normalizedPath.includes(".opencode/plans/") || normalizedPath.includes(".orchestrator\\plans\\") || normalizedPath.includes(".orchestrator/plans/")) {
         log(`[${HOOK_NAME}] Injecting workflow reminder for plan write`, {
           sessionID: input.sessionID,
           tool: toolName,

@@ -1,123 +1,77 @@
-import { describe, it, expect } from "bun:test"
+import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test"
 import { Command } from "commander"
+
+const mockLogin = mock(async () => 0)
+const mockLogout = mock(async () => 0)
+const mockStatus = mock(async () => 0)
+
+mock.module("./login", () => ({ login: mockLogin }))
+mock.module("./logout", () => ({ logout: mockLogout }))
+mock.module("./status", () => ({ status: mockStatus }))
+
 import { createMcpOAuthCommand } from "./index"
 
-describe("mcp oauth command", () => {
+describe("cli/mcp-oauth/index", () => {
+  let originalExit: typeof process.exit
 
-  describe("command structure", () => {
-    it("creates mcp command group with oauth subcommand", () => {
-      // given
-      const mcpCommand = createMcpOAuthCommand()
-
-      // when
-      const subcommands = mcpCommand.commands.map((cmd: Command) => cmd.name())
-
-      // then
-      expect(subcommands).toContain("oauth")
-    })
-
-    it("oauth subcommand has login, logout, and status subcommands", () => {
-      // given
-      const mcpCommand = createMcpOAuthCommand()
-      const oauthCommand = mcpCommand.commands.find((cmd: Command) => cmd.name() === "oauth")
-
-      // when
-      const subcommands = oauthCommand?.commands.map((cmd: Command) => cmd.name()) ?? []
-
-      // then
-      expect(subcommands).toContain("login")
-      expect(subcommands).toContain("logout")
-      expect(subcommands).toContain("status")
-    })
+  beforeEach(() => {
+    mockLogin.mockClear()
+    mockLogout.mockClear()
+    mockStatus.mockClear()
+    originalExit = process.exit
+    // @ts-ignore
+    process.exit = mock(() => { throw new Error("process.exit") })
   })
 
-  describe("login subcommand", () => {
-    it("exists and has description", () => {
-      // given
-      const mcpCommand = createMcpOAuthCommand()
-      const oauthCommand = mcpCommand.commands.find((cmd: Command) => cmd.name() === "oauth")
-      const loginCommand = oauthCommand?.commands.find((cmd: Command) => cmd.name() === "login")
-
-      // when
-      const description = loginCommand?.description() ?? ""
-
-      // then
-      expect(loginCommand).toBeDefined()
-      expect(description).toContain("OAuth")
-    })
-
-    it("accepts --server-url option", () => {
-      // given
-      const mcpCommand = createMcpOAuthCommand()
-      const oauthCommand = mcpCommand.commands.find((cmd: Command) => cmd.name() === "oauth")
-      const loginCommand = oauthCommand?.commands.find((cmd: Command) => cmd.name() === "login")
-
-      // when
-      const options = loginCommand?.options ?? []
-      const serverUrlOption = options.find((opt: { long?: string }) => opt.long === "--server-url")
-
-      // then
-      expect(serverUrlOption).toBeDefined()
-    })
-
-    it("accepts --client-id option", () => {
-      // given
-      const mcpCommand = createMcpOAuthCommand()
-      const oauthCommand = mcpCommand.commands.find((cmd: Command) => cmd.name() === "oauth")
-      const loginCommand = oauthCommand?.commands.find((cmd: Command) => cmd.name() === "login")
-
-      // when
-      const options = loginCommand?.options ?? []
-      const clientIdOption = options.find((opt: { long?: string }) => opt.long === "--client-id")
-
-      // then
-      expect(clientIdOption).toBeDefined()
-    })
-
-    it("accepts --scopes option", () => {
-      // given
-      const mcpCommand = createMcpOAuthCommand()
-      const oauthCommand = mcpCommand.commands.find((cmd: Command) => cmd.name() === "oauth")
-      const loginCommand = oauthCommand?.commands.find((cmd: Command) => cmd.name() === "login")
-
-      // when
-      const options = loginCommand?.options ?? []
-      const scopesOption = options.find((opt: { long?: string }) => opt.long === "--scopes")
-
-      // then
-      expect(scopesOption).toBeDefined()
-    })
+  afterEach(() => {
+    process.exit = originalExit
+    mock.restore()
   })
 
-  describe("logout subcommand", () => {
-    it("exists and has description", () => {
-      // given
-      const mcpCommand = createMcpOAuthCommand()
-      const oauthCommand = mcpCommand.commands.find((cmd: Command) => cmd.name() === "oauth")
-      const logoutCommand = oauthCommand?.commands.find((cmd: Command) => cmd.name() === "logout")
-
-      // when
-      const description = logoutCommand?.description() ?? ""
-
-      // then
-      expect(logoutCommand).toBeDefined()
-      expect(description).toContain("tokens")
-    })
+  test("creates mcp command with oauth subcommands", () => {
+    const cmd = createMcpOAuthCommand()
+    expect(cmd.name()).toBe("mcp")
+    expect(cmd.commands.length).toBe(1)
+    expect(cmd.commands[0].name()).toBe("oauth")
   })
 
-  describe("status subcommand", () => {
-    it("exists and has description", () => {
-      // given
-      const mcpCommand = createMcpOAuthCommand()
-      const oauthCommand = mcpCommand.commands.find((cmd: Command) => cmd.name() === "oauth")
-      const statusCommand = oauthCommand?.commands.find((cmd: Command) => cmd.name() === "status")
+  test("login subcommand calls login and process.exit", async () => {
+    mockLogin.mockResolvedValueOnce(0)
+    const cmd = createMcpOAuthCommand()
 
-      // when
-      const description = statusCommand?.description() ?? ""
+    await expect(cmd.parseAsync(["node", "test", "oauth", "login", "serverA", "--server-url", "http://a", "--client-id", "id1", "--scopes", "a", "b"])).rejects.toThrow("process.exit")
 
-      // then
-      expect(statusCommand).toBeDefined()
-      expect(description).toContain("status")
-    })
+    expect(mockLogin).toHaveBeenCalledWith("serverA", { serverUrl: "http://a", clientId: "id1", scopes: ["a", "b"] })
+    expect(process.exit).toHaveBeenCalledWith(0)
+  })
+
+  test("logout subcommand calls logout and process.exit", async () => {
+    mockLogout.mockResolvedValueOnce(1)
+    const cmd = createMcpOAuthCommand()
+
+    await expect(cmd.parseAsync(["node", "test", "oauth", "logout", "serverA", "--server-url", "http://a"])).rejects.toThrow("process.exit")
+
+    expect(mockLogout).toHaveBeenCalledWith("serverA", { serverUrl: "http://a" })
+    expect(process.exit).toHaveBeenCalledWith(1)
+  })
+
+  test("status subcommand calls status and process.exit", async () => {
+    mockStatus.mockResolvedValueOnce(0)
+    const cmd = createMcpOAuthCommand()
+
+    await expect(cmd.parseAsync(["node", "test", "oauth", "status", "serverA"])).rejects.toThrow("process.exit")
+
+    expect(mockStatus).toHaveBeenCalledWith("serverA")
+    expect(process.exit).toHaveBeenCalledWith(0)
+  })
+
+  test("status subcommand works without server name", async () => {
+    mockStatus.mockResolvedValueOnce(0)
+    const cmd = createMcpOAuthCommand()
+
+    await expect(cmd.parseAsync(["node", "test", "oauth", "status"])).rejects.toThrow("process.exit")
+
+    expect(mockStatus).toHaveBeenCalledWith(undefined)
+    expect(process.exit).toHaveBeenCalledWith(0)
   })
 })

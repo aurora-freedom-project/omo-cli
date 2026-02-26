@@ -5,10 +5,10 @@ import { createAgentToolRestrictions } from "../shared/permission-compat"
 export const EXPLORER_PROMPT_METADATA: AgentPromptMetadata = {
   category: "exploration",
   cost: "FREE",
-  promptAlias: "Explore",
-  keyTrigger: "2+ modules involved → fire `explore` background",
+  promptAlias: "Explorer",
+  keyTrigger: "2+ modules involved → fire `explorer` background",
   triggers: [
-    { domain: "Explore", trigger: "Find existing codebase structure, patterns and styles" },
+    { domain: "Explorer", trigger: "Find existing codebase structure, patterns and styles" },
   ],
   useWhen: [
     "Multiple search angles needed",
@@ -33,7 +33,7 @@ export function createExplorerAgent(model: string): AgentConfig {
 
   return {
     description:
-      'Contextual grep for codebases. Answers "Where is X?", "Which file has Y?", "Find the code that does Z". Fire multiple in parallel for broad searches. Specify thoroughness: "quick" for basic, "medium" for moderate, "very thorough" for comprehensive analysis. (Explore - OmoCli)',
+      'Contextual grep for codebases. Answers "Where is X?", "Which file has Y?", "Find the code that does Z". Fire multiple in parallel for broad searches. Specify thoroughness: "quick" for basic, "medium" for moderate, "very thorough" for comprehensive analysis. (Explorer - OmoCli)',
     mode: "subagent" as const,
     model,
     temperature: 0.1,

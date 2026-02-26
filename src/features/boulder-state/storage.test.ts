@@ -10,13 +10,13 @@ import {
   getPlanProgress,
   getPlanName,
   createBoulderState,
-  findPrometheusPlans,
+  findPlannerPlans,
 } from "./storage"
 import type { BoulderState } from "./types"
 
 describe("boulder-state", () => {
   const TEST_DIR = join(tmpdir(), "boulder-state-test-" + Date.now())
-  const SISYPHUS_DIR = join(TEST_DIR, ".sisyphus")
+  const SISYPHUS_DIR = join(TEST_DIR, ".orchestrator")
 
   beforeEach(() => {
     if (!existsSync(TEST_DIR)) {
@@ -65,7 +65,7 @@ describe("boulder-state", () => {
   })
 
   describe("writeBoulderState", () => {
-    test("should write state and create .sisyphus directory if needed", () => {
+    test("should write state and create .orchestrator directory if needed", () => {
       // #given - state to write
       const state: BoulderState = {
         active_plan: "/test/plan.md",

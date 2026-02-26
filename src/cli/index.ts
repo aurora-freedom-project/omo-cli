@@ -5,6 +5,7 @@ import { run } from "./run"
 import { getLocalVersion } from "./get-local-version"
 import { doctor } from "./doctor"
 import { createMcpOAuthCommand } from "./mcp-oauth"
+import { createMemoryCommand } from "./memory"
 import { importSkills } from "./import-skills"
 import { runSecurityScan } from "./skills-scanner"
 import { runCategorization } from "./skills-categorizer"
@@ -144,7 +145,7 @@ program
   .command("import-skills")
   .description("Import skills from antigravity-awesome-skills library (560+ skills)")
   .option("-s, --skills <names...>", "Import specific skills by name")
-  .option("-t, --target <path>", "Target directory (default: ~/.opencode/skills)")
+  .option("-t, --target <path>", "Target directory (default: ~/.config/_skills_)")
   .option("--tier <number>", "Import skills by tier (1-4, requires categorize-skills first)")
   .option("--audit", "Audit skills structure without importing")
   .option("--valid-only", "Only import valid skills (with proper SKILL.md)")
@@ -233,7 +234,7 @@ program
   .description("Adapt and import skills with OMO metadata (agents, category, tier)")
   .option("--tier <number>", "Adapt specific tier (1-4)")
   .option("--max-tier <number>", "Adapt all tiers up to max (default: 2)")
-  .option("-t, --target <path>", "Target directory (default: ~/.agents/skills)")
+  .option("-t, --target <path>", "Target directory (default: ~/.config/_skills_)")
   .addHelpText("after", `
 Examples:
   $ bunx omo-cli adapt-skills --tier 1         # Tier 1 only (85 skills)
@@ -278,7 +279,7 @@ Examples:
 
 This command uses a Shadow Clone architecture to fetch the latest global skills 
 without corrupting local git caches. It automatically applies YAML fixes and 
-deduplicates skill names before copying to ~/.opencode/skills.
+deduplicates skill names before copying to ~/.config/_skills_.
 `)
   .action(async (options) => {
     await syncSkills(options.force)
@@ -286,6 +287,7 @@ deduplicates skill names before copying to ~/.opencode/skills.
 
 
 
+program.addCommand(createMemoryCommand())
 program.addCommand(createMcpOAuthCommand())
 
 program.parse()

@@ -6,7 +6,7 @@ import { createAgentToolRestrictions } from "../shared/permission-compat"
 export const ADVISOR_PROMPT_METADATA: AgentPromptMetadata = {
   category: "advisor",
   cost: "EXPENSIVE",
-  promptAlias: "Oracle",
+  promptAlias: "Architect",
   triggers: [
     { domain: "Architecture decisions", trigger: "Multi-system tradeoffs, unfamiliar patterns" },
     { domain: "Self-review", trigger: "After completing significant implementation" },
@@ -105,7 +105,7 @@ export function createAdvisorAgent(model: string): AgentConfig {
 
   const base = {
     description:
-      "Read-only consultation agent. High-IQ reasoning specialist for debugging hard problems and high-difficulty architecture design. (Oracle - OmoCli)",
+      "Read-only consultation agent. High-IQ reasoning specialist for debugging hard problems and high-difficulty architecture design. (Architect - OmoCli)",
     mode: "subagent" as const,
     model,
     temperature: 0.1,

@@ -159,14 +159,14 @@ describe("createWorkerAgentWithOverrides", () => {
       if (tools) {
         expect(tools.task).toBe(false)
         expect(tools.delegate_task).toBe(false)
-        // call_omo_agent is NOW ALLOWED for subagents to spawn explore/librarian
+        // call_omo_agent is NOW ALLOWED for subagents to spawn explorer/researcher
         expect(tools.call_omo_agent).toBe(true)
         expect(tools.read).toBe(true)
       }
       if (permission) {
         expect(permission.task).toBe("deny")
         expect(permission.delegate_task).toBe("deny")
-        // call_omo_agent is NOW ALLOWED for subagents to spawn explore/librarian
+        // call_omo_agent is NOW ALLOWED for subagents to spawn explorer/researcher
         expect(permission.call_omo_agent).toBe("allow")
       }
     })
@@ -185,7 +185,7 @@ describe("createWorkerAgentWithOverrides", () => {
       // #when
       const result = createWorkerAgentWithOverrides(override as Parameters<typeof createWorkerAgentWithOverrides>[0])
 
-      // #then - task/delegate_task blocked, but call_omo_agent allowed for explore/librarian spawning
+      // #then - task/delegate_task blocked, but call_omo_agent allowed for explorer/researcher spawning
       const tools = result.tools as Record<string, boolean> | undefined
       const permission = result.permission as Record<string, string> | undefined
       if (tools) {
@@ -210,7 +210,7 @@ describe("createWorkerAgentWithOverrides", () => {
       const result = createWorkerAgentWithOverrides(override)
 
       // #then
-      expect(result.prompt).toContain("Sisyphus-Junior")
+      expect(result.prompt).toContain("Orchestrator-Junior")
       expect(result.prompt).toContain("You work ALONE")
       expect(result.prompt).toContain("BLOCKED ACTIONS")
     })

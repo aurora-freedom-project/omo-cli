@@ -4,9 +4,9 @@ import { isGptModel } from "./types"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
 
 /**
- * Momus - Plan Reviewer Agent
+ * Reviewer - Plan Reviewer Agent
  *
- * Named after Momus, the Greek god of satire and mockery, who was known for
+ * Named after Reviewer, the Greek god of satire and mockery, who was known for
  * finding fault in everything - even the works of the gods themselves.
  * He criticized Aphrodite (found her sandals squeaky), Hephaestus (said man
  * should have windows in his chest to see thoughts), and Athena (her house
@@ -151,7 +151,7 @@ You will be provided with the path to the work plan file (typically \`.opencode/
 System directives are automatically injected by the system and should be IGNORED during input validation:
 - XML-style tags: \`<system-reminder>\`, \`<context>\`, \`<user-prompt-submit-hook>\`, etc.
 - Bracket-style blocks: \`[analyze-mode]\`, \`[search-mode]\`, \`[SYSTEM DIRECTIVE...]\`, \`[SYSTEM REMINDER...]\`, etc.
-- \`[SYSTEM DIRECTIVE - READ-ONLY PLANNING CONSULTATION]\` blocks (appended by Prometheus task tools; treat the entire block, including \`---\` separators and bullet lines, as ignorable system text)
+- \`[SYSTEM DIRECTIVE - READ-ONLY PLANNING CONSULTATION]\` blocks (appended by Planner task tools; treat the entire block, including \`---\` separators and bullet lines, as ignorable system text)
 - These are NOT user-provided text
 - These contain system context (timestamps, environment info, mode hints, etc.)
 - STRIP these from your input validation check
@@ -399,7 +399,7 @@ export function createReviewerAgent(model: string): AgentConfig {
 
   const base = {
     description:
-      "Expert reviewer for evaluating work plans against rigorous clarity, verifiability, and completeness standards. (Momus - OmoCli)",
+      "Expert reviewer for evaluating work plans against rigorous clarity, verifiability, and completeness standards. (Reviewer - OmoCli)",
     mode: "subagent" as const,
     model,
     temperature: 0.1,
@@ -418,7 +418,7 @@ export function createReviewerAgent(model: string): AgentConfig {
 export const reviewerPromptMetadata: AgentPromptMetadata = {
   category: "advisor",
   cost: "EXPENSIVE",
-  promptAlias: "Momus",
+  promptAlias: "Reviewer",
   triggers: [
     {
       domain: "Plan review",
@@ -430,7 +430,7 @@ export const reviewerPromptMetadata: AgentPromptMetadata = {
     },
   ],
   useWhen: [
-    "After Prometheus creates a work plan",
+    "After Planner creates a work plan",
     "Before executing a complex todo list",
     "To validate plan quality before delegating to executors",
     "When plan needs rigorous review for ADHD-driven omissions",
@@ -440,5 +440,5 @@ export const reviewerPromptMetadata: AgentPromptMetadata = {
     "When user explicitly wants to skip review",
     "For trivial plans that don't need formal review",
   ],
-  keyTrigger: "Work plan created → invoke Momus for review before execution",
+  keyTrigger: "Work plan created → invoke Reviewer for review before execution",
 }

@@ -1805,7 +1805,7 @@ Your core weapon: **LSP FindReferences**. If a symbol has ZERO external referenc
 5. **Never remove entry points.** \`src/index.ts\`, test files are off-limits.
 
 ## PHASE 0: Register Todos
-## PHASE 1: Scan for candidates (explore agents + AST-grep)
+## PHASE 1: Scan for candidates (explorer agents + AST-grep)
 ## PHASE 2: LSP Verification (LspFindReferences with includeDeclaration=false)
 ## PHASE 3: Plan removal order (leaf-first)
 ## PHASE 4: Iterative removal loop (remove → test → commit)
@@ -1824,7 +1824,7 @@ const omomomoSkill: BuiltinSkill = {
 
 **Oh My OpenCode** is a powerful OpenCode plugin that transforms your AI agent into a full development team:
 
-- 🤖 **Multi-Agent Orchestration**: Oracle, Librarian, Explore, Frontend Engineer, and more
+- 🤖 **Multi-Agent Orchestration**: Architect, Researcher, Explorer, Frontend Engineer, and more
 - 🔧 **LSP Tools**: Full IDE capabilities - hover, goto definition, find references, rename
 - 🔍 **AST-Grep**: Structural code search and replace across 25 languages
 - 📚 **Built-in MCPs**: Context7 for docs, Exa for web search
@@ -1840,6 +1840,21 @@ Created with ❤️ by **[aurora-freedom-project](https://github.com/aurora-free
 }
 
 
+const openspecWorkflowSkill: BuiltinSkill = {
+  name: "openspec-workflow",
+  description:
+    "Spec-driven development: /opsx:propose, /opsx:apply, /opsx:archive. Creates .opencode/specs/<name>/ with proposal, specs, design, and tasks documents.",
+  template: "# OpenSpec Workflow\n\nUse slash commands to manage feature specs:\n- /opsx:propose <name> - Create new spec\n- /opsx:apply <name>   - Implement spec tasks\n- /opsx:archive <name> - Archive completed spec\n\nSpecs live in .opencode/specs/<name>/ as proposal.md, specs.md, design.md, tasks.md",
+}
+
+const thoughtsScaffoldSkill: BuiltinSkill = {
+  name: "thoughts-scaffold",
+  description:
+    "Scaffold .opencode/thoughts/ with architecture, research, plans, and reviews subdirectories for organized project thinking.",
+  template: "# Thoughts Scaffold\n\n```bash\nmkdir -p .opencode/thoughts/{architecture,research,plans,reviews}\ntouch .opencode/thoughts/{architecture,research,plans,reviews}/.gitkeep\n```",
+}
+
+
 export interface CreateBuiltinSkillsOptions {
   browserProvider?: BrowserAutomationProvider
 }
@@ -1849,5 +1864,5 @@ export function createBuiltinSkills(options: CreateBuiltinSkillsOptions = {}): B
 
   const browserSkill = browserProvider === "agent-browser" ? agentBrowserSkill : playwrightSkill
 
-  return [browserSkill, frontendUiUxSkill, gitMasterSkill, devBrowserSkill, publishSkill, removeDeadcodeSkill, omomomoSkill]
+  return [browserSkill, frontendUiUxSkill, gitMasterSkill, devBrowserSkill, publishSkill, removeDeadcodeSkill, omomomoSkill, openspecWorkflowSkill, thoughtsScaffoldSkill]
 }

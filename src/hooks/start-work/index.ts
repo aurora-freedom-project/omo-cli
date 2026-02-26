@@ -3,7 +3,7 @@ import {
   readBoulderState,
   writeBoulderState,
   appendSessionId,
-  findPrometheusPlans,
+  findPlannerPlans,
   getPlanProgress,
   createBoulderState,
   getPlanName,
@@ -60,7 +60,7 @@ export function createStartWorkHook(ctx: PluginInput) {
         .trim() || ""
 
       // Only trigger on actual command execution (contains <session-context> tag)
-      // NOT on description text like "Start Sisyphus work session from Prometheus plan"
+      // NOT on description text like "Start Orchestrator work session from Planner plan"
       const isStartWorkCommand = promptText.includes("<session-context>")
 
       if (!isStartWorkCommand) {
@@ -73,7 +73,7 @@ export function createStartWorkHook(ctx: PluginInput) {
 
       const currentAgent = getSessionAgent(input.sessionID)
       if (!currentAgent) {
-        updateSessionAgent(input.sessionID, "atlas")
+        updateSessionAgent(input.sessionID, "conductor")
       }
 
       const existingState = readBoulderState(ctx.directory)
@@ -89,7 +89,7 @@ export function createStartWorkHook(ctx: PluginInput) {
           sessionID: input.sessionID,
         })
         
-        const allPlans = findPrometheusPlans(ctx.directory)
+        const allPlans = findPlannerPlans(ctx.directory)
         const matchedPlan = findPlanByName(allPlans, explicitPlanName)
         
         if (matchedPlan) {
@@ -171,7 +171,7 @@ Looking for new plans...`
       }
 
       if ((!existingState && !explicitPlanName) || (existingState && !explicitPlanName && getPlanProgress(existingState.active_plan).isComplete)) {
-        const plans = findPrometheusPlans(ctx.directory)
+        const plans = findPlannerPlans(ctx.directory)
         const incompletePlans = plans.filter(p => !getPlanProgress(p).isComplete)
         
         if (plans.length === 0) {
@@ -179,8 +179,8 @@ Looking for new plans...`
 
 ## No Plans Found
 
-No Prometheus plan files found at .opencode/plans/
-Use Prometheus to create a work plan first: /plan "your task"`
+No Planner plan files found at .opencode/plans/
+Use Planner to create a work plan first: /plan "your task"`
         } else if (incompletePlans.length === 0) {
           contextInfo += `
 

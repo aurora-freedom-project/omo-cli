@@ -56,7 +56,7 @@ describe("createCompactionContextInjector", () => {
       expect(injectedPrompt).toContain("Verification Progress")
     })
 
-    it("includes Momus-specific context for reviewer agents", async () => {
+    it("includes Reviewer-specific context for reviewer agents", async () => {
       // given
       const injector = createCompactionContextInjector()
       const context: SummarizeContext = {

@@ -168,7 +168,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
       ])
     );
 
-    const isSisyphusEnabled = pluginConfig.sisyphus_agent?.disabled !== true;
+    const isOrchestratorEnabled = pluginConfig.sisyphus_agent?.disabled !== true;
     const builderEnabled =
       pluginConfig.sisyphus_agent?.default_builder_enabled ?? false;
     const plannerEnabled =
@@ -181,7 +181,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
     > & {
       build?: Record<string, unknown>;
       plan?: Record<string, unknown>;
-      explore?: { tools?: Record<string, unknown> };
+      explorer?: { tools?: Record<string, unknown> };
       researcher?: { tools?: Record<string, unknown> };
       vision?: { tools?: Record<string, unknown> };
       navigator?: { tools?: Record<string, unknown> };
@@ -189,15 +189,15 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
     };
     const configAgent = config.agent as AgentConfig | undefined;
 
-    if (isSisyphusEnabled && builtinAgents.orchestrator) {
+    if (isOrchestratorEnabled && builtinAgents.orchestrator) {
       (config as { default_agent?: string }).default_agent = "orchestrator";
 
       const agentConfig: Record<string, unknown> = {
-        sisyphus: builtinAgents.orchestrator,
+        orchestrator: builtinAgents.orchestrator,
       };
 
-      agentConfig["sisyphus-junior"] = createWorkerAgentWithOverrides(
-        pluginConfig.agents?.["sisyphus-junior"],
+      agentConfig["worker"] = createWorkerAgentWithOverrides(
+        pluginConfig.agents?.["worker"],
         config.model as string | undefined
       );
 
@@ -208,13 +208,13 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
           buildConfigWithoutName as Record<string, unknown>
         );
         const openCodeBuilderOverride =
-          pluginConfig.agents?.["OpenCode-Builder"];
+          pluginConfig.agents?.["builder"];
         const openCodeBuilderBase = {
           ...migratedBuildConfig,
           description: `${configAgent?.build?.description ?? "Build agent"} (OpenCode default)`,
         };
 
-        agentConfig["OpenCode-Builder"] = openCodeBuilderOverride
+        agentConfig["builder"] = openCodeBuilderOverride
           ? { ...openCodeBuilderBase, ...openCodeBuilderOverride }
           : openCodeBuilderBase;
       }
@@ -225,7 +225,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
         const migratedPlanConfig = migrateAgentConfig(
           planConfigWithoutName as Record<string, unknown>
         );
-        const prometheusOverride =
+        const plannerOverride =
           pluginConfig.agents?.["coder"] as
           | (Record<string, unknown> & {
             category?: string
@@ -240,14 +240,14 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
           })
           | undefined;
 
-        const categoryConfig = prometheusOverride?.category
+        const categoryConfig = plannerOverride?.category
           ? resolveCategoryConfig(
-            prometheusOverride.category,
+            plannerOverride.category,
             pluginConfig.categories
           )
           : undefined;
 
-        const prometheusRequirement = AGENT_MODEL_REQUIREMENTS["coder"];
+        const plannerRequirement = AGENT_MODEL_REQUIREMENTS["coder"];
         const connectedProviders = readConnectedProvidersCache();
         const availableModels = ctx.client
           ? await fetchAvailableModels(ctx.client, { connectedProviders: connectedProviders ?? undefined })
@@ -255,29 +255,29 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
 
         const modelResolution = resolveModelWithFallback({
           uiSelectedModel: currentModel,
-          userModel: prometheusOverride?.model ?? categoryConfig?.model,
-          fallbackChain: prometheusRequirement?.fallbackChain,
+          userModel: plannerOverride?.model ?? categoryConfig?.model,
+          fallbackChain: plannerRequirement?.fallbackChain,
           availableModels,
           systemDefaultModel: undefined,
         });
         const resolvedModel = modelResolution?.model;
         const resolvedVariant = modelResolution?.variant;
 
-        const variantToUse = prometheusOverride?.variant ?? resolvedVariant;
-        const reasoningEffortToUse = prometheusOverride?.reasoningEffort ?? categoryConfig?.reasoningEffort;
-        const textVerbosityToUse = prometheusOverride?.textVerbosity ?? categoryConfig?.textVerbosity;
-        const thinkingToUse = prometheusOverride?.thinking ?? categoryConfig?.thinking;
-        const temperatureToUse = prometheusOverride?.temperature ?? categoryConfig?.temperature;
-        const topPToUse = prometheusOverride?.top_p ?? categoryConfig?.top_p;
-        const maxTokensToUse = prometheusOverride?.maxTokens ?? categoryConfig?.maxTokens;
-        const prometheusBase = {
+        const variantToUse = plannerOverride?.variant ?? resolvedVariant;
+        const reasoningEffortToUse = plannerOverride?.reasoningEffort ?? categoryConfig?.reasoningEffort;
+        const textVerbosityToUse = plannerOverride?.textVerbosity ?? categoryConfig?.textVerbosity;
+        const thinkingToUse = plannerOverride?.thinking ?? categoryConfig?.thinking;
+        const temperatureToUse = plannerOverride?.temperature ?? categoryConfig?.temperature;
+        const topPToUse = plannerOverride?.top_p ?? categoryConfig?.top_p;
+        const maxTokensToUse = plannerOverride?.maxTokens ?? categoryConfig?.maxTokens;
+        const plannerBase = {
           name: "coder",
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(variantToUse ? { variant: variantToUse } : {}),
           mode: "all" as const,
           prompt: CODER_SYSTEM_PROMPT,
           permission: CODER_PERMISSION,
-          description: `${configAgent?.plan?.description ?? "Plan agent"} (Prometheus - OmoCli)`,
+          description: `${configAgent?.plan?.description ?? "Plan agent"} (Planner - OmoCli)`,
           color: (configAgent?.plan?.color as string) ?? "#FF6347",
           ...(temperatureToUse !== undefined ? { temperature: temperatureToUse } : {}),
           ...(topPToUse !== undefined ? { top_p: topPToUse } : {}),
@@ -292,9 +292,9 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
             : {}),
         };
 
-        agentConfig["coder"] = prometheusOverride
-          ? { ...prometheusBase, ...prometheusOverride }
-          : prometheusBase;
+        agentConfig["coder"] = plannerOverride
+          ? { ...plannerBase, ...plannerOverride }
+          : plannerBase;
       }
 
       const filteredConfigAgents = configAgent

@@ -1,10 +1,10 @@
-# Oh-My-OpenCode Features
+# omo-cli Features
 
 ---
 
 ## Agents: Your AI Team
 
-Oh-My-OpenCode provides 10 specialized AI agents. Each has distinct expertise, optimized models, and tool permissions.
+omo-cli provides 10 specialized AI agents. Each has distinct expertise, optimized models, and tool permissions.
 
 ### Core Agents
 
@@ -105,7 +105,7 @@ Skills provide specialized workflows with embedded MCP servers and detailed inst
 
 **Trigger**: Any browser-related request
 
-Oh-My-OpenCode provides two browser automation providers, configurable via `browser_automation_engine.provider`:
+omo-cli provides two browser automation providers, configurable via `browser_automation_engine.provider`:
 
 #### Option 1: Playwright MCP (Default)
 

@@ -12,11 +12,11 @@ describe("model-resolution check", () => {
       const info = getModelResolutionInfo()
 
       // #then: Should have agent entries
-      const sisyphus = info.agents.find((a) => a.name === "sisyphus")
-      expect(sisyphus).toBeDefined()
-      expect(sisyphus!.requirement.fallbackChain[0]?.model).toBe("claude-opus-4-5")
-      expect(sisyphus!.requirement.fallbackChain[0]?.providers).toContain("anthropic")
-      expect(sisyphus!.requirement.fallbackChain[0]?.providers).toContain("github-copilot")
+      const orchestrator = info.agents.find((a) => a.name === "orchestrator")
+      expect(orchestrator).toBeDefined()
+      expect(orchestrator!.requirement.fallbackChain[0]?.model).toBe("claude-opus-4-5")
+      expect(orchestrator!.requirement.fallbackChain[0]?.providers).toContain("anthropic")
+      expect(orchestrator!.requirement.fallbackChain[0]?.providers).toContain("github-copilot")
     })
 
     it("returns category requirements with provider chains", async () => {
@@ -40,20 +40,20 @@ describe("model-resolution check", () => {
     it("shows user override for agent when configured", async () => {
       const { getModelResolutionInfoWithOverrides } = await import("./model-resolution")
 
-      // #given: User has override for oracle agent
+      // #given: User has override for architect agent
       const mockConfig = {
         agents: {
-          oracle: { model: "anthropic/claude-opus-4-5" },
+          architect: { model: "anthropic/claude-opus-4-5" },
         },
       }
 
       const info = getModelResolutionInfoWithOverrides(mockConfig)
 
-      // #then: Oracle should show the override
-      const oracle = info.agents.find((a) => a.name === "oracle")
-      expect(oracle).toBeDefined()
-      expect(oracle!.userOverride).toBe("anthropic/claude-opus-4-5")
-      expect(oracle!.effectiveResolution).toBe("User override: anthropic/claude-opus-4-5")
+      // #then: Architect should show the override
+      const architect = info.agents.find((a) => a.name === "architect")
+      expect(architect).toBeDefined()
+      expect(architect!.userOverride).toBe("anthropic/claude-opus-4-5")
+      expect(architect!.effectiveResolution).toBe("User override: anthropic/claude-opus-4-5")
     })
 
     it("shows user override for category when configured", async () => {
@@ -84,11 +84,11 @@ describe("model-resolution check", () => {
       const info = getModelResolutionInfoWithOverrides(mockConfig)
 
       // #then: Should show provider fallback chain
-      const sisyphus = info.agents.find((a) => a.name === "sisyphus")
-      expect(sisyphus).toBeDefined()
-      expect(sisyphus!.userOverride).toBeUndefined()
-      expect(sisyphus!.effectiveResolution).toContain("Provider fallback:")
-      expect(sisyphus!.effectiveResolution).toContain("anthropic")
+      const orchestrator = info.agents.find((a) => a.name === "orchestrator")
+      expect(orchestrator).toBeDefined()
+      expect(orchestrator!.userOverride).toBeUndefined()
+      expect(orchestrator!.effectiveResolution).toContain("Provider fallback:")
+      expect(orchestrator!.effectiveResolution).toContain("anthropic")
     })
   })
 

@@ -240,7 +240,7 @@ export async function adaptTier(options: {
     const securityPath = options.securityPath ||
         join(process.cwd(), "skills_security_report.json");
     const targetPath = options.targetPath ||
-        join(homedir(), ".agents", "skills");
+        join(homedir(), ".config", "_skills_");
     const skillsRepoPath = join(homedir(), ".antigravity-skills-cache");
 
     const report: AdaptationReport = {

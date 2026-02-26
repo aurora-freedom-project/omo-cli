@@ -10,7 +10,7 @@ const getCategoryDescription = (name: string, userCategories?: Record<string, Ca
   userCategories?.[name]?.description ?? CATEGORY_DESCRIPTIONS[name] ?? "General tasks"
 
 /**
- * Atlas - Master Orchestrator Agent
+ * Conductor - Master Orchestrator Agent
  *
  * Orchestrates work via delegate_task() to complete ALL tasks in a todo list until fully done.
  * You are the conductor of a symphony of specialized agents.
@@ -51,7 +51,7 @@ function buildCategorySection(userCategories?: Record<string, CategoryConfig>): 
 
   return `##### Option A: Use CATEGORY (for domain-specific work)
 
-Categories spawn \`Sisyphus-Junior-{category}\` with optimized settings:
+Categories spawn \`Orchestrator-Junior-{category}\` with optimized settings:
 
 | Category | Temperature | Best For |
 |----------|-------------|----------|
@@ -122,9 +122,9 @@ ${agentRows.join("\n")}
 
 export const ATLAS_SYSTEM_PROMPT = `
 <identity>
-You are Atlas - the Master Orchestrator from OmoCli.
+You are Conductor - the Master Orchestrator from OmoCli.
 
-In Greek mythology, Atlas holds up the celestial heavens. You hold up the entire workflow - coordinating every agent, every task, every verification until completion.
+In Greek mythology, Conductor holds up the celestial heavens. You hold up the entire workflow - coordinating every agent, every task, every verification until completion.
 
 You are a conductor, not a musician. A general, not a soldier. You DELEGATE, COORDINATE, and VERIFY.
 You never write code yourself. You orchestrate specialists who do.
@@ -141,7 +141,7 @@ One task per delegation. Parallel when independent. Verify everything.
 Use \`delegate_task()\` with EITHER category OR agent (mutually exclusive):
 
 \`\`\`typescript
-// Option A: Category + Skills (spawns Sisyphus-Junior with domain config)
+// Option A: Category + Skills (spawns Orchestrator-Junior with domain config)
 delegate_task(
   category="[category-name]",
   load_skills=["skill-1", "skill-2"],
@@ -384,9 +384,9 @@ ACCUMULATED WISDOM:
 <parallel_execution>
 ## Parallel Execution Rules
 
-**For exploration (explore/librarian)**: ALWAYS background
+**For exploration (explorer/researcher)**: ALWAYS background
 \`\`\`typescript
-delegate_task(subagent_type="explore", run_in_background=true, ...)
+delegate_task(subagent_type="explorer", run_in_background=true, ...)
 delegate_task(subagent_type="researcher", run_in_background=true, ...)
 \`\`\`
 
@@ -529,8 +529,8 @@ export function createNavigatorAgent(ctx: OrchestratorContext): AgentConfig {
   ])
   return {
     description:
-      "Orchestrates work via delegate_task() to complete ALL tasks in a todo list until fully done. (Atlas - OmoCli)",
-    // Atlas is a background orchestrator - no mode: "primary" to avoid UI visibility conflict
+      "Orchestrates work via delegate_task() to complete ALL tasks in a todo list until fully done. (Conductor - OmoCli)",
+    // Conductor is a background orchestrator - no mode: "primary" to avoid UI visibility conflict
     ...(ctx.model ? { model: ctx.model } : {}),
     temperature: 0.1,
     prompt: buildDynamicOrchestratorPrompt(ctx),
@@ -543,7 +543,7 @@ export function createNavigatorAgent(ctx: OrchestratorContext): AgentConfig {
 export const navigatorPromptMetadata: AgentPromptMetadata = {
   category: "advisor",
   cost: "EXPENSIVE",
-  promptAlias: "Atlas",
+  promptAlias: "Conductor",
   triggers: [
     {
       domain: "Todo list orchestration",

@@ -1,7 +1,9 @@
 import * as p from "@clack/prompts"
 import color from "picocolors"
-import { spawn } from "node:child_process"
-import type { InstallArgs, InstallConfig, DetectedConfig } from "./types"
+import { spawn, execSync } from "node:child_process"
+import { detectExistingSurrealDB } from "./memory/docker-manager"
+import { ensureUnifiedSkillsDirectory } from "./skills-setup"
+import type { InstallArgs, ProfileSummary, DetectedConfig } from "./types"
 import {
   addPluginToOpenCodeConfig,
   writeOmoConfig,
@@ -35,19 +37,20 @@ function formatProvider(name: string, enabled: boolean, detail?: string): string
   return `  ${status} ${label}${suffix}`
 }
 
-function formatConfigSummary(config: InstallConfig): string {
+function formatConfigSummary(config: ProfileSummary): string {
   const lines: string[] = []
 
   lines.push(color.bold(color.white("Configuration Summary")))
   lines.push("")
 
-  const claudeDetail = config.hasClaude ? (config.isMax20 ? "max20" : "standard") : undefined
-  lines.push(formatProvider("Claude", config.hasClaude, claudeDetail))
-  lines.push(formatProvider("OpenAI/ChatGPT", config.hasOpenAI, "GPT-5.2 for Oracle"))
-  lines.push(formatProvider("Gemini", config.hasGemini))
-  lines.push(formatProvider("GitHub Copilot", config.hasCopilot, "fallback"))
-  lines.push(formatProvider("OpenCode Zen", config.hasOpencodeZen, "opencode/ models"))
-  lines.push(formatProvider("Z.ai Coding Plan", config.hasZaiCodingPlan, "Librarian/Multimodal"))
+  const claudeDetail = config.providers.has("anthropic") ? (config.hasClaudeOpus ? "max20" : "standard") : undefined
+  lines.push(formatProvider("Claude", config.providers.has("anthropic"), claudeDetail))
+  lines.push(formatProvider("OpenAI/ChatGPT", config.providers.has("openai"), "GPT-5.2 for Architect"))
+  lines.push(formatProvider("Gemini", config.providers.has("google")))
+  lines.push(formatProvider("GitHub Copilot", config.providers.has("github-copilot"), "fallback"))
+  lines.push(formatProvider("OpenCode Zen", config.providers.has("opencode"), "opencode/ models"))
+  lines.push(formatProvider("Z.ai Coding Plan", config.providers.has("zai-coding-plan"), "Researcher/Multimodal"))
+  lines.push(formatProvider("Ollama", config.providers.has("ollama"), "Local Models"))
 
   lines.push("")
   lines.push(color.dim("─".repeat(40)))
@@ -111,7 +114,7 @@ function printBox(content: string, title?: string): void {
   console.log()
 }
 
-async function runTuiMode(detected: DetectedConfig, args: InstallArgs): Promise<InstallConfig | null> {
+async function runTuiMode(detected: DetectedConfig, args: InstallArgs): Promise<ProfileSummary | null> {
   // ---------------------------------------------------------------------------
   // Profile-based selection: scan profiles/ dir + offer wizard
   // ---------------------------------------------------------------------------
@@ -145,7 +148,6 @@ async function runTuiMode(detected: DetectedConfig, args: InstallArgs): Promise<
     const wizardResult = await runProfileWizard()
     if (!wizardResult) return null
 
-    // We do NOT try to do arg skillsMode stuff automatically here
     return deriveInstallConfigFromProfile(wizardResult)
   }
 
@@ -233,7 +235,7 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   }
   printSuccess(`Plugin ${isUpdate ? "verified" : "added"} ${SYMBOLS.arrow} ${color.dim(pluginResult.configPath)}`)
 
-  if (config.hasGemini) {
+  if (config.providers.has("google")) {
     printStep(step++, totalSteps, "Adding auth plugins...")
     const authResult = await addAuthPlugins(config)
     if (!authResult.success) {
@@ -284,16 +286,43 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
     step++
   }
 
+  // Memory setup step
+  if (config.enableMemory) {
+    printStep(step++, totalSteps, "Setting up omo-memory (SurrealDB)...")
+    try {
+      execSync("docker --version", { stdio: "ignore" })
+      printSuccess("Docker detected")
+
+      // Detect existing SurrealDB services
+      const discovered = await detectExistingSurrealDB()
+      if (discovered.length > 0) {
+        const svc = discovered[0]
+        const label = svc.containerName
+          ? `Container "${svc.containerName}" on port ${svc.port}`
+          : `Service on port ${svc.port}`
+        printInfo(`Found existing SurrealDB: ${label}`)
+        printInfo("Configure memory.mode='external' in omo-cli.json to reuse it")
+        printInfo("Or run 'omo-cli memory start' to create a managed container")
+      } else {
+        printInfo("Run 'omo-cli memory start' to launch SurrealDB container")
+      }
+    } catch {
+      printWarning("Docker not found — omo-memory requires Docker. Install Docker and run 'omo-cli memory start' later.")
+    }
+  } else {
+    step++
+  }
+
   printStep(step++, totalSteps, "Verifying configuration...")
   printSuccess(`Configured properly for selected profile.`)
 
   printBox(formatConfigSummary(config), isUpdate ? "Updated Configuration" : "Installation Complete")
 
-  if (!config.hasClaude) {
+  if (!config.providers.has("anthropic")) {
     console.log()
     console.log(color.bgRed(color.white(color.bold(" CRITICAL WARNING "))))
     console.log()
-    console.log(color.red(color.bold("  Sisyphus agent is STRONGLY optimized for Claude Opus 4.6.")))
+    console.log(color.red(color.bold("  Orchestrator agent is STRONGLY optimized for Claude Opus 4.6.")))
     console.log(color.red("  Without Claude, you may experience significantly degraded performance:"))
     console.log(color.dim("    • Reduced orchestration quality"))
     console.log(color.dim("    • Weaker tool selection and delegation"))
@@ -303,7 +332,7 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
     console.log()
   }
 
-  if (!config.hasClaude && !config.hasOpenAI && !config.hasGemini && !config.hasCopilot && !config.hasOpencodeZen) {
+  if (config.providers.size === 0) {
     printWarning("No model providers configured. Using opencode/big-pickle as fallback.")
   }
 
@@ -324,12 +353,12 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   console.log(color.dim("oMoMoMoMo... Enjoy!"))
   console.log()
 
-  if ((config.hasClaude || config.hasGemini || config.hasCopilot) && !args.skipAuth) {
+  if ((config.providers.has("anthropic") || config.providers.has("google") || config.providers.has("github-copilot")) && !args.skipAuth) {
     printBox(
       `Run ${color.cyan("opencode auth login")} and select your provider:\n` +
-      (config.hasClaude ? `  ${SYMBOLS.bullet} Anthropic ${color.gray("→ Claude Pro/Max")}\n` : "") +
-      (config.hasGemini ? `  ${SYMBOLS.bullet} Google ${color.gray("→ OAuth with Antigravity")}\n` : "") +
-      (config.hasCopilot ? `  ${SYMBOLS.bullet} GitHub ${color.gray("→ Copilot")}` : ""),
+      (config.providers.has("anthropic") ? `  ${SYMBOLS.bullet} Anthropic ${color.gray("→ Claude Pro/Max")}\n` : "") +
+      (config.providers.has("google") ? `  ${SYMBOLS.bullet} Google ${color.gray("→ OAuth with Antigravity")}\n` : "") +
+      (config.providers.has("github-copilot") ? `  ${SYMBOLS.bullet} GitHub ${color.gray("→ Copilot")}` : ""),
       "Authenticate Your Providers"
     )
   }
@@ -364,6 +393,20 @@ export async function install(args: InstallArgs): Promise<number> {
     s.stop(`OpenCode ${version ?? "installed"} ${color.green("[OK]")}`)
   }
 
+  // Unified skills directory setup
+  s.start("Setting up unified skills directory")
+  try {
+    const { migrated, linked } = ensureUnifiedSkillsDirectory()
+    if (migrated > 0) {
+      s.stop(`Unified skills linked ${color.green("[OK]")} — migrated ${migrated} existing skills to ~/.config/_skills_`)
+    } else {
+      s.stop(`Unified skills linked ${color.green("[OK]")} — ~/.opencode/skills → ~/.config/_skills_`)
+    }
+  } catch (err) {
+    s.stop(`Skills directory setup failed ${color.yellow("[!]")}`)
+    p.log.warn(`Could not set up unified skills directory: ${err}`)
+  }
+
   const config = await runTuiMode(detected, args)
   if (!config) return 1
 
@@ -376,7 +419,7 @@ export async function install(args: InstallArgs): Promise<number> {
   }
   s.stop(`Plugin added to ${color.cyan(pluginResult.configPath)}`)
 
-  if (config.hasGemini) {
+  if (config.providers.has("google")) {
     s.start("Adding auth plugins (fetching latest versions)")
     const authResult = await addAuthPlugins(config)
     if (!authResult.success) {
@@ -394,6 +437,84 @@ export async function install(args: InstallArgs): Promise<number> {
       return 1
     }
     s.stop(`Omo-cli config written to ${color.cyan(omoResult.configPath)}`)
+  }
+
+  // Memory setup step  
+  if (config.enableMemory) {
+    s.start("Setting up omo-memory (SurrealDB)")
+    try {
+      execSync("docker --version", { stdio: "ignore" })
+      s.stop(`Docker detected ${color.green("[OK]")}`)
+
+      // Detect existing SurrealDB services
+      const discovered = await detectExistingSurrealDB()
+      if (discovered.length > 0) {
+        const svc = discovered[0]
+        const label = svc.containerName
+          ? `Container ${color.cyan(`"${svc.containerName}"`)} on port ${svc.port}`
+          : `Service on port ${svc.port}`
+
+        p.log.info(`Found existing SurrealDB: ${label}`)
+
+        const memoryChoice = await p.select({
+          message: "How would you like to configure memory?",
+          options: [
+            {
+              value: "external",
+              label: `Use existing service (localhost:${svc.port})`,
+              hint: "Connect to the running SurrealDB with custom namespace/database",
+            },
+            {
+              value: "managed",
+              label: "Create new managed container (port 18000)",
+              hint: "omo-cli manages its own SurrealDB container",
+            },
+          ],
+        })
+
+        if (!p.isCancel(memoryChoice) && memoryChoice === "external") {
+          const nsInput = await p.text({
+            message: "SurrealDB namespace",
+            placeholder: "omo",
+            defaultValue: "omo",
+          })
+          const dbInput = await p.text({
+            message: "Database name",
+            placeholder: "memory",
+            defaultValue: "memory",
+          })
+          const userInput = await p.text({
+            message: "Username",
+            placeholder: "root",
+            defaultValue: "root",
+          })
+          const passInput = await p.password({
+            message: "Password",
+          })
+
+          if (!p.isCancel(nsInput) && !p.isCancel(dbInput) && !p.isCancel(userInput) && !p.isCancel(passInput)) {
+            // Store external config in ProfileSummary for downstream writeOmoConfig
+            ; (config as unknown as Record<string, unknown>).memoryConfig = {
+              enabled: true,
+              mode: "external" as const,
+              port: svc.port,
+              url: `${svc.url}/rpc`,
+              user: userInput as string,
+              pass: passInput as string,
+              namespace: nsInput as string,
+              database: dbInput as string,
+              auto_capture: true,
+            }
+            p.log.success(`Memory configured: ${color.cyan(`${nsInput}/${dbInput}`)} on existing service`)
+          }
+        }
+      } else {
+        p.log.info(`Run ${color.cyan("omo-cli memory start")} to launch the SurrealDB container`)
+      }
+    } catch {
+      s.stop(`Docker not found ${color.yellow("[!]")}`)
+      p.log.warn("omo-memory requires Docker. Install Docker and run 'omo-cli memory start' later.")
+    }
   }
 
   s.start("Verifying omo-cli configuration")
@@ -428,11 +549,11 @@ export async function install(args: InstallArgs): Promise<number> {
     })
   }
 
-  if (!config.hasClaude) {
+  if (!config.providers.has("anthropic")) {
     console.log()
     console.log(color.bgRed(color.white(color.bold(" CRITICAL WARNING "))))
     console.log()
-    console.log(color.red(color.bold("  Sisyphus agent is STRONGLY optimized for Claude Opus 4.6.")))
+    console.log(color.red(color.bold("  Orchestrator agent is STRONGLY optimized for Claude Opus 4.6.")))
     console.log(color.red("  Without Claude, you may experience significantly degraded performance:"))
     console.log(color.dim("    • Reduced orchestration quality"))
     console.log(color.dim("    • Weaker tool selection and delegation"))
@@ -442,7 +563,7 @@ export async function install(args: InstallArgs): Promise<number> {
     console.log()
   }
 
-  if (!config.hasClaude && !config.hasOpenAI && !config.hasGemini && !config.hasCopilot && !config.hasOpencodeZen) {
+  if (config.providers.size === 0) {
     p.log.warn("No model providers configured. Using opencode/big-pickle as fallback.")
   }
 
@@ -463,11 +584,11 @@ export async function install(args: InstallArgs): Promise<number> {
 
   p.outro(color.green("oMoMoMoMo... Enjoy!"))
 
-  if ((config.hasClaude || config.hasGemini || config.hasCopilot) && !args.skipAuth) {
+  if ((config.providers.has("anthropic") || config.providers.has("google") || config.providers.has("github-copilot")) && !args.skipAuth) {
     const providers: string[] = []
-    if (config.hasClaude) providers.push(`Anthropic ${color.gray("→ Claude Pro/Max")}`)
-    if (config.hasGemini) providers.push(`Google ${color.gray("→ OAuth with Antigravity")}`)
-    if (config.hasCopilot) providers.push(`GitHub ${color.gray("→ Copilot")}`)
+    if (config.providers.has("anthropic")) providers.push(`Anthropic ${color.gray("→ Claude Pro/Max")}`)
+    if (config.providers.has("google")) providers.push(`Google ${color.gray("→ OAuth with Antigravity")}`)
+    if (config.providers.has("github-copilot")) providers.push(`GitHub ${color.gray("→ Copilot")}`)
 
     console.log()
     console.log(color.bold("Authenticate Your Providers"))

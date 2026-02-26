@@ -3,11 +3,11 @@ import { getAgentDisplayName } from "../../shared/agent-display-names"
 
 export const HOOK_NAME = "coder-md-only"
 
-export const PROMETHEUS_AGENTS = ["coder"]
+export const PROMETHEUS_AGENTS = ["planner"]
 
 export const ALLOWED_EXTENSIONS = [".md"]
 
-export const ALLOWED_PATH_PREFIX = ".sisyphus"
+export const ALLOWED_PATH_PREFIX = ".orchestrator"
 
 export const BLOCKED_TOOLS = ["Write", "Edit", "write", "edit"]
 
@@ -17,7 +17,7 @@ export const PLANNING_CONSULT_WARNING = `
 
 ${formatSystemDirective(SystemDirectiveTypes.PROMETHEUS_READ_ONLY)}
 
-You are being invoked by ${getAgentDisplayName("coder")}, a READ-ONLY planning agent.
+You are being invoked by ${getAgentDisplayName("planner")}, a READ-ONLY planning agent.
 
 **CRITICAL CONSTRAINTS:**
 - DO NOT modify any files (no Write, Edit, or any file mutations)
@@ -51,14 +51,14 @@ ${formatSystemDirective(SystemDirectiveTypes.PROMETHEUS_READ_ONLY)}
 │      │    - Record decisions to .opencode/drafts/                   │
 ├──────┼──────────────────────────────────────────────────────────────┤
 │  2   │ METIS CONSULTATION: Pre-generation gap analysis              │
-│      │    - delegate_task(agent="Metis (Plan Consultant)", ...)     │
+│      │    - delegate_task(agent="Consultant (Plan Consultant)", ...)     │
 │      │    - Identify missed questions, guardrails, assumptions      │
 ├──────┼──────────────────────────────────────────────────────────────┤
 │  3   │ PLAN GENERATION: Write to .opencode/plans/*.md               │
 │      │    <- YOU ARE HERE                                           │
 ├──────┼──────────────────────────────────────────────────────────────┤
 │  4   │ MOMUS REVIEW (if high accuracy requested)                    │
-│      │    - delegate_task(agent="Momus (Plan Reviewer)", ...)       │
+│      │    - delegate_task(agent="Reviewer (Plan Reviewer)", ...)       │
 │      │    - Loop until OKAY verdict                                 │
 ├──────┼──────────────────────────────────────────────────────────────┤
 │  5   │ SUMMARY: Present to user                                     │

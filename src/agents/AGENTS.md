@@ -1,21 +1,21 @@
 # AGENTS KNOWLEDGE BASE
 
 ## OVERVIEW
-10 AI agents for multi-model orchestration. Sisyphus (primary), Atlas (orchestrator), oracle, librarian, explore, multimodal-looker, Prometheus, Metis, Momus, Sisyphus-Junior.
+10 AI agents for multi-model orchestration. Orchestrator (primary), Conductor (orchestrator), architect, researcher, explorer, multimodal-looker, Planner, Consultant, Reviewer, Orchestrator-Junior.
 
 ## STRUCTURE
 ```
 agents/
-├── atlas.ts                    # Master Orchestrator (holds todo list)
-├── sisyphus.ts                 # Main prompt (SF Bay Area engineer identity)
-├── sisyphus-junior.ts          # Delegated task executor (category-spawned)
-├── oracle.ts                   # Strategic advisor (GPT-5.2)
-├── librarian.ts                # Multi-repo research (GitHub CLI, Context7)
-├── explore.ts                  # Fast contextual grep (Grok Code)
+├── conductor.ts                    # Master Orchestrator (holds todo list)
+├── orchestrator.ts                 # Main prompt (SF Bay Area engineer identity)
+├── orchestrator-junior.ts          # Delegated task executor (category-spawned)
+├── architect.ts                   # Strategic advisor (GPT-5.2)
+├── researcher.ts                # Multi-repo research (GitHub CLI, Context7)
+├── explorer.ts                  # Fast contextual grep (Grok Code)
 ├── multimodal-looker.ts        # Media analyzer (Gemini 3 Flash)
-├── prometheus-prompt.ts        # Planning (Interview/Consultant mode, 1196 lines)
-├── metis.ts                    # Pre-planning analysis (Gap detection)
-├── momus.ts                    # Plan reviewer (Ruthless fault-finding)
+├── planner-prompt.ts        # Planning (Interview/Consultant mode, 1196 lines)
+├── consultant.ts                    # Pre-planning analysis (Gap detection)
+├── reviewer.ts                    # Plan reviewer (Ruthless fault-finding)
 ├── dynamic-agent-prompt-builder.ts  # Dynamic prompt generation
 ├── types.ts                    # AgentModelConfig, AgentPromptMetadata
 ├── utils.ts                    # createBuiltinAgents(), resolveModelWithFallback()
@@ -25,16 +25,16 @@ agents/
 ## AGENT MODELS (Recommended Configuration)
 | Agent | Model | Temp | Purpose |
 |-------|-------|------|---------| 
-| Sisyphus | claude-opus-4-5-thinking (max) | 0.1 | Primary orchestrator, Thinking enabled |
-| Atlas | claude-opus-4-5-thinking (max) | 0.1 | Master orchestrator, Thinking enabled |
-| oracle | claude-opus-4-5-thinking (max) | 0.1 | Consultation, debugging, code review |
-| Prometheus | claude-opus-4-5-thinking (max) | 0.1 | Strategic planning, Thinking enabled |
-| Metis | claude-sonnet-4-5-thinking (max) | 0.3 | Pre-planning analysis, gap detection |
-| Momus | claude-sonnet-4-5-thinking (max) | 0.1 | Plan validation |
-| Sisyphus-Junior | claude-sonnet-4-5-thinking (max) | 0.1 | Category-spawned executor |
+| Orchestrator | claude-opus-4-5-thinking (max) | 0.1 | Primary orchestrator, Thinking enabled |
+| Conductor | claude-opus-4-5-thinking (max) | 0.1 | Master orchestrator, Thinking enabled |
+| architect | claude-opus-4-5-thinking (max) | 0.1 | Consultation, debugging, code review |
+| Planner | claude-opus-4-5-thinking (max) | 0.1 | Strategic planning, Thinking enabled |
+| Consultant | claude-sonnet-4-5-thinking (max) | 0.3 | Pre-planning analysis, gap detection |
+| Reviewer | claude-sonnet-4-5-thinking (max) | 0.1 | Plan validation |
+| Orchestrator-Junior | claude-sonnet-4-5-thinking (max) | 0.1 | Category-spawned executor |
 | multimodal-looker | gemini-3-pro (high) | 0.1 | PDF/image analysis |
-| librarian | minimax-m2.1 (Ollama) | 0.1 | Docs, GitHub search (fast/cheap) |
-| explore | minimax-m2.1 (Ollama) | 0.1 | Fast contextual grep (fast/cheap) |
+| researcher | minimax-m2.1 (Ollama) | 0.1 | Docs, GitHub search (fast/cheap) |
+| explorer | minimax-m2.1 (Ollama) | 0.1 | Fast contextual grep (fast/cheap) |
 
 > Models configurable via `omo-cli.json`. Above = recommended cost/performance balance.
 
@@ -47,20 +47,20 @@ agents/
 ## TOOL RESTRICTIONS
 | Agent | Denied Tools |
 |-------|-------------|
-| oracle | write, edit, task, delegate_task |
-| librarian | write, edit, task, delegate_task, call_omo_agent |
-| explore | write, edit, task, delegate_task, call_omo_agent |
+| architect | write, edit, task, delegate_task |
+| researcher | write, edit, task, delegate_task, call_omo_agent |
+| explorer | write, edit, task, delegate_task, call_omo_agent |
 | multimodal-looker | Allowlist: read only |
-| Sisyphus-Junior | task, delegate_task |
+| Orchestrator-Junior | task, delegate_task |
 
 ## PATTERNS
 - **Factory**: `createXXXAgent(model: string): AgentConfig`
 - **Metadata**: `XXX_PROMPT_METADATA` with category, cost, triggers.
 - **Tool restrictions**: `createAgentToolRestrictions(tools)` or `createAgentToolAllowlist(tools)`.
-- **Thinking**: 32k budget tokens for Sisyphus, Oracle, Prometheus, Atlas.
+- **Thinking**: 32k budget tokens for Orchestrator, Architect, Planner, Conductor.
 
 ## ANTI-PATTERNS
 - **Trust reports**: NEVER trust "I'm done" - verify outputs.
 - **High temp**: Don't use >0.3 for code agents.
 - **Sequential calls**: Use `delegate_task` with `run_in_background` for exploration.
-- **Prometheus writing code**: Planner only - never implements.
+- **Planner writing code**: Planner only - never implements.

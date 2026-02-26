@@ -11,6 +11,7 @@ import {
 import type { CommandFrontmatter } from "../../features/claude-code-command-loader/types"
 import { isMarkdownFile } from "../../shared/file-utils"
 import { discoverAllSkills, type LoadedSkill, type LazyContentLoader } from "../../features/opencode-skill-loader"
+import { PREFIX_SKILL_MAP } from "./constants"
 import type { ParsedSlashCommand } from "./types"
 
 interface CommandScope {
@@ -126,9 +127,38 @@ async function discoverAllCommands(options?: ExecutorOptions): Promise<CommandIn
 
 async function findCommand(commandName: string, options?: ExecutorOptions): Promise<CommandInfo | null> {
   const allCommands = await discoverAllCommands(options)
-  return allCommands.find(
+
+  // 1. Exact match
+  const exact = allCommands.find(
     (cmd) => cmd.name.toLowerCase() === commandName.toLowerCase()
-  ) ?? null
+  )
+  if (exact) return exact
+
+  // 2. Prefix-based mapping (e.g. "opsx:propose" → skill "openspec-workflow")
+  for (const [prefix, skillName] of Object.entries(PREFIX_SKILL_MAP)) {
+    if (commandName.toLowerCase().startsWith(prefix)) {
+      const mapped = allCommands.find(
+        (cmd) => cmd.name.toLowerCase() === skillName.toLowerCase()
+      )
+      if (mapped) {
+        // Inject the subcommand (e.g. "propose") into the args
+        const subcommand = commandName.slice(prefix.length)
+        return {
+          ...mapped,
+          metadata: {
+            ...mapped.metadata,
+            name: commandName,  // keep original command name for display
+          },
+          // Prepend subcommand to content so the skill knows which action
+          content: mapped.content
+            ? `**Subcommand**: ${subcommand}\n\n${mapped.content}`
+            : mapped.content,
+        }
+      }
+    }
+  }
+
+  return null
 }
 
 async function formatCommandTemplate(cmd: CommandInfo, args: string): Promise<string> {

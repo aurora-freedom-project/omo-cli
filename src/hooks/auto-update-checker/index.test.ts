@@ -1,254 +1,300 @@
-import { describe, test, expect } from "bun:test"
-import { isPrereleaseVersion, isDistTag, isPrereleaseOrDistTag, extractChannel } from "./index"
+import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test"
+import * as index from "./index"
 
-describe("auto-update-checker", () => {
+// Mock dependencies
+const mockGetCachedVersion = mock(() => null as string | null)
+const mockGetLocalDevVersion = mock(() => null as string | null)
+const mockFindPluginEntry = mock(() => null as any)
+const mockGetLatestVersion = mock(async () => null as string | null)
+const mockUpdatePinnedVersion = mock(() => false)
+
+mock.module("./checker", () => ({
+  getCachedVersion: mockGetCachedVersion,
+  getLocalDevVersion: mockGetLocalDevVersion,
+  findPluginEntry: mockFindPluginEntry,
+  getLatestVersion: mockGetLatestVersion,
+  updatePinnedVersion: mockUpdatePinnedVersion,
+}))
+
+const mockInvalidatePackage = mock(() => { })
+mock.module("./cache", () => ({ invalidatePackage: mockInvalidatePackage }))
+
+const mockLog = mock(() => { })
+mock.module("../../shared/logger", () => ({ log: mockLog }))
+
+const mockGetConfigLoadErrors = mock(() => [] as any[])
+const mockClearConfigLoadErrors = mock(() => { })
+mock.module("../../shared/config-errors", () => ({
+  getConfigLoadErrors: mockGetConfigLoadErrors,
+  clearConfigLoadErrors: mockClearConfigLoadErrors
+}))
+
+const mockRunBunInstall = mock(async () => true)
+mock.module("../../cli/config-manager", () => ({
+  runBunInstall: mockRunBunInstall
+}))
+
+const mockIsModelCacheAvailable = mock(() => true)
+mock.module("../../shared/model-availability", () => ({
+  isModelCacheAvailable: mockIsModelCacheAvailable
+}))
+
+const mockHasConnectedProvidersCache = mock(() => true)
+const mockUpdateConnectedProvidersCache = mock(async () => { })
+mock.module("../../shared/connected-providers-cache", () => ({
+  hasConnectedProvidersCache: mockHasConnectedProvidersCache,
+  updateConnectedProvidersCache: mockUpdateConnectedProvidersCache
+}))
+
+describe("hooks/auto-update-checker/index", () => {
+  beforeEach(() => {
+    mockGetCachedVersion.mockClear()
+    mockGetLocalDevVersion.mockClear()
+    mockFindPluginEntry.mockClear()
+    mockGetLatestVersion.mockClear()
+    mockUpdatePinnedVersion.mockClear()
+    mockInvalidatePackage.mockClear()
+    mockLog.mockClear()
+    mockGetConfigLoadErrors.mockClear()
+    mockClearConfigLoadErrors.mockClear()
+    mockRunBunInstall.mockClear()
+    mockIsModelCacheAvailable.mockClear()
+    mockHasConnectedProvidersCache.mockClear()
+    mockUpdateConnectedProvidersCache.mockClear()
+  })
+
   describe("isPrereleaseVersion", () => {
-    test("returns true for beta versions", () => {
-      // #given a beta version
-      const version = "3.0.0-beta.1"
-
-      // #when checking if prerelease
-      const result = isPrereleaseVersion(version)
-
-      // #then returns true
-      expect(result).toBe(true)
-    })
-
-    test("returns true for alpha versions", () => {
-      // #given an alpha version
-      const version = "1.0.0-alpha"
-
-      // #when checking if prerelease
-      const result = isPrereleaseVersion(version)
-
-      // #then returns true
-      expect(result).toBe(true)
-    })
-
-    test("returns true for rc versions", () => {
-      // #given an rc version
-      const version = "2.0.0-rc.1"
-
-      // #when checking if prerelease
-      const result = isPrereleaseVersion(version)
-
-      // #then returns true
-      expect(result).toBe(true)
-    })
-
-    test("returns false for stable versions", () => {
-      // #given a stable version
-      const version = "2.14.0"
-
-      // #when checking if prerelease
-      const result = isPrereleaseVersion(version)
-
-      // #then returns false
-      expect(result).toBe(false)
+    test("detects hyphens", () => {
+      expect(index.isPrereleaseVersion("1.0.0-beta")).toBe(true)
+      expect(index.isPrereleaseVersion("1.0.0")).toBe(false)
     })
   })
 
   describe("isDistTag", () => {
-    test("returns true for beta dist-tag", () => {
-      // #given beta dist-tag
-      const version = "beta"
-
-      // #when checking if dist-tag
-      const result = isDistTag(version)
-
-      // #then returns true
-      expect(result).toBe(true)
-    })
-
-    test("returns true for next dist-tag", () => {
-      // #given next dist-tag
-      const version = "next"
-
-      // #when checking if dist-tag
-      const result = isDistTag(version)
-
-      // #then returns true
-      expect(result).toBe(true)
-    })
-
-    test("returns true for canary dist-tag", () => {
-      // #given canary dist-tag
-      const version = "canary"
-
-      // #when checking if dist-tag
-      const result = isDistTag(version)
-
-      // #then returns true
-      expect(result).toBe(true)
-    })
-
-    test("returns false for semver versions", () => {
-      // #given a semver version
-      const version = "2.14.0"
-
-      // #when checking if dist-tag
-      const result = isDistTag(version)
-
-      // #then returns false
-      expect(result).toBe(false)
-    })
-
-    test("returns false for latest (handled separately)", () => {
-      // #given latest tag
-      const version = "latest"
-
-      // #when checking if dist-tag
-      const result = isDistTag(version)
-
-      // #then returns true (but latest is filtered before this check)
-      expect(result).toBe(true)
+    test("detects starting with non-digit", () => {
+      expect(index.isDistTag("latest")).toBe(true)
+      expect(index.isDistTag("next")).toBe(true)
+      expect(index.isDistTag("1.0.0")).toBe(false)
     })
   })
 
   describe("isPrereleaseOrDistTag", () => {
-    test("returns false for null", () => {
-      // #given null version
-      const version = null
-
-      // #when checking
-      const result = isPrereleaseOrDistTag(version)
-
-      // #then returns false
-      expect(result).toBe(false)
-    })
-
-    test("returns true for prerelease version", () => {
-      // #given prerelease version
-      const version = "3.0.0-beta.1"
-
-      // #when checking
-      const result = isPrereleaseOrDistTag(version)
-
-      // #then returns true
-      expect(result).toBe(true)
-    })
-
-    test("returns true for dist-tag", () => {
-      // #given dist-tag
-      const version = "beta"
-
-      // #when checking
-      const result = isPrereleaseOrDistTag(version)
-
-      // #then returns true
-      expect(result).toBe(true)
-    })
-
-    test("returns false for stable version", () => {
-      // #given stable version
-      const version = "2.14.0"
-
-      // #when checking
-      const result = isPrereleaseOrDistTag(version)
-
-      // #then returns false
-      expect(result).toBe(false)
+    test("detects either", () => {
+      expect(index.isPrereleaseOrDistTag(null)).toBe(false)
+      expect(index.isPrereleaseOrDistTag("latest")).toBe(true)
+      expect(index.isPrereleaseOrDistTag("1.0.0-beta")).toBe(true)
+      expect(index.isPrereleaseOrDistTag("1.0.0")).toBe(false)
     })
   })
 
   describe("extractChannel", () => {
-    test("extracts beta from dist-tag", () => {
-      // #given beta dist-tag
-      const version = "beta"
+    test("extracts properly", () => {
+      expect(index.extractChannel(null)).toBe("latest")
+      expect(index.extractChannel("latest")).toBe("latest")
+      expect(index.extractChannel("next")).toBe("next")
+      expect(index.extractChannel("1.0.0-beta")).toBe("beta")
+      expect(index.extractChannel("1.0.0-alpha.1")).toBe("alpha")
+      expect(index.extractChannel("1.0.0-rc")).toBe("rc")
+      expect(index.extractChannel("1.0.0-canary")).toBe("canary")
+      expect(index.extractChannel("1.0.0-next.0")).toBe("next")
+      expect(index.extractChannel("1.0.0-unknown")).toBe("latest")
+      expect(index.extractChannel("1.0.0")).toBe("latest")
+    })
+  })
 
-      // #when extracting channel
-      const result = extractChannel(version)
+  describe("createAutoUpdateCheckerHook", () => {
+    const createMockCtx = () => {
+      const showToast = mock(async () => { })
+      return {
+        directory: "/test",
+        client: {
+          tui: { showToast }
+        }
+      } as any
+    }
 
-      // #then returns beta
-      expect(result).toBe("beta")
+    const runHook = async (hook: any, ctx: any, props?: any) => {
+      hook.event({ event: { type: "session.created", properties: props } })
+      await new Promise(r => setTimeout(r, 10)) // wait for background setTimeout
+    }
+
+    test("ignores non-session.created events", () => {
+      const hook = index.createAutoUpdateCheckerHook(createMockCtx())
+      hook.event({ event: { type: "something.else" } })
+      expect(mockGetCachedVersion).not.toHaveBeenCalled()
     })
 
-    test("extracts next from dist-tag", () => {
-      // #given next dist-tag
-      const version = "next"
-
-      // #when extracting channel
-      const result = extractChannel(version)
-
-      // #then returns next
-      expect(result).toBe("next")
+    test("ignores if already checked", async () => {
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx)
+      await runHook(hook, ctx)
+      expect(mockGetCachedVersion).toHaveBeenCalled()
+      mockGetCachedVersion.mockClear()
+      await runHook(hook, ctx)
+      expect(mockGetCachedVersion).not.toHaveBeenCalled()
     })
 
-    test("extracts canary from dist-tag", () => {
-      // #given canary dist-tag
-      const version = "canary"
-
-      // #when extracting channel
-      const result = extractChannel(version)
-
-      // #then returns canary
-      expect(result).toBe("canary")
+    test("ignores child sessions", async () => {
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx)
+      await runHook(hook, ctx, { info: { parentID: "abc" } })
+      expect(mockGetCachedVersion).not.toHaveBeenCalled()
     })
 
-    test("extracts beta from prerelease version", () => {
-      // #given beta prerelease version
-      const version = "3.0.0-beta.1"
-
-      // #when extracting channel
-      const result = extractChannel(version)
-
-      // #then returns beta
-      expect(result).toBe("beta")
+    test("shows config load errors", async () => {
+      mockGetConfigLoadErrors.mockReturnValueOnce([{ path: "a", error: "err" }])
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx)
+      await runHook(hook, ctx)
+      expect(mockClearConfigLoadErrors).toHaveBeenCalled()
+      expect(ctx.client.tui.showToast).toHaveBeenCalled()
     })
 
-    test("extracts alpha from prerelease version", () => {
-      // #given alpha prerelease version
-      const version = "1.0.0-alpha"
-
-      // #when extracting channel
-      const result = extractChannel(version)
-
-      // #then returns alpha
-      expect(result).toBe("alpha")
+    test("shows model cache warning if not available", async () => {
+      mockIsModelCacheAvailable.mockReturnValueOnce(false)
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx)
+      await runHook(hook, ctx)
+      expect(ctx.client.tui.showToast).toHaveBeenCalled()
     })
 
-    test("extracts rc from prerelease version", () => {
-      // #given rc prerelease version
-      const version = "2.0.0-rc.1"
-
-      // #when extracting channel
-      const result = extractChannel(version)
-
-      // #then returns rc
-      expect(result).toBe("rc")
+    test("shows connected providers toast if missing cache", async () => {
+      mockHasConnectedProvidersCache.mockReturnValueOnce(false)
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx)
+      await runHook(hook, ctx)
+      expect(mockUpdateConnectedProvidersCache).toHaveBeenCalled()
+      expect(ctx.client.tui.showToast).toHaveBeenCalled()
     })
 
-    test("returns latest for stable version", () => {
-      // #given stable version
-      const version = "2.14.0"
-
-      // #when extracting channel
-      const result = extractChannel(version)
-
-      // #then returns latest
-      expect(result).toBe("latest")
+    test("local development mode halts update checks and shows local toast", async () => {
+      mockGetLocalDevVersion.mockReturnValueOnce("1.0.0")
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: true, isSisyphusEnabled: true })
+      await runHook(hook, ctx)
+      expect(mockFindPluginEntry).not.toHaveBeenCalled()
     })
 
-    test("returns latest for null", () => {
-      // #given null version
-      const version = null
-
-      // #when extracting channel
-      const result = extractChannel(version)
-
-      // #then returns latest
-      expect(result).toBe("latest")
+    test("background check aborts if no plugin info", async () => {
+      mockFindPluginEntry.mockReturnValueOnce(null)
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false })
+      await runHook(hook, ctx)
+      expect(mockGetLatestVersion).not.toHaveBeenCalled()
     })
 
-    test("handles complex prerelease identifiers", () => {
-      // #given complex prerelease
-      const version = "3.0.0-beta.1.experimental"
+    test("background check aborts if no version found", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ pinnedVersion: null })
+      mockGetCachedVersion.mockReturnValueOnce(null)
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false })
+      await runHook(hook, ctx)
+      expect(mockGetLatestVersion).not.toHaveBeenCalled()
+    })
 
-      // #when extracting channel
-      const result = extractChannel(version)
+    test("background check aborts if getLatestVersion returns null", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ pinnedVersion: "1.0.0" })
+      mockGetCachedVersion.mockReturnValueOnce("1.0.0")
+      mockGetLatestVersion.mockResolvedValueOnce(null)
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false })
+      await runHook(hook, ctx)
+      expect(mockInvalidatePackage).not.toHaveBeenCalled()
+    })
 
-      // #then returns beta
-      expect(result).toBe("beta")
+    test("background check aborts if already latest version", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ pinnedVersion: "1.0.0" })
+      mockGetCachedVersion.mockReturnValueOnce("1.0.0")
+      mockGetLatestVersion.mockResolvedValueOnce("1.0.0")
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false })
+      await runHook(hook, ctx)
+      expect(mockInvalidatePackage).not.toHaveBeenCalled()
+    })
+
+    test("background check issues notification only if autoUpdate disabled", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ pinnedVersion: "1.0.0" })
+      mockGetCachedVersion.mockReturnValueOnce("1.0.0")
+      mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false, autoUpdate: false })
+      await runHook(hook, ctx)
+      expect(ctx.client.tui.showToast).toHaveBeenCalled()
+      expect(mockInvalidatePackage).not.toHaveBeenCalled()
+    })
+
+    test("background check installs update", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ isPinned: true, configPath: "foo", entry: "bar", pinnedVersion: "1.0.0" })
+      mockGetCachedVersion.mockReturnValueOnce("1.0.0")
+      mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
+      mockUpdatePinnedVersion.mockReturnValueOnce(true)
+      mockRunBunInstall.mockResolvedValueOnce(true)
+
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false, autoUpdate: true })
+      await runHook(hook, ctx)
+
+      expect(mockUpdatePinnedVersion).toHaveBeenCalled()
+      expect(mockInvalidatePackage).toHaveBeenCalled()
+      expect(mockRunBunInstall).toHaveBeenCalled()
+      expect(ctx.client.tui.showToast).toHaveBeenCalled()
+    })
+
+    test("background check handles pinned update failure", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ isPinned: true, configPath: "foo", entry: "bar", pinnedVersion: "1.0.0" })
+      mockGetCachedVersion.mockReturnValueOnce("1.0.0")
+      mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
+      mockUpdatePinnedVersion.mockReturnValueOnce(false)
+
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false, autoUpdate: true })
+      await runHook(hook, ctx)
+
+      expect(mockInvalidatePackage).not.toHaveBeenCalled()
+    })
+
+    test("background check handles runBunInstall failure", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ isPinned: false, pinnedVersion: "1.0.0" })
+      mockGetCachedVersion.mockReturnValueOnce("1.0.0")
+      mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
+      mockRunBunInstall.mockResolvedValueOnce(false)
+
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false, autoUpdate: true })
+      await runHook(hook, ctx)
+
+      expect(ctx.client.tui.showToast).toHaveBeenCalled()
+    })
+
+    test("background check handles runBunInstall exception", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ isPinned: false, pinnedVersion: "1.0.0" })
+      mockGetCachedVersion.mockReturnValueOnce("1.0.0")
+      mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
+      mockRunBunInstall.mockImplementationOnce(() => Promise.reject(new Error("Crash")))
+
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false, autoUpdate: true })
+      await runHook(hook, ctx)
+
+      expect(ctx.client.tui.showToast).toHaveBeenCalled()
+    })
+
+    test("getToastMessage evaluates with sisyphus configurations accurately during startup", async () => {
+      mockFindPluginEntry.mockReturnValueOnce({ pinnedVersion: "1.0.0" })
+      mockGetCachedVersion.mockReturnValueOnce("1.0.0")
+      mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: true, autoUpdate: false, isSisyphusEnabled: true })
+      await runHook(hook, ctx)
+      expect(ctx.client.tui.showToast).toHaveBeenCalled()
+    })
+
+    test("handles top-level configuration throwing without bubbling", async () => {
+      mockFindPluginEntry.mockImplementationOnce(() => { throw new Error("crash") })
+      const ctx = createMockCtx()
+      const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false })
+      await runHook(hook, ctx)
+      expect(mockLog).toHaveBeenCalledWith("[auto-update-checker] Background update check failed:", expect.any(Error))
     })
   })
 })

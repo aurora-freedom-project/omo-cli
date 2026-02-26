@@ -32,7 +32,7 @@ interface AuditResult {
 }
 
 const SKILLS_REPO = "https://github.com/sickn33/antigravity-awesome-skills.git";
-const DEFAULT_SKILLS_PATH = join(homedir(), ".opencode", "skills");
+const DEFAULT_SKILLS_PATH = join(homedir(), ".config", "_skills_");
 
 /**
  * Run git command

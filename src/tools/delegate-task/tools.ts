@@ -20,7 +20,7 @@ import { CATEGORY_MODEL_REQUIREMENTS } from "../../shared/model-requirements"
 
 type OpencodeClient = PluginInput["client"]
 
-const SISYPHUS_JUNIOR_AGENT = "sisyphus-junior"
+const SISYPHUS_JUNIOR_AGENT = "worker"
 
 function parseModelString(model: string): { providerID: string; modelID: string } | undefined {
   const parts = model.split("/")
@@ -164,7 +164,7 @@ export interface DelegateTaskToolOptions {
   directory: string
   userCategories?: CategoriesConfig
   gitMasterConfig?: GitMasterConfig
-  sisyphusJuniorModel?: string
+  workerModel?: string
   browserProvider?: BrowserAutomationProvider
   onSyncSessionCreated?: (event: SyncSessionCreatedEvent) => Promise<void>
 }
@@ -202,7 +202,7 @@ export function buildSystemContent(input: BuildSystemContentInput): string | und
 }
 
 export function createDelegateTask(options: DelegateTaskToolOptions): ToolDefinition {
-  const { manager, client, directory, userCategories, gitMasterConfig, sisyphusJuniorModel, browserProvider, onSyncSessionCreated } = options
+  const { manager, client, directory, userCategories, gitMasterConfig, workerModel, browserProvider, onSyncSessionCreated } = options
 
   const allCategories = { ...DEFAULT_CATEGORIES, ...userCategories }
   const categoryNames = Object.keys(allCategories)
@@ -220,7 +220,7 @@ export function createDelegateTask(options: DelegateTaskToolOptions): ToolDefini
 MUTUALLY EXCLUSIVE: Provide EITHER category OR subagent_type, not both (unless continuing a session).
 
 - load_skills: ALWAYS REQUIRED. Pass at least one skill name (e.g., ["playwright"], ["git-master", "frontend-ui-ux"]).
-- category: Use predefined category → Spawns Sisyphus-Junior with category config
+- category: Use predefined category → Spawns Orchestrator-Junior with category config
   Available categories:
 ${categoryList}
 - subagent_type: Use specific agent directly (e.g., "advisor", "explorer")
@@ -243,7 +243,7 @@ Prompts MUST be in English.`
       prompt: tool.schema.string().describe("Full detailed prompt for the agent"),
       run_in_background: tool.schema.boolean().describe("true=async (returns task_id), false=sync (waits). Default: false"),
       category: tool.schema.string().optional().describe(`Category (e.g., ${categoryExamples}). Mutually exclusive with subagent_type.`),
-      subagent_type: tool.schema.string().optional().describe("Agent name (e.g., 'oracle', 'explore'). Mutually exclusive with category."),
+      subagent_type: tool.schema.string().optional().describe("Agent name (e.g., 'architect', 'explorer'). Mutually exclusive with category."),
       session_id: tool.schema.string().optional().describe("Existing Task session to continue"),
       command: tool.schema.string().optional().describe("The command that triggered this task"),
     },
@@ -541,7 +541,7 @@ To continue this session: session_id="${args.session_id}"`
           }
         } else {
           const resolution = resolveModelWithFallback({
-            userModel: userCategories?.[args.category]?.model ?? sisyphusJuniorModel,
+            userModel: userCategories?.[args.category]?.model ?? workerModel,
             fallbackChain: requirement.fallbackChain,
             availableModels,
             systemDefaultModel,
@@ -770,11 +770,11 @@ To continue this session: session_id="${sessionID}"`
         if (equalsIgnoreCase(agentName, SISYPHUS_JUNIOR_AGENT)) {
           return `Cannot use subagent_type="${SISYPHUS_JUNIOR_AGENT}" directly. Use category parameter instead (e.g., ${categoryExamples}).
 
-Sisyphus-Junior is spawned automatically when you specify a category. Pick the appropriate category for your task domain.`
+Orchestrator-Junior is spawned automatically when you specify a category. Pick the appropriate category for your task domain.`
         }
 
         if (isPlanAgent(agentName) && isPlanAgent(parentAgent)) {
-          return `You are prometheus. You cannot delegate to prometheus via delegate_task.
+          return `You are planner. You cannot delegate to planner via delegate_task.
 
 Create the work plan directly - that's your job as the planning agent.`
         }

@@ -40,19 +40,19 @@ TodoWrite([
 
 ## PHASE 1: Scan for Dead Code Candidates
 
-### Launch Parallel Explore Agents
+### Launch Parallel Explorer Agents
 
 ```
 // Find all exported symbols
-delegate_task(subagent_type="explore", run_in_background=true,
+delegate_task(subagent_type="explorer", run_in_background=true,
   prompt="Find ALL exported symbols in src/. Return: file path, line, symbol name.")
 
 // Find potentially unused files
-delegate_task(subagent_type="explore", run_in_background=true,
+delegate_task(subagent_type="explorer", run_in_background=true,
   prompt="Find files in src/ NOT imported by any other file.")
 
 // Find unused imports
-delegate_task(subagent_type="explore", run_in_background=true,
+delegate_task(subagent_type="explorer", run_in_background=true,
   prompt="Find unused imports across src/**/*.ts.")
 ```
 

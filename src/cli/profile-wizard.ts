@@ -186,20 +186,6 @@ export async function runProfileWizard(): Promise<string | null> {
     // 4. Settings
     p.log.step(color.bold("\n── Settings ──"))
 
-    const skillsMode = await p.select({
-        message: "Skills mode:",
-        options: [
-            { value: "bundled", label: "📦 Bundled (626+ skills pre-loaded)", hint: "recommended" },
-            { value: "filesystem", label: "📁 Filesystem (load from ~/.agents/skills/)" },
-        ],
-        initialValue: "bundled",
-    })
-
-    if (p.isCancel(skillsMode)) {
-        p.cancel("Cancelled.")
-        return null
-    }
-
     const concurrency = await p.text({
         message: "Background task concurrency:",
         placeholder: "5",
@@ -216,13 +202,23 @@ export async function runProfileWizard(): Promise<string | null> {
         return null
     }
 
+    const enableMemory = await p.confirm({
+        message: "Enable omo-memory (SurrealDB)? Requires Docker.",
+        initialValue: false,
+    })
+
+    if (p.isCancel(enableMemory)) {
+        p.cancel("Cancelled.")
+        return null
+    }
+
     // 5. Generate config
     const config = {
         $schema: "https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/master/assets/omo-cli.schema.json",
         agents,
         categories,
         background_task: { defaultConcurrency: parseInt(concurrency as string, 10) },
-        skills_mode: skillsMode as string,
+        memory: { enabled: enableMemory as boolean },
     }
 
     // 6. Save to profiles/<name>/omo-cli.json

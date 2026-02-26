@@ -32,12 +32,12 @@ export const REMINDER_MESSAGE = `
 
 You called a search/fetch tool directly without leveraging specialized agents.
 
-RECOMMENDED: Use delegate_task with explore/librarian agents for better results:
+RECOMMENDED: Use delegate_task with explorer/researcher agents for better results:
 
 \`\`\`
 // Parallel exploration - fire multiple agents simultaneously
-delegate_task(agent="explore", prompt="Find all files matching pattern X")
-delegate_task(agent="explore", prompt="Search for implementation of Y") 
+delegate_task(agent="explorer", prompt="Find all files matching pattern X")
+delegate_task(agent="explorer", prompt="Search for implementation of Y") 
 delegate_task(agent="researcher", prompt="Lookup documentation for Z")
 
 // Then continue your work while they run in background

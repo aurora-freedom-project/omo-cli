@@ -73,10 +73,10 @@ export function clearBoulderState(directory: string): boolean {
 }
 
 /**
- * Find Prometheus plan files for this project.
- * Prometheus stores plans at: {project}/.opencode/plans/{name}.md
+ * Find Planner plan files for this project.
+ * Planner stores plans at: {project}/.opencode/plans/{name}.md
  */
-export function findPrometheusPlans(directory: string): string[] {
+export function findPlannerPlans(directory: string): string[] {
   const plansDir = join(directory, PROMETHEUS_PLANS_DIR)
 
   if (!existsSync(plansDir)) {

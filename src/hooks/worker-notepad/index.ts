@@ -6,7 +6,7 @@ import { HOOK_NAME, NOTEPAD_DIRECTIVE } from "./constants"
 
 export * from "./constants"
 
-export function createSisyphusJuniorNotepadHook(ctx: PluginInput) {
+export function createWorkerNotepadHook(ctx: PluginInput) {
   return {
     "tool.execute.before": async (
       input: { tool: string; sessionID: string; callID: string },
@@ -17,7 +17,7 @@ export function createSisyphusJuniorNotepadHook(ctx: PluginInput) {
         return
       }
 
-      // 2. Check if caller is Atlas (orchestrator)
+      // 2. Check if caller is Conductor (orchestrator)
       if (!isCallerOrchestrator(input.sessionID)) {
         return
       }

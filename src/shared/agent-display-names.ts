@@ -44,7 +44,7 @@ export const AGENT_DISPLAY_NAMES: Record<string, string> = {
   vision: "Vision",
   explorer: "Explorer",
   researcher: "Researcher",
-  coder: "Coder", // Keep coder for generic coder role if used elsewhere, or map appropriately. Wait, the plan was to remove 'coder' as a mapping for prometheus. We should keep it if it's a valid generic agent, otherwise remove. Let's keep it but with a generic description.
+  coder: "Coder", // Keep coder for generic coder role if used elsewhere, or map appropriately. Wait, the plan was to remove 'coder' as a mapping for planner. We should keep it if it's a valid generic agent, otherwise remove. Let's keep it but with a generic description.
   builder: "Builder",
 
   // Legacy fallbacks

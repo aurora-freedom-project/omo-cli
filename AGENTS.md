@@ -51,7 +51,7 @@ omo-cli/
 | Add command | `src/features/builtin-commands/` | Add template + register in commands.ts |
 | Config schema | `src/config/schema.ts` | Zod schema, run `bun run build:schema` |
 | Background agents | `src/features/background-agent/` | manager.ts (1377 lines) |
-| Orchestrator | `src/hooks/atlas/` | Main orchestration hook (752 lines) |
+| Orchestrator | `src/hooks/navigator/` | Main orchestration hook (752 lines) |
 
 ## TDD (Test-Driven Development)
 
@@ -133,9 +133,9 @@ bun test               # 100 test files
 |------|-------|-------------|
 | `src/features/builtin-skills/skills.ts` | 1729 | Skill definitions |
 | `src/features/background-agent/manager.ts` | 1377 | Task lifecycle, concurrency |
-| `src/agents/prometheus-prompt.ts` | 1196 | Planning agent |
+| `src/agents/planner-prompt.ts` | 1196 | Planning agent |
 | `src/tools/delegate-task/tools.ts` | 1070 | Category-based delegation |
-| `src/hooks/atlas/index.ts` | 752 | Orchestrator hook |
+| `src/hooks/navigator/index.ts` | 752 | Orchestrator hook |
 | `src/cli/config-manager.ts` | 664 | JSONC config parsing |
 | `src/index.ts` | 672 | Main plugin entry |
 | `src/features/builtin-commands/templates/refactor.ts` | 619 | Refactor command template |

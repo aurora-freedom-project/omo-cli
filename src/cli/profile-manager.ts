@@ -17,6 +17,7 @@ interface OmoConfig {
     agents?: Record<string, { model: string; variant?: string; stream?: boolean }>
     categories?: Record<string, { model: string; variant?: string; stream?: boolean }>
     background_task?: { defaultConcurrency: number }
+    memory?: { enabled?: boolean }
 }
 
 // ---------------------------------------------------------------------------
@@ -195,21 +196,17 @@ function deriveProfileSummary(config: OmoConfig | null): string {
     return `${providerList} | concurrency: ${concurrency}`
 }
 
-import type { InstallConfig } from "./types"
+import type { ProfileSummary } from "./types"
 
 /**
- * Derive an InstallConfig representation from a specific profile's omo-cli.json
- * This replaces the old provider-flag arguments for the install flow.
+ * Derive a ProfileSummary from a specific profile's omo-cli.json.
+ * Dynamically detects providers from the model strings in the profile.
  */
-export function deriveInstallConfigFromProfile(name: string): InstallConfig {
-    const defaultResult: InstallConfig = {
-        hasClaude: false,
-        isMax20: false,
-        hasOpenAI: false,
-        hasGemini: false,
-        hasCopilot: false,
-        hasOpencodeZen: false,
-        hasZaiCodingPlan: false,
+export function deriveInstallConfigFromProfile(name: string): ProfileSummary {
+    const defaultResult: ProfileSummary = {
+        providers: new Set<string>(),
+        hasClaudeOpus: false,
+        enableMemory: false,
     }
 
     const profilesDir = getProfilesDir()
@@ -234,27 +231,24 @@ export function deriveInstallConfigFromProfile(name: string): InstallConfig {
         }
 
         for (const model of allModels) {
+            // Extract dynamic provider (prefix before '/')
             if (model.includes("antigravity-claude") || model.startsWith("anthropic/")) {
-                res.hasClaude = true
+                res.providers.add("anthropic")
                 if (model.includes("opus-4-6")) {
-                    res.isMax20 = true
+                    res.hasClaudeOpus = true
                 }
+            } else if (model.includes("antigravity-gemini") || model.startsWith("google/")) {
+                res.providers.add("google")
+            } else if (model.includes("/")) {
+                res.providers.add(model.split("/")[0])
+            } else if (model.includes("antigravity")) {
+                res.providers.add("google")
             }
-            if (model.includes("antigravity-gemini") || model.startsWith("google/")) {
-                res.hasGemini = true
-            }
-            if (model.startsWith("openai/")) {
-                res.hasOpenAI = true
-            }
-            if (model.startsWith("github-copilot/")) {
-                res.hasCopilot = true
-            }
-            if (model.startsWith("opencode/")) {
-                res.hasOpencodeZen = true
-            }
-            if (model.startsWith("zai-coding-plan/")) {
-                res.hasZaiCodingPlan = true
-            }
+        }
+
+        // Read memory config
+        if (config.memory?.enabled) {
+            res.enableMemory = true
         }
 
         return res

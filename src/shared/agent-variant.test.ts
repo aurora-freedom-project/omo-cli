@@ -18,12 +18,12 @@ describe("resolveAgentVariant", () => {
     // #given
     const config = {
       agents: {
-        sisyphus: { variant: "low" },
+        orchestrator: { variant: "low" },
       },
     } as OmoCliConfig
 
     // #when
-    const variant = resolveAgentVariant(config, "sisyphus")
+    const variant = resolveAgentVariant(config, "orchestrator")
 
     // #then
     expect(variant).toBe("low")
@@ -33,7 +33,7 @@ describe("resolveAgentVariant", () => {
     // #given
     const config = {
       agents: {
-        sisyphus: { category: "ultrabrain" },
+        orchestrator: { category: "ultrabrain" },
       },
       categories: {
         ultrabrain: { model: "openai/gpt-5.2", variant: "xhigh" },
@@ -41,7 +41,7 @@ describe("resolveAgentVariant", () => {
     } as OmoCliConfig
 
     // #when
-    const variant = resolveAgentVariant(config, "sisyphus")
+    const variant = resolveAgentVariant(config, "orchestrator")
 
     // #then
     expect(variant).toBe("xhigh")
@@ -53,13 +53,13 @@ describe("applyAgentVariant", () => {
     // #given
     const config = {
       agents: {
-        sisyphus: { variant: "low" },
+        orchestrator: { variant: "low" },
       },
     } as OmoCliConfig
     const message: { variant?: string } = {}
 
     // #when
-    applyAgentVariant(config, "sisyphus", message)
+    applyAgentVariant(config, "orchestrator", message)
 
     // #then
     expect(message.variant).toBe("low")
@@ -69,13 +69,13 @@ describe("applyAgentVariant", () => {
     // #given
     const config = {
       agents: {
-        sisyphus: { variant: "low" },
+        orchestrator: { variant: "low" },
       },
     } as OmoCliConfig
     const message = { variant: "max" }
 
     // #when
-    applyAgentVariant(config, "sisyphus", message)
+    applyAgentVariant(config, "orchestrator", message)
 
     // #then
     expect(message.variant).toBe("max")
@@ -89,7 +89,7 @@ describe("resolveVariantForModel", () => {
     const model = { providerID: "anthropic", modelID: "claude-opus-4-5" }
 
     // #when
-    const variant = resolveVariantForModel(config, "sisyphus", model)
+    const variant = resolveVariantForModel(config, "orchestrator", model)
 
     // #then
     expect(variant).toBe("max")
@@ -101,7 +101,7 @@ describe("resolveVariantForModel", () => {
     const model = { providerID: "openai", modelID: "gpt-5.2" }
 
     // #when
-    const variant = resolveVariantForModel(config, "sisyphus", model)
+    const variant = resolveVariantForModel(config, "orchestrator", model)
 
     // #then
     expect(variant).toBe("medium")
@@ -113,7 +113,7 @@ describe("resolveVariantForModel", () => {
     const model = { providerID: "google", modelID: "gemini-3-pro" }
 
     // #when
-    const variant = resolveVariantForModel(config, "sisyphus", model)
+    const variant = resolveVariantForModel(config, "orchestrator", model)
 
     // #then
     expect(variant).toBeUndefined()
@@ -125,7 +125,7 @@ describe("resolveVariantForModel", () => {
     const model = { providerID: "unknown-provider", modelID: "some-model" }
 
     // #when
-    const variant = resolveVariantForModel(config, "sisyphus", model)
+    const variant = resolveVariantForModel(config, "orchestrator", model)
 
     // #then
     expect(variant).toBeUndefined()
@@ -149,7 +149,7 @@ describe("resolveVariantForModel", () => {
     const model = { providerID: "zai-coding-plan", modelID: "glm-4.7" }
 
     // #when
-    const variant = resolveVariantForModel(config, "sisyphus", model)
+    const variant = resolveVariantForModel(config, "orchestrator", model)
 
     // #then
     expect(variant).toBeUndefined()
@@ -171,25 +171,25 @@ describe("resolveVariantForModel", () => {
     expect(variant).toBe("xhigh")
   })
 
-  test("returns correct variant for oracle agent with openai", () => {
+  test("returns correct variant for architect agent with openai", () => {
     // #given
     const config = {} as OmoCliConfig
     const model = { providerID: "openai", modelID: "gpt-5.2" }
 
     // #when
-    const variant = resolveVariantForModel(config, "oracle", model)
+    const variant = resolveVariantForModel(config, "architect", model)
 
     // #then
     expect(variant).toBe("high")
   })
 
-  test("returns correct variant for oracle agent with anthropic", () => {
+  test("returns correct variant for architect agent with anthropic", () => {
     // #given
     const config = {} as OmoCliConfig
     const model = { providerID: "anthropic", modelID: "claude-opus-4-5" }
 
     // #when
-    const variant = resolveVariantForModel(config, "oracle", model)
+    const variant = resolveVariantForModel(config, "architect", model)
 
     // #then
     expect(variant).toBe("max")

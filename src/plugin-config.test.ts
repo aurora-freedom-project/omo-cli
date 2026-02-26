@@ -1,119 +1,182 @@
-import { describe, expect, it } from "bun:test";
-import { mergeConfigs } from "./plugin-config";
-import type { OmoCliConfig } from "./config";
+import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test"
 
-describe("mergeConfigs", () => {
-  describe("categories merging", () => {
-    // #given base config has categories, override has different categories
-    // #when merging configs
-    // #then should deep merge categories, not override completely
+const mockExistsSync = mock(() => false)
+const mockReadFileSync = mock(() => "")
+mock.module("fs", () => ({ existsSync: mockExistsSync, readFileSync: mockReadFileSync }))
 
-    it("should deep merge categories from base and override", () => {
+const mockSafeParse = mock(() => ({ success: true, data: {} }))
+mock.module("./config", () => ({
+  OmoCliConfigSchema: { safeParse: mockSafeParse }
+}))
+
+const mockLog = mock(() => { })
+const mockDeepMerge = mock((a, b) => ({ ...a, ...b }))
+const mockGetOpenCodeConfigDir = mock(() => "/user/.config")
+const mockAddConfigLoadError = mock(() => { })
+const mockParseJsonc = mock(() => ({}))
+const mockDetectConfigFile = mock(() => ({ format: "none", path: "" }))
+const mockMigrateConfigFile = mock(() => { })
+
+mock.module("./shared", () => ({
+  log: mockLog,
+  deepMerge: mockDeepMerge,
+  getOpenCodeConfigDir: mockGetOpenCodeConfigDir,
+  addConfigLoadError: mockAddConfigLoadError,
+  parseJsonc: mockParseJsonc,
+  detectConfigFile: mockDetectConfigFile,
+  migrateConfigFile: mockMigrateConfigFile
+}))
+
+import { loadConfigFromPath, mergeConfigs, loadPluginConfig } from "./plugin-config"
+
+describe("plugin-config", () => {
+  beforeEach(() => {
+    mockExistsSync.mockClear()
+    mockReadFileSync.mockClear()
+    mockSafeParse.mockClear()
+    mockLog.mockClear()
+    mockDeepMerge.mockClear()
+    mockGetOpenCodeConfigDir.mockClear()
+    mockAddConfigLoadError.mockClear()
+    mockParseJsonc.mockClear()
+    mockDetectConfigFile.mockClear()
+    mockMigrateConfigFile.mockClear()
+  })
+
+  describe("loadConfigFromPath", () => {
+    test("returns null if file does not exist", () => {
+      mockExistsSync.mockReturnValueOnce(false)
+      const res = loadConfigFromPath("/fake/path.json", {})
+      expect(res).toBeNull()
+    })
+
+    test("returns null and logs error if fs throws", () => {
+      mockExistsSync.mockImplementationOnce(() => { throw new Error("FS Error") })
+      const res = loadConfigFromPath("/fake/path.json", {})
+      expect(res).toBeNull()
+      expect(mockAddConfigLoadError).toHaveBeenCalledWith({ path: "/fake/path.json", error: "FS Error" })
+    })
+
+    test("returns null and adds error if zod validation fails", () => {
+      mockExistsSync.mockReturnValueOnce(true)
+      mockReadFileSync.mockReturnValueOnce("{}")
+      mockParseJsonc.mockReturnValueOnce({})
+      mockSafeParse.mockReturnValueOnce({
+        success: false,
+        error: { issues: [{ path: ["agents"], message: "Invalid type" }] }
+      } as any)
+
+      const res = loadConfigFromPath("/fake/path.json", {})
+      expect(res).toBeNull()
+      expect(mockAddConfigLoadError).toHaveBeenCalledWith({ path: "/fake/path.json", error: "Validation error: agents: Invalid type" })
+    })
+
+    test("returns valid config on success", () => {
+      mockExistsSync.mockReturnValueOnce(true)
+      mockReadFileSync.mockReturnValueOnce("{}")
+      mockParseJsonc.mockReturnValueOnce({ agents: {} })
+      mockSafeParse.mockReturnValueOnce({ success: true, data: { agents: {} } } as any)
+
+      const res = loadConfigFromPath("/fake/path.json", {})
+      expect(res).toEqual({ agents: {} })
+      expect(mockMigrateConfigFile).toHaveBeenCalled()
+    })
+  })
+
+  describe("mergeConfigs", () => {
+    test("merges base and overrides with deduplication", () => {
       const base = {
-        categories: {
-          general: {
-            model: "openai/gpt-5.2",
-            temperature: 0.5,
-          },
-          quick: {
-            model: "anthropic/claude-haiku-4-5",
-          },
-        },
-      } as OmoCliConfig;
+        disabled_agents: ["a", "b"],
+        disabled_mcps: ["x"],
+        disabled_hooks: ["hook1"],
+        disabled_commands: [],
+        disabled_skills: ["skill1"]
+      } as any
 
       const override = {
-        categories: {
-          general: {
-            temperature: 0.3,
-          },
-          visual: {
-            model: "google/gemini-3-pro",
-          },
-        },
-      } as unknown as OmoCliConfig;
+        disabled_agents: ["b", "c"],
+        disabled_mcps: ["x", "y"],
+        disabled_hooks: ["hook2"],
+        disabled_commands: ["cmd1"],
+        disabled_skills: ["skill1", "skill2"]
+      } as any
 
-      const result = mergeConfigs(base, override);
+      const res = mergeConfigs(base, override)
 
-      // #then general.model should be preserved from base
-      expect(result.categories?.general?.model).toBe("openai/gpt-5.2");
-      // #then general.temperature should be overridden
-      expect(result.categories?.general?.temperature).toBe(0.3);
-      // #then quick should be preserved from base
-      expect(result.categories?.quick?.model).toBe("anthropic/claude-haiku-4-5");
-      // #then visual should be added from override
-      expect(result.categories?.visual?.model).toBe("google/gemini-3-pro");
-    });
+      expect(res.disabled_agents).toEqual(["a", "b", "c"])
+      expect(res.disabled_mcps).toEqual(["x", "y"])
+      expect(res.disabled_hooks).toEqual(["hook1", "hook2"])
+      expect(res.disabled_commands).toEqual(["cmd1"])
+      expect(res.disabled_skills).toEqual(["skill1", "skill2"])
+    })
+  })
 
-    it("should preserve base categories when override has no categories", () => {
-      const base: OmoCliConfig = {
-        categories: {
-          general: {
-            model: "openai/gpt-5.2",
-          },
-        },
-      };
+  describe("loadPluginConfig", () => {
+    test("loads configs falling back to json extension when format is none", () => {
+      mockGetOpenCodeConfigDir.mockReturnValueOnce("/user/config")
+      mockDetectConfigFile.mockReturnValue({ format: "none", path: "" })
 
-      const override: OmoCliConfig = {};
+      mockExistsSync.mockReturnValue(true) // pretend all exist
+      mockReadFileSync.mockReturnValue("{}")
+      mockParseJsonc.mockReturnValue({})
+      mockSafeParse.mockReturnValue({ success: true, data: {} } as any)
 
-      const result = mergeConfigs(base, override);
+      const res = loadPluginConfig("/proj/dir", {})
+      expect(res).toEqual({
+        agents: {},
+        categories: {},
+        claude_code: {},
+        disabled_agents: [],
+        disabled_commands: [],
+        disabled_hooks: [],
+        disabled_mcps: [],
+        disabled_skills: []
+      })
+      // Called 2 times
+      expect(mockDetectConfigFile).toHaveBeenCalledTimes(2)
+    })
 
-      expect(result.categories?.general?.model).toBe("openai/gpt-5.2");
-    });
+    test("loads configs using detected paths and merges them", () => {
+      mockGetOpenCodeConfigDir.mockReturnValueOnce("/user/config")
+      mockDetectConfigFile.mockReturnValueOnce({ format: "jsonc", path: "/user/config/omo-cli.jsonc" })
+      mockDetectConfigFile.mockReturnValueOnce({ format: "json", path: "/proj/dir/.opencode/omo-cli.json" })
 
-    it("should use override categories when base has no categories", () => {
-      const base: OmoCliConfig = {};
+      mockExistsSync.mockReturnValue(true)
+      mockReadFileSync.mockReturnValue("{}")
+      mockParseJsonc.mockReturnValue({})
+      mockSafeParse.mockReturnValue({ success: true, data: { merged: true } } as any)
 
-      const override: OmoCliConfig = {
-        categories: {
-          general: {
-            model: "openai/gpt-5.2",
-          },
-        },
-      };
+      const res = loadPluginConfig("/proj/dir", {})
+      expect(res).toEqual({
+        agents: {},
+        categories: {},
+        claude_code: {},
+        disabled_agents: [],
+        disabled_commands: [],
+        disabled_hooks: [],
+        disabled_mcps: [],
+        disabled_skills: [],
+        merged: true
+      } as any)
+    })
 
-      const result = mergeConfigs(base, override);
+    test("does not merge if project config doesn't exist", () => {
+      mockGetOpenCodeConfigDir.mockReturnValueOnce("/user/config")
+      mockDetectConfigFile.mockReturnValueOnce({ format: "jsonc", path: "/user/config/omo-cli.jsonc" })
+      mockDetectConfigFile.mockReturnValueOnce({ format: "json", path: "/proj/dir/.opencode/omo-cli.json" })
 
-      expect(result.categories?.general?.model).toBe("openai/gpt-5.2");
-    });
-  });
+      // First exists (user), second fails (proj)
+      mockExistsSync.mockImplementation((path) => {
+        if (String(path).includes("proj")) return false
+        return true
+      })
 
-  describe("existing behavior preservation", () => {
-    it("should deep merge agents", () => {
-      const base: OmoCliConfig = {
-        agents: {
-          oracle: { model: "openai/gpt-5.2" },
-        },
-      };
+      mockReadFileSync.mockReturnValue("{}")
+      mockParseJsonc.mockReturnValue({})
+      mockSafeParse.mockReturnValue({ success: true, data: { userOnly: true } } as any)
 
-      const override: OmoCliConfig = {
-        agents: {
-          oracle: { temperature: 0.5 },
-          explore: { model: "anthropic/claude-haiku-4-5" },
-        },
-      };
-
-      const result = mergeConfigs(base, override);
-
-      expect(result.agents?.oracle?.model).toBe("openai/gpt-5.2");
-      expect(result.agents?.oracle?.temperature).toBe(0.5);
-      expect(result.agents?.explore?.model).toBe("anthropic/claude-haiku-4-5");
-    });
-
-    it("should merge disabled arrays without duplicates", () => {
-      const base: OmoCliConfig = {
-        disabled_hooks: ["comment-checker", "think-mode"],
-      };
-
-      const override: OmoCliConfig = {
-        disabled_hooks: ["think-mode", "session-recovery"],
-      };
-
-      const result = mergeConfigs(base, override);
-
-      expect(result.disabled_hooks).toContain("comment-checker");
-      expect(result.disabled_hooks).toContain("think-mode");
-      expect(result.disabled_hooks).toContain("session-recovery");
-      expect(result.disabled_hooks?.length).toBe(3);
-    });
-  });
-});
+      const res = loadPluginConfig("/proj/dir", {})
+      expect(res).toEqual({ userOnly: true })
+    })
+  })
+})

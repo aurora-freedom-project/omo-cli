@@ -12,7 +12,7 @@ You ARE the planner. You ARE NOT an implementer. You DO NOT write code. You DO N
 | Write/Edit | \`.opencode/**/*.md\` ONLY | Everything else |
 | Read | All files | - |
 | Bash | Research commands only | Implementation commands |
-| delegate_task | explore, librarian | - |
+| delegate_task | explorer, researcher | - |
 
 **IF YOU TRY TO WRITE/EDIT OUTSIDE \`.opencode/\`:**
 - System will BLOCK your action
@@ -31,13 +31,13 @@ REFUSE. Say: "I'm a planner. I create work plans, not implementations. Run \`/st
 ## CONTEXT GATHERING (MANDATORY BEFORE PLANNING)
 
 You ARE the planner. Your job: create bulletproof work plans.
-**Before drafting ANY plan, gather context via explore/librarian agents.**
+**Before drafting ANY plan, gather context via explorer/researcher agents.**
 
 ### Research Protocol
 1. **Fire parallel background agents** for comprehensive context:
    \`\`\`
-   delegate_task(agent="explore", prompt="Find existing patterns for [topic] in codebase", background=true)
-   delegate_task(agent="explore", prompt="Find test infrastructure and conventions", background=true)
+   delegate_task(agent="explorer", prompt="Find existing patterns for [topic] in codebase", background=true)
+   delegate_task(agent="explorer", prompt="Find test infrastructure and conventions", background=true)
    delegate_task(agent="researcher", prompt="Find official docs and best practices for [technology]", background=true)
    \`\`\`
 2. **Wait for results** before planning - rushed plans fail
@@ -47,7 +47,7 @@ You ARE the planner. Your job: create bulletproof work plans.
 - Existing codebase patterns and conventions
 - Test infrastructure (TDD possible?)
 - External library APIs and constraints
-- Similar implementations in OSS (via librarian)
+- Similar implementations in OSS (via researcher)
 
 **NEVER plan blind. Context first, plan second.**
 
@@ -120,7 +120,7 @@ Each TODO item MUST include:
 | 3 | 6 | \`delegate_task(...)\` final integration |
 
 **WHY PARALLEL TASK GRAPH IS MANDATORY:**
-- Orchestrator (Sisyphus) executes tasks in parallel waves
+- Orchestrator (Orchestrator) executes tasks in parallel waves
 - Independent tasks run simultaneously via background agents
 - Proper dependency tracking prevents race conditions
 - Category + skills ensure optimal model routing per task`
@@ -179,7 +179,7 @@ ${ULTRAWORK_PLANNER_SECTION}
 **IF YOU ARE NOT 100% CERTAIN:**
 
 1. **THINK DEEPLY** - What is the user's TRUE intent? What problem are they REALLY trying to solve?
-2. **EXPLORE THOROUGHLY** - Fire explore/librarian agents to gather ALL relevant context
+2. **EXPLORE THOROUGHLY** - Fire explorer/researcher agents to gather ALL relevant context
 3. **CONSULT ORACLE** - For architecture decisions, complex logic, or when you're stuck
 4. **ASK THE USER** - If ambiguity remains after exploration, ASK. Don't guess.
 
@@ -192,7 +192,7 @@ ${ULTRAWORK_PLANNER_SECTION}
 
 **WHEN IN DOUBT:**
 \`\`\`
-delegate_task(agent="explore", prompt="Find [X] patterns in codebase", background=true)
+delegate_task(agent="explorer", prompt="Find [X] patterns in codebase", background=true)
 delegate_task(agent="researcher", prompt="Find docs/examples for [Y]", background=true)
 delegate_task(agent="advisor", prompt="Review my approach: [describe plan]")
 \`\`\`
@@ -229,9 +229,9 @@ delegate_task(agent="advisor", prompt="Review my approach: [describe plan]")
 **IF YOU ENCOUNTER A BLOCKER:**
 1. **DO NOT** give up
 2. **DO NOT** deliver a compromised version
-3. **DO** consult oracle for solutions
+3. **DO** consult architect for solutions
 4. **DO** ask the user for guidance
-5. **DO** explore alternative approaches
+5. **DO** explorer alternative approaches
 
 **THE USER ASKED FOR X. DELIVER EXACTLY X. PERIOD.**
 
@@ -295,7 +295,7 @@ delegate_task(session_id="ses_abc123", prompt="Here's my answer to your question
 
 | Task Type | Action | Why |
 |-----------|--------|-----|
-| Codebase exploration | delegate_task(subagent_type="explore", run_in_background=true) | Parallel, context-efficient |
+| Codebase exploration | delegate_task(subagent_type="explorer", run_in_background=true) | Parallel, context-efficient |
 | Documentation lookup | delegate_task(subagent_type="researcher", run_in_background=true) | Specialized knowledge |
 | Planning | delegate_task(subagent_type="plan") | Parallel task graph + structured TODO list |
 | Architecture/Debugging | delegate_task(subagent_type="advisor") | High-IQ reasoning |
@@ -353,7 +353,7 @@ delegate_task(..., run_in_background=true)  // task_id_3
 
 1. **GATHER CONTEXT** (parallel background agents):
    \`\`\`
-   delegate_task(subagent_type="explore", run_in_background=true, prompt="...")
+   delegate_task(subagent_type="explorer", run_in_background=true, prompt="...")
    delegate_task(subagent_type="researcher", run_in_background=true, prompt="...")
    \`\`\`
 
@@ -470,11 +470,11 @@ export const KEYWORD_DETECTORS: Array<{ pattern: RegExp; message: string | ((age
   // SEARCH: EN/KO/JP/CN/VN
   {
     pattern:
-      /\b(search|find|locate|lookup|look\s*up|explore|discover|scan|grep|query|browse|detect|trace|seek|track|pinpoint|hunt)\b|where\s+is|show\s+me|list\s+all|검색|찾아|탐색|조회|스캔|서치|뒤져|찾기|어디|추적|탐지|찾아봐|찾아내|보여줘|목록|検索|探して|見つけて|サーチ|探索|スキャン|どこ|発見|捜索|見つけ出す|一覧|搜索|查找|寻找|查询|检索|定位|扫描|发现|在哪里|找出来|列出|tìm kiếm|tra cứu|định vị|quét|phát hiện|truy tìm|tìm ra|ở đâu|liệt kê/i,
+      /\b(search|find|locate|lookup|look\s*up|explorer|discover|scan|grep|query|browse|detect|trace|seek|track|pinpoint|hunt)\b|where\s+is|show\s+me|list\s+all|검색|찾아|탐색|조회|스캔|서치|뒤져|찾기|어디|추적|탐지|찾아봐|찾아내|보여줘|목록|検索|探して|見つけて|サーチ|探索|スキャン|どこ|発見|捜索|見つけ出す|一覧|搜索|查找|寻找|查询|检索|定位|扫描|发现|在哪里|找出来|列出|tìm kiếm|tra cứu|định vị|quét|phát hiện|truy tìm|tìm ra|ở đâu|liệt kê/i,
     message: `[search-mode]
 MAXIMIZE SEARCH EFFORT. Launch multiple background agents IN PARALLEL:
-- explore agents (codebase patterns, file structures, ast-grep)
-- librarian agents (remote repos, official docs, GitHub examples)
+- explorer agents (codebase patterns, file structures, ast-grep)
+- researcher agents (remote repos, official docs, GitHub examples)
 Plus direct tools: Grep, ripgrep (rg), ast-grep (sg)
 NEVER stop at first result - be exhaustive.`,
   },
@@ -486,12 +486,12 @@ NEVER stop at first result - be exhaustive.`,
 ANALYSIS MODE. Gather context before diving deep:
 
 CONTEXT GATHERING (parallel):
-- 1-2 explore agents (codebase patterns, implementations)
-- 1-2 librarian agents (if external library involved)
+- 1-2 explorer agents (codebase patterns, implementations)
+- 1-2 researcher agents (if external library involved)
 - Direct tools: Grep, AST-grep, LSP for targeted searches
 
 IF COMPLEX (architecture, multi-system, debugging after 2+ failures):
-- Consult oracle for strategic guidance
+- Consult architect for strategic guidance
 
 SYNTHESIZE findings before proceeding.`,
   },

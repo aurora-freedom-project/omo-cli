@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  omo-surrealdb:
+    image: surrealdb/surrealdb:latest
+    container_name: omo-surrealdb
+    restart: unless-stopped
+    ports:
+      - "18000:8000"
+    volumes:
+      - ${XDG_CONFIG_HOME:-~/.config}/opencode/omo-memory:/data
+    command: >
+      start --user root --pass omo-secret rocksdb:/data/omo.db
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

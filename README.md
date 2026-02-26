@@ -9,8 +9,8 @@
 
 > [!NOTE]
 >
-> [![Sisyphus Labs — Sisyphus là agent lập trình như đội ngũ của bạn.](./.github/assets/sisyphuslabs.png?v=2)](https://sisyphuslabs.ai)
-> > **Chúng tôi đang xây dựng phiên bản hoàn chỉnh của Sisyphus để định hình tương lai của các frontier agent. <br />Tham gia waitlist [tại đây](https://sisyphuslabs.ai).**
+> [![Orchestrator Labs — Orchestrator là agent lập trình như đội ngũ của bạn.](./.github/assets/sisyphuslabs.png?v=2)](https://sisyphuslabs.ai)
+> > **Chúng tôi đang xây dựng phiên bản hoàn chỉnh của Orchestrator để định hình tương lai của các frontier agent. <br />Tham gia waitlist [tại đây](https://sisyphuslabs.ai).**
 
 <div align="center">
 
@@ -20,7 +20,7 @@
 
 </div>
 
-> Đây là lập trình ở một tầm cao mới — `omo-cli` đang hoạt động. Chạy agent nền song song, gọi các agent chuyên biệt như oracle, librarian, frontend engineer. Sử dụng LSP/AST tools, MCP tuyển chọn, và lớp tương thích Claude Code hoàn chỉnh.
+> Đây là lập trình ở một tầm cao mới — `omo-cli` đang hoạt động. Chạy agent nền song song, gọi các agent chuyên biệt như architect, researcher, frontend engineer. Sử dụng LSP/AST tools, MCP tuyển chọn, và lớp tương thích Claude Code hoàn chỉnh.
 
 <div align="center">
 
@@ -81,20 +81,20 @@ Hey please read this readme and tell me why it is different from other agent har
 
 Thế thôi. Mọi tính năng sẽ hoạt động như phép thuật — agent song song, tác vụ nền, khám phá sâu, và thực thi không ngừng cho đến khi hoàn thành. Agent tự xử lý phần còn lại.
 
-### Gặp Sisyphus
+### Gặp Orchestrator
 
-![Gặp Sisyphus](.github/assets/sisyphus.png)
+![Gặp Orchestrator](.github/assets/sisyphus.png)
 
-Trong thần thoại Hy Lạp, Sisyphus bị kết án lăn tảng đá lên đồi mãi mãi. LLM Agent chẳng làm gì sai, nhưng chúng cũng lăn "đá" của mình — suy nghĩ — mỗi ngày.
+Trong thần thoại Hy Lạp, Orchestrator bị kết án lăn tảng đá lên đồi mãi mãi. LLM Agent chẳng làm gì sai, nhưng chúng cũng lăn "đá" của mình — suy nghĩ — mỗi ngày.
 
-Đây là agent chính của chúng tôi: **Sisyphus** (Claude Opus 4.6 Thinking). Dưới đây là công cụ Sisyphus dùng để tiếp tục lăn đá. *Mọi thứ bên dưới đều có thể tùy chỉnh. Lấy cái bạn muốn. Tất cả tính năng được bật mặc định.*
+Đây là agent chính của chúng tôi: **Orchestrator** (Claude Opus 4.6 Thinking). Dưới đây là công cụ Orchestrator dùng để tiếp tục lăn đá. *Mọi thứ bên dưới đều có thể tùy chỉnh. Lấy cái bạn muốn. Tất cả tính năng được bật mặc định.*
 
-- **Đồng đội của Sisyphus** (10 Agent tuyển chọn chạy song song)
+- **Đồng đội của Orchestrator** (10 Agent tuyển chọn chạy song song)
 - **Hỗ trợ LSP / AstGrep đầy đủ**: Refactor quyết đoán.
-- **Todo Continuation Enforcer**: Buộc agent tiếp tục nếu nó bỏ cuộc giữa chừng. **Đây là thứ giữ Sisyphus lăn đá.**
+- **Todo Continuation Enforcer**: Buộc agent tiếp tục nếu nó bỏ cuộc giữa chừng. **Đây là thứ giữ Orchestrator lăn đá.**
 - **Tương thích Claude Code**: Command, Agent, Skill, MCP, Hook
 - **MCP tuyển chọn**: Exa (Web Search), Context7 (Tài liệu real-time), Grep.app (Tìm kiếm code GitHub)
-- **700+ Skill đi kèm**: Skill cấp chuyên gia, nạp trực tiếp từ `~/.opencode/skills/`
+- **700+ Skill đi kèm**: Skill cấp chuyên gia, lưu tập trung tại `~/.config/_skills_/` (symlink tự động từ `~/.opencode/skills/`)
 
 ---
 
@@ -177,18 +177,18 @@ omo-cli/
 │   ├── plugin-config.ts          # Nạp config (omo-cli.json)
 │   ├── plugin-state.ts           # Trạng thái runtime (model cache, v.v.)
 │   ├── agents/                   # 🧠 Định nghĩa Agent (10 agent)
-│   │   ├── orchestrator.ts       # Sisyphus — nhạc trưởng chính
-│   │   ├── worker.ts             # Sisyphus-Junior — worker song song
-│   │   ├── coder-prompt.ts       # Prometheus — chuyên code
+│   │   ├── orchestrator.ts       # Orchestrator — nhạc trưởng chính
+│   │   ├── worker.ts             # Worker — worker song song
+│   │   ├── coder-prompt.ts       # Planner — chuyên code
 │   │   ├── explorer.ts           # Explorer — duyệt codebase
-│   │   ├── researcher.ts         # Librarian — nghiên cứu chuyên sâu
-│   │   ├── planner.ts            # Atlas — lập kế hoạch chiến lược
-│   │   ├── advisor.ts            # Oracle — tư vấn kiến trúc
-│   │   ├── reviewer.ts           # Momus — review code
+│   │   ├── researcher.ts         # Researcher — nghiên cứu chuyên sâu
+│   │   ├── planner.ts            # Conductor — lập kế hoạch chiến lược
+│   │   ├── advisor.ts            # Architect — tư vấn kiến trúc
+│   │   ├── reviewer.ts           # Reviewer — review code
 │   │   ├── navigator.ts          # Navigator — phân công tác vụ
 │   │   └── vision.ts             # Vision — phân tích đa phương tiện
 │   ├── hooks/                    # 🪝 Hook vòng đời (35+)
-│   │   ├── todo-continuation-enforcer.ts   # Giữ Sisyphus lăn đá
+│   │   ├── todo-continuation-enforcer.ts   # Giữ Orchestrator lăn đá
 │   │   ├── comment-checker/               # Hook chống AI slop
 │   │   ├── ralph-loop/                    # Retry loop cho lỗi
 │   │   ├── think-mode/                    # Bật/tắt thinking mở rộng
@@ -203,7 +203,7 @@ omo-cli/
 │   │   ├── look-at/              # Công cụ vision
 │   │   └── skill/                # Khám phá & thực thi skill
 │   ├── features/                 # 📦 Module tính năng
-│   │   ├── opencode-skill-loader/   # Nạp skill từ ~/.opencode/skills/
+│   │   ├── opencode-skill-loader/   # Nạp skill từ ~/.config/_skills_/
 │   │   ├── builtin-skills/          # Skill chuyên gia đi kèm
 │   │   ├── background-agent/        # Runtime agent nền
 │   │   ├── tmux-subagent/           # Thực thi song song qua tmux
@@ -235,7 +235,7 @@ omo-cli/
 |----------|-----------|
 | **Kiến trúc plugin** | Hook vào hệ thống plugin gốc của OpenCode — zero patch vào core OpenCode |
 | **Config theo profile** | Một file JSON điều khiển toàn bộ agent, model, feature — chuyển đổi tức thì |
-| **Skill trong `~/.opencode/skills/`** | Thư mục skill gốc OpenCode — không dùng path cũ `.claude` hay `.agent` |
+| **Unified Skills (`~/.config/_skills_/`)** | Single source of truth — `~/.opencode/skills` là symlink tự động, chia sẻ với mọi công cụ AI |
 | **`bun link` cho dev** | `dist/cli/index.js` là bin target — rebuild là lệnh tự cập nhật |
 
 ---
@@ -252,10 +252,10 @@ Profile `mike` là baseline chính:
 
 | Tầng Agent | Vai trò | Model được chọn |
 |-----------|---------|--------|
-| 🧠 **Brain** | Sisyphus, Prometheus, Atlas, Oracle | Opus 4.6 Thinking |
-| ⚡ **Worker** | Metis, Momus, Sisyphus-Junior | Sonnet 4.5 Thinking |
+| 🧠 **Brain** | Orchestrator, Planner, Conductor, Architect | Opus 4.6 Thinking |
+| ⚡ **Worker** | Consultant, Reviewer, Worker | Sonnet 4.5 Thinking |
 | 👁️ **Vision** | Multimodal-looker | Gemini 3 Pro Image |
-| 🚀 **IO** | Explore, Librarian | Minimax M2.1 |
+| 🚀 **IO** | Explore, Researcher | Minimax M2.1 |
 
 ### Lệnh Profile
 
@@ -293,7 +293,10 @@ Engine định tuyến sử dụng **BM25 keyword scoring** trên prompt để k
 ## Thư viện Skill (700+)
 
 `omo-cli` gắn kết thuần với triết lý OpenCode. **Hook legacy `.claude` và `.agent` đã bị loại bỏ hoàn toàn.**
-Skill nạp trực tiếp và duy nhất từ `~/.opencode/skills/` và `./.opencode/skills/` trong dự án.
+
+Tất cả skill được lưu tập trung tại **`~/.config/_skills_/`** — đây là Single Source of Truth.
+`~/.opencode/skills` là symlink tự động trỏ đến `~/.config/_skills_/`, giúp OpenCode phát hiện skill bình thường.
+Việc này cho phép bạn chia sẻ bộ skill với các công cụ AI khác (Claude Code, Cursor, v.v.) từ một nơi duy nhất.
 
 ```bash
 # Import toàn bộ skill an toàn và đã xác minh
@@ -321,7 +324,6 @@ Cú pháp: omo-cli install [tùy chọn]
 Tùy chọn:
   --no-tui              Chạy không tương tác (yêu cầu --profile)
   -p, --profile <tên>   Áp dụng profile theo tên (vd: mike)
-  --skills-mode <mode>  Chế độ nạp skill: bundled (626+ đi kèm) hoặc filesystem (mặc định)
   --skip-auth           Bỏ qua gợi ý thiết lập xác thực
 
 Ví dụ:
@@ -341,19 +343,41 @@ Chạy OpenCode với enforcement hoàn thành todo/tác vụ nền.
 Cú pháp: omo-cli run [tùy chọn] <tin nhắn>
 
 Tùy chọn:
-  -a, --agent <tên>       Agent sử dụng (mặc định: Sisyphus)
+  -a, --agent <tên>       Agent sử dụng (mặc định: Orchestrator)
   -d, --directory <path>  Thư mục làm việc
   -t, --timeout <ms>      Timeout tính bằng mili-giây (mặc định: 30 phút)
 
 Ví dụ:
   omo-cli run "Sửa bug trong index.ts"
-  omo-cli run --agent Sisyphus "Triển khai tính năng X"
+  omo-cli run --agent Orchestrator "Triển khai tính năng X"
   omo-cli run --timeout 3600000 "Tác vụ refactoring lớn"
 ```
 
 Khác với `opencode run`, lệnh này chờ cho đến khi:
 - Tất cả todo được hoàn thành hoặc hủy
 - Tất cả session con (tác vụ nền) ở trạng thái idle
+
+---
+
+### `omo-cli memory`
+
+Quản lý cơ sở dữ liệu SurrealDB cục bộ cho tính năng Project Memory (Lưu trữ Vector/Kiến thức).
+
+```
+Cú pháp: omo-cli memory [lệnh con]
+
+Lệnh con:
+  start    Khởi động container SurrealDB (cổng 18000)
+  stop     Dừng container SurrealDB
+  status   Xem trạng thái container và kết nối
+  reset    Xóa toàn bộ dữ liệu trí nhớ (CẨN THẬN)
+
+Ví dụ:
+  omo-cli memory start
+  omo-cli memory status
+```
+
+> **Mẹo Docker Compose**: OMO CLI mặc định hỗ trợ khởi chạy qua `docker-compose.yml`. Nếu bạn có file `docker-compose.yml` ở thư mục gốc dự án (với định nghĩa service `omo-surrealdb`), lệnh `omo-cli memory start` sẽ tự động ưu tiên gọi `docker compose up -d` thay vì tự chạy container `docker run` độc lập. Hoặc bạn cũng có thể cài đặt chế độ `external` để không thiết lập auto-container.
 
 ---
 
@@ -416,7 +440,7 @@ Cú pháp: omo-cli import-skills [tùy chọn]
 Tùy chọn:
   -b, --bundle <tên>        Import gói skill (essentials, web-dev, security, devops, v.v.)
   -s, --skills <tên...>     Import skill cụ thể theo tên
-  -t, --target <path>       Thư mục đích (mặc định: ~/.agents/skills)
+  -t, --target <path>       Thư mục đích (mặc định: ~/.config/_skills_)
   -l, --list                Liệt kê các gói có sẵn
   -a, --all                 Import TẤT CẢ skill từ repository
   --tier <số>               Import skill theo tầng (1-4, cần chạy categorize-skills trước)
@@ -509,7 +533,7 @@ Cú pháp: omo-cli adapt-skills [tùy chọn]
 Tùy chọn:
   --tier <số>           Import tầng cụ thể (1-4)
   --max-tier <số>       Import tất cả tầng đến max (mặc định: 2)
-  -t, --target <path>   Thư mục đích (mặc định: ~/.agents/skills)
+  -t, --target <path>   Thư mục đích (mặc định: ~/.config/_skills_)
 
 Ví dụ:
   omo-cli adapt-skills --tier 1         # Chỉ Tầng 1 (85 skill)
@@ -538,7 +562,7 @@ Ví dụ:
   omo-cli sync-skills -f
 ```
 
-Lệnh này dùng kiến trúc Shadow Clone để fetch skill toàn cục mới nhất mà không làm hỏng git cache cục bộ. Tự động sửa YAML và loại bỏ trùng tên skill trước khi copy sang `~/.opencode/skills`.
+Lệnh này dùng kiến trúc Shadow Clone để fetch skill toàn cục mới nhất mà không làm hỏng git cache cục bộ. Tự động sửa YAML và loại bỏ trùng tên skill trước khi copy sang `~/.config/_skills_`.
 
 ---
 

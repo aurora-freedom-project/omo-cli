@@ -1,4 +1,4 @@
-# Oh-My-OpenCode Configuration
+# omo-cli Configuration
 
 Highly opinionated, but adjustable to taste.
 
@@ -249,7 +249,7 @@ Available agents: `sisyphus`, `prometheus`, `oracle`, `librarian`, `explore`, `m
 
 ## Built-in Skills
 
-Oh My OpenCode includes built-in skills that provide additional capabilities:
+omo-cli includes built-in skills that provide additional capabilities:
 
 - **playwright** (default) / **agent-browser**: Browser automation for web scraping, testing, screenshots, and browser interactions. See [Browser Automation](#browser-automation) for switching between providers.
 - **git-master**: Git expert for atomic commits, rebase/squash, and history search (blame, bisect, log -S). STRONGLY RECOMMENDED: Use with `delegate_task(category='quick', load_skills=['git-master'], ...)` to save context.
@@ -557,7 +557,7 @@ oc() {
 **How subagent panes work**:
 
 1. Main OpenCode starts HTTP server on specified port (e.g., `http://localhost:4096`)
-2. When a background agent spawns, Oh My OpenCode creates a new tmux pane
+2. When a background agent spawns, omo-cli creates a new tmux pane
 3. The pane runs: `opencode attach http://localhost:4096 --session <session-id>`
 4. Each subagent pane shows real-time streaming output
 5. Panes are automatically closed when the subagent completes
@@ -836,7 +836,7 @@ Each category supports: `model`, `temperature`, `top_p`, `maxTokens`, `thinking`
 
 ## Model Resolution System
 
-At runtime, Oh My OpenCode uses a 3-step resolution process to determine which model to use for each agent and category. This happens dynamically based on your configuration and available models.
+At runtime, omo-cli uses a 3-step resolution process to determine which model to use for each agent and category. This happens dynamically based on your configuration and available models.
 
 ### Overview
 
@@ -1072,8 +1072,8 @@ Don't want them? Disable via `disabled_mcps` in `~/.config/opencode/omo-cli.json
 ## LSP
 
 OpenCode provides LSP tools for analysis.
-Oh My OpenCode adds refactoring tools (rename, code actions).
-All OpenCode LSP configs and custom settings (from opencode.json) are supported, plus additional Oh My OpenCode-specific settings.
+omo-cli adds refactoring tools (rename, code actions).
+All OpenCode LSP configs and custom settings (from opencode.json) are supported, plus additional omo-cli-specific settings.
 
 Add LSP servers via the `lsp` option in `~/.config/opencode/omo-cli.json` or `.opencode/omo-cli.json`:
 

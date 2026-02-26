@@ -30,9 +30,9 @@ import {
   createDelegateTaskRetryHook,
   createTaskResumeInfoHook,
   createStartWorkHook,
-  createAtlasHook,
-  createPrometheusMdOnlyHook,
-  createSisyphusJuniorNotepadHook,
+  createConductorHook,
+  createPlannerMdOnlyHook,
+  createWorkerNotepadHook,
   createQuestionLabelTruncatorHook,
   createSubagentQuestionBlockerHook,
 } from "./hooks";
@@ -80,6 +80,8 @@ import { log, detectExternalNotificationPlugin, getNotificationConflictWarning, 
 import { loadPluginConfig } from "./plugin-config";
 import { createModelCacheState, getModelLimit } from "./plugin-state";
 import { createConfigHandler } from "./plugin-handlers";
+import { createMemoryTools } from "./cli/memory/memory-tools";
+import { createMemoryCaptureHook } from "./hooks/memory-capture";
 
 const OmoCliPlugin: Plugin = async (ctx) => {
   log("[OmoCliPlugin] ENTRY - plugin loading", { directory: ctx.directory })
@@ -116,7 +118,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
 
     if (externalNotifier.detected && !forceEnable) {
       // External notification plugin detected - skip our notification to avoid conflicts
-      console.warn(getNotificationConflictWarning(externalNotifier.pluginName!));
+      log(getNotificationConflictWarning(externalNotifier.pluginName!));
       log("session-notification disabled due to external notifier conflict", {
         detected: externalNotifier.pluginName,
         allPlugins: externalNotifier.allPlugins,
@@ -227,12 +229,12 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     ? createStartWorkHook(ctx)
     : null;
 
-  const prometheusMdOnly = isHookEnabled("coder-md-only")
-    ? createPrometheusMdOnlyHook(ctx)
+  const plannerMdOnly = isHookEnabled("coder-md-only")
+    ? createPlannerMdOnlyHook(ctx)
     : null;
 
-  const sisyphusJuniorNotepad = isHookEnabled("worker-notepad")
-    ? createSisyphusJuniorNotepadHook(ctx)
+  const workerNotepad = isHookEnabled("worker-notepad")
+    ? createWorkerNotepadHook(ctx)
     : null;
 
   const questionLabelTruncator = createQuestionLabelTruncatorHook();
@@ -269,8 +271,8 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     },
   });
 
-  const atlasHook = isHookEnabled("navigator")
-    ? createAtlasHook(ctx, { directory: ctx.directory, backgroundManager })
+  const conductorHook = isHookEnabled("navigator")
+    ? createConductorHook(ctx, { directory: ctx.directory, backgroundManager })
     : null;
 
   initTaskToastManager(ctx.client);
@@ -304,7 +306,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     directory: ctx.directory,
     userCategories: pluginConfig.categories,
     gitMasterConfig: pluginConfig.git_master,
-    sisyphusJuniorModel: pluginConfig.agents?.["sisyphus-junior"]?.model,
+    workerModel: pluginConfig.agents?.["worker"]?.model,
     browserProvider,
     onSyncSessionCreated: async (event) => {
       log("[index] onSyncSessionCreated callback", {
@@ -376,10 +378,19 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     modelCacheState,
   });
 
+  const memoryTools = pluginConfig.memory?.enabled
+    ? createMemoryTools(ctx, pluginConfig.memory)
+    : {};
+
+  const memoryCapture = pluginConfig.memory?.enabled && pluginConfig.memory?.auto_capture !== false
+    ? createMemoryCaptureHook(pluginConfig.memory, ctx.directory)
+    : null;
+
   return {
     tool: {
       ...builtinTools,
       ...backgroundTools,
+      ...memoryTools,
       call_omo_agent: callOmoAgent,
       ...(lookAt ? { look_at: lookAt } : {}),
       delegate_task: delegateTask,
@@ -420,6 +431,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await claudeCodeHooks["chat.message"]?.(input, output);
       await autoSlashCommand?.["chat.message"]?.(input, output);
       await startWork?.["chat.message"]?.(input, output);
+      await memoryCapture?.["chat.message"]?.(input, output);
 
       if (!hasConnectedProvidersCache()) {
         ctx.client.tui.showToast({
@@ -517,7 +529,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await categorySkillReminder?.event(input);
       await interactiveBashSession?.event(input);
       await ralphLoop?.event(input);
-      await atlasHook?.handler(input);
+      await conductorHook?.handler(input);
 
       const { event } = input;
       const props = event.properties as Record<string, unknown> | undefined;
@@ -599,14 +611,14 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await directoryAgentsInjector?.["tool.execute.before"]?.(input, output);
       await directoryReadmeInjector?.["tool.execute.before"]?.(input, output);
       await rulesInjector?.["tool.execute.before"]?.(input, output);
-      await prometheusMdOnly?.["tool.execute.before"]?.(input, output);
-      await sisyphusJuniorNotepad?.["tool.execute.before"]?.(input, output);
-      await atlasHook?.["tool.execute.before"]?.(input, output);
+      await plannerMdOnly?.["tool.execute.before"]?.(input, output);
+      await workerNotepad?.["tool.execute.before"]?.(input, output);
+      await conductorHook?.["tool.execute.before"]?.(input, output);
 
       if (input.tool === "task") {
         const args = output.args as Record<string, unknown>;
         const subagentType = args.subagent_type as string;
-        const isExploreOrLibrarian = includesCaseInsensitive(
+        const isExploreOrResearcher = includesCaseInsensitive(
           ["explorer", "researcher"],
           subagentType ?? ""
         );
@@ -614,7 +626,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
         args.tools = {
           ...(args.tools as Record<string, boolean> | undefined),
           delegate_task: false,
-          ...(isExploreOrLibrarian ? { call_omo_agent: false } : {}),
+          ...(isExploreOrResearcher ? { call_omo_agent: false } : {}),
         };
       }
 
@@ -688,7 +700,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await interactiveBashSession?.["tool.execute.after"](input, output);
       await editErrorRecovery?.["tool.execute.after"](input, output);
       await delegateTaskRetry?.["tool.execute.after"](input, output);
-      await atlasHook?.["tool.execute.after"]?.(input, output);
+      await conductorHook?.["tool.execute.after"]?.(input, output);
       await taskResumeInfo["tool.execute.after"](input, output);
     },
   };

@@ -14,14 +14,14 @@ import { formatSystemDirective, SYSTEM_DIRECTIVE_PREFIX, SystemDirectiveTypes } 
 import { isCallerOrchestrator, getMessageDir } from "../../shared/session-utils"
 import type { BackgroundManager } from "../../features/background-agent"
 
-export const HOOK_NAME = "atlas"
+export const HOOK_NAME = "conductor"
 
 /**
  * Cross-platform check if a path is inside .opencode/ directory.
  * Handles both forward slashes (Unix) and backslashes (Windows).
  */
-function isSisyphusPath(filePath: string): boolean {
-  return /\.sisyphus[/\\]/.test(filePath)
+function isOrchestratorPath(filePath: string): boolean {
+  return /\.(opencode|orchestrator|sisyphus)[/\\]/.test(filePath)
 }
 
 const WRITE_EDIT_TOOLS = ["Write", "Edit", "write", "edit"]
@@ -112,7 +112,7 @@ ${formatSystemDirective(SystemDirectiveTypes.DELEGATION_REQUIRED)}
 
 **STOP. YOU ARE VIOLATING ORCHESTRATOR PROTOCOL.**
 
-You (Atlas) are attempting to directly modify a file outside \`.opencode/\`.
+You (Conductor) are attempting to directly modify a file outside \`.opencode/\`.
 
 **Path attempted:** $FILE_PATH
 
@@ -180,7 +180,7 @@ If you were NOT given **exactly ONE atomic task**, you MUST:
 `
 
 function buildVerificationReminder(sessionId: string): string {
-   return `${VERIFICATION_REMINDER}
+  return `${VERIFICATION_REMINDER}
 
 ---
 
@@ -358,7 +358,7 @@ function formatFileChanges(stats: GitFileStat[], notepadPath?: string): string {
   }
 
   if (notepadPath) {
-    const notepadStat = stats.find((s) => s.path.includes("notepad") || s.path.includes(".sisyphus"))
+    const notepadStat = stats.find((s) => s.path.includes("notepad") || s.path.includes(".orchestrator"))
     if (notepadStat) {
       lines.push("[NOTEPAD UPDATED]")
       lines.push(`  ${notepadStat.path}  (+${notepadStat.added})`)
@@ -388,7 +388,7 @@ interface SessionState {
 
 const CONTINUATION_COOLDOWN_MS = 5000
 
-export interface AtlasHookOptions {
+export interface ConductorHookOptions {
   directory: string
   backgroundManager?: BackgroundManager
 }
@@ -414,9 +414,9 @@ function isAbortError(error: unknown): boolean {
   return false
 }
 
-export function createAtlasHook(
+export function createConductorHook(
   ctx: PluginInput,
-  options?: AtlasHookOptions
+  options?: ConductorHookOptions
 ) {
   const backgroundManager = options?.backgroundManager
   const sessions = new Map<string, SessionState>()
@@ -474,15 +474,15 @@ export function createAtlasHook(
           : undefined
       }
 
-       await ctx.client.session.prompt({
-         path: { id: sessionID },
-         body: {
-            agent: "atlas",
-           ...(model !== undefined ? { model } : {}),
-           parts: [{ type: "text", text: prompt }],
-         },
-         query: { directory: ctx.directory },
-       })
+      await ctx.client.session.prompt({
+        path: { id: sessionID },
+        body: {
+          agent: "conductor",
+          ...(model !== undefined ? { model } : {}),
+          parts: [{ type: "text", text: prompt }],
+        },
+        query: { directory: ctx.directory },
+      })
 
       log(`[${HOOK_NAME}] Boulder continuation injected`, { sessionID })
     } catch (err) {
@@ -550,7 +550,7 @@ export function createAtlasHook(
         }
 
         if (!isCallerOrchestrator(sessionID)) {
-          log(`[${HOOK_NAME}] Skipped: last agent is not Atlas`, { sessionID })
+          log(`[${HOOK_NAME}] Skipped: last agent is not Conductor`, { sessionID })
           return
         }
 
@@ -631,7 +631,7 @@ export function createAtlasHook(
       // Check Write/Edit tools for orchestrator - inject strong warning
       if (WRITE_EDIT_TOOLS.includes(input.tool)) {
         const filePath = (output.args.filePath ?? output.args.path ?? output.args.file) as string | undefined
-        if (filePath && !isSisyphusPath(filePath)) {
+        if (filePath && !isOrchestratorPath(filePath)) {
           // Store filePath for use in tool.execute.after
           if (input.callID) {
             pendingFilePaths.set(input.callID, filePath)
@@ -680,7 +680,7 @@ export function createAtlasHook(
         if (!filePath) {
           filePath = output.metadata?.filePath as string | undefined
         }
-        if (filePath && !isSisyphusPath(filePath)) {
+        if (filePath && !isOrchestratorPath(filePath)) {
           output.output = (output.output || "") + DIRECT_WORK_REMINDER
           log(`[${HOOK_NAME}] Direct work reminder appended`, {
             sessionID: input.sessionID,
@@ -695,13 +695,13 @@ export function createAtlasHook(
         return
       }
 
-       const outputStr = output.output && typeof output.output === "string" ? output.output : ""
-       const isBackgroundLaunch = outputStr.includes("Background task launched") || outputStr.includes("Background task continued")
-      
+      const outputStr = output.output && typeof output.output === "string" ? output.output : ""
+      const isBackgroundLaunch = outputStr.includes("Background task launched") || outputStr.includes("Background task continued")
+
       if (isBackgroundLaunch) {
         return
       }
-      
+
       if (output.output && typeof output.output === "string") {
         const gitStats = getGitDiffStats(ctx.directory)
         const fileChanges = formatFileChanges(gitStats)
