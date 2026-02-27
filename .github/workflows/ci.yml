@@ -120,12 +120,12 @@ jobs:
       - name: Auto-commit schema changes
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
-          if git diff --quiet assets/oh-my-opencode.schema.json; then
+          if git diff --quiet assets/omo-cli.schema.json; then
             echo "No schema changes to commit"
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add assets/oh-my-opencode.schema.json
+            git add assets/omo-cli.schema.json
             git commit -m "chore: auto-update schema.json"
             git push
           fi
@@ -150,7 +150,12 @@ jobs:
       - name: Generate release notes
         id: notes
         run: |
-          NOTES=$(bun run script/generate-changelog.ts)
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            NOTES=$(git log "${PREV_TAG}..HEAD" --oneline --format="- %h %s" | grep -vE "^- \w+ (ignore:|test:|chore:|ci:|release:)" || echo "No notable changes")
+          else
+            NOTES="Initial release"
+          fi
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT

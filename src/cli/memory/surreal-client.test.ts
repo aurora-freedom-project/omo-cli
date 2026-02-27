@@ -186,4 +186,160 @@ describe("cli/memory/surreal-client", () => {
             expect(res).toBe(false)
         })
     })
+    describe("code intelligence - addCodeElement", () => {
+        test("successfully creates element and returns ID", async () => {
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [{ id: "code_element:123" }] }] })
+            } as any)
+
+            const id = await surreal.addCodeElement({
+                name: "testFn",
+                kind: "function",
+                file: "test.ts",
+                lineStart: 1,
+                lineEnd: 5,
+                signature: "testFn()",
+                exported: true,
+                project: "proj1"
+            })
+            expect(id).toBe("code_element:123")
+
+            const body = JSON.parse(globalFetchSpy.mock.calls[0][1].body)
+            expect(body.params[0]).toContain("CREATE code_element SET")
+            expect(body.params[1].name).toBe("testFn")
+        })
+
+        test("throws if no ID returned", async () => {
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [] }] })
+            } as any)
+
+            await expect(surreal.addCodeElement({
+                name: "test", kind: "test", file: "test", lineStart: 1, lineEnd: 1, signature: "test", exported: false, project: "test"
+            })).rejects.toThrow(/Failed to create code_element/)
+        })
+    })
+
+    describe("code intelligence - addCodeRelation", () => {
+        test("properly formats IDs and executes relation query", async () => {
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [] })
+            } as any)
+
+            await surreal.addCodeRelation("123", "code_element:456", "calls")
+
+            const body = JSON.parse(globalFetchSpy.mock.calls[0][1].body)
+            expect(body.params[0]).toContain("RELATE $src->code_relation->$tgt SET kind = $kind;")
+            expect(body.params[1].src).toBe("code_element:123")
+            expect(body.params[1].tgt).toBe("code_element:456")
+        })
+    })
+
+    describe("code intelligence - searchCode", () => {
+        test("builds correct query with project and kind filters", async () => {
+            const mockResult = [{ name: "testFn", kind: "function" }]
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: mockResult }] })
+            } as any)
+
+            const res = await surreal.searchCode("test", { kind: "function", project: "proj1" })
+            expect(res).toEqual(mockResult)
+
+            const body = JSON.parse(globalFetchSpy.mock.calls[0][1].body)
+            expect(body.params[0]).toContain("kind = $kind")
+            expect(body.params[0]).toContain("project = $project")
+            expect(body.params[1].q).toBe("test")
+        })
+    })
+
+    describe("code intelligence - findCallers", () => {
+        test("returns callers from relation query", async () => {
+            const mockCallers = [{ caller_name: "wrapper" }]
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: mockCallers }] })
+            } as any)
+
+            const res = await surreal.findCallers("targetFn", "proj1")
+            expect(res).toEqual(mockCallers)
+        })
+
+        test("falls back to subquery if relation query returns empty", async () => {
+            // First call returns empty, second returns fallback
+            const fallbackResults = [{ name: "fallback" }]
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [] }] }) // empty relations
+            } as any).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: fallbackResults }] }) // fallback query
+            } as any)
+
+            const res = await surreal.findCallers("targetFn")
+            expect(res).toEqual(fallbackResults)
+        })
+    })
+
+    describe("code intelligence - findDependencies", () => {
+        test("queries both imports and importedBy", async () => {
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [{ file: "a.ts" }] }] })
+            } as any).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [{ file: "b.ts" }] }] })
+            } as any)
+
+            const res = await surreal.findDependencies("target.ts")
+            expect(res).toEqual({ imports: ["a.ts"], importedBy: ["b.ts"] })
+        })
+    })
+
+    describe("code intelligence - getCodeOverview", () => {
+        test("aggregates stats from multiple queries", async () => {
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [{ kind: "func", count: 5 }] }] })
+            } as any).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [{ count: 10 }] }] }) // files
+            } as any).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [{ count: 3 }] }] }) // exports
+            } as any)
+
+            const res = await surreal.getCodeOverview("proj1")
+            expect(res.fileCount).toBe(10)
+            expect(res.exportCount).toBe(3)
+            expect(res.elementCounts).toEqual([{ kind: "func", count: 5 }])
+        })
+    })
+
+    describe("code intelligence - clearCodeIndex", () => {
+        test("deletes relations then elements", async () => {
+            globalFetchSpy.mockResolvedValue({
+                ok: true,
+                json: async () => ({ result: [] })
+            } as any)
+
+            await surreal.clearCodeIndex("proj1")
+            expect(globalFetchSpy).toHaveBeenCalledTimes(2)
+        })
+    })
+
+    describe("code intelligence - getIndexedFiles", () => {
+        test("returns mapped files and hashes", async () => {
+            globalFetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ result: [{ result: [{ file: "test.ts", file_hash: "123" }] }] })
+            } as any)
+
+            const res = await surreal.getIndexedFiles("proj1")
+            expect(res).toEqual([{ file: "test.ts", fileHash: "123" }])
+        })
+    })
 })

@@ -94,7 +94,7 @@ jobs:
   publish-main:
     runs-on: ubuntu-latest
     needs: [test, typecheck]
-    if: github.repository == 'aurora-freedom-project/oh-my-opencode'
+    if: github.repository == 'aurora-freedom-project/omo-cli'
     outputs:
       version: ${{ steps.version.outputs.version }}
       dist_tag: ${{ steps.version.outputs.dist_tag }}
@@ -124,7 +124,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           if [ -z "$VERSION" ]; then
-            PREV=$(curl -s https://registry.npmjs.org/oh-my-opencode/latest | jq -r '.version // "0.0.0"')
+            PREV=$(curl -s https://registry.npmjs.org/omo-cli/latest | jq -r '.version // "0.0.0"')
             BASE="${PREV%%-*}"
             IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE"
             case "${{ inputs.bump }}" in
@@ -148,10 +148,10 @@ jobs:
         id: check
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/oh-my-opencode/${VERSION}")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/omo-cli/${VERSION}")
           if [ "$STATUS" = "200" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "✓ oh-my-opencode@${VERSION} already published"
+            echo "✓ omo-cli@${VERSION} already published"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
@@ -193,7 +193,7 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add package.json assets/oh-my-opencode.schema.json packages/*/package.json || true
+          git add package.json assets/omo-cli.schema.json packages/*/package.json || true
           git diff --cached --quiet || git commit -m "release: v${{ steps.version.outputs.version }}"
           git tag -f "v${{ steps.version.outputs.version }}"
           git push origin --tags --force
@@ -241,7 +241,7 @@ jobs:
           fi
           
           if [ -z "$PREV_TAG" ]; then
-            PREV_TAG=$(curl -s https://registry.npmjs.org/oh-my-opencode/latest | jq -r '.version // "0.0.0"')
+            PREV_TAG=$(curl -s https://registry.npmjs.org/omo-cli/latest | jq -r '.version // "0.0.0"')
           fi
           
           echo "Comparing v${PREV_TAG}..v${VERSION}"

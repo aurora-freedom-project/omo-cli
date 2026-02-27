@@ -11,6 +11,7 @@ import { runSecurityScan } from "./skills-scanner"
 import { runCategorization } from "./skills-categorizer"
 import { adaptTier, adaptAllTiers } from "./skills-adapter"
 import { syncSkills } from "./skills-sync"
+import { createIndexCommand } from "./index-codebase"
 import type { InstallArgs } from "./types"
 import type { RunOptions } from "./run"
 import type { GetLocalVersionOptions } from "./get-local-version/types"
@@ -289,5 +290,6 @@ deduplicates skill names before copying to ~/.config/_skills_.
 
 program.addCommand(createMemoryCommand())
 program.addCommand(createMcpOAuthCommand())
+program.addCommand(createIndexCommand())
 
 program.parse()

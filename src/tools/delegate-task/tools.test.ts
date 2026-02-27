@@ -9,10 +9,22 @@ import * as connectedProvidersCache from "../../shared/connected-providers-cache
 
 const SYSTEM_DEFAULT_MODEL = "anthropic/claude-sonnet-4-5"
 
+import { mkdirSync, rmSync } from "node:fs"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
+
+const TEST_CONFIG_DIR = join(tmpdir(), "delegate-task-test-" + Date.now())
+let originalConfigDir: string | undefined
+
 describe("orchestrator-task", () => {
   let cacheSpy: ReturnType<typeof spyOn>
 
   beforeEach(() => {
+    // Prevent scanning 952 global skills which causes timeouts
+    originalConfigDir = process.env.OPENCODE_CONFIG_DIR
+    process.env.OPENCODE_CONFIG_DIR = join(TEST_CONFIG_DIR, ".config-test")
+    mkdirSync(join(TEST_CONFIG_DIR, ".config-test", "skills"), { recursive: true })
+
     __resetModelCache()
     clearSkillCache()
     __setTimingConfig({
@@ -28,6 +40,10 @@ describe("orchestrator-task", () => {
   })
 
   afterEach(() => {
+    if (originalConfigDir !== undefined) process.env.OPENCODE_CONFIG_DIR = originalConfigDir
+    else delete process.env.OPENCODE_CONFIG_DIR
+    try { rmSync(TEST_CONFIG_DIR, { recursive: true, force: true }) } catch { }
+
     __resetTimingConfig()
     cacheSpy?.mockRestore()
   })
@@ -180,7 +196,7 @@ describe("orchestrator-task", () => {
     test("proceeds without error when systemDefaultModel is undefined", async () => {
       // #given a mock client with no model in config
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = { launch: async () => ({ id: "task-123" }) }
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
@@ -191,19 +207,19 @@ describe("orchestrator-task", () => {
           messages: async () => ({ data: [] }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when delegating with a category
       const result = await tool.execute(
         {
@@ -215,7 +231,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then proceeds without error - uses fallback chain
       expect(result).not.toContain("omo-cli requires a default model")
     })
@@ -223,7 +239,7 @@ describe("orchestrator-task", () => {
     test("returns clear error when no model can be resolved", async () => {
       // #given - custom category with no model, no systemDefaultModel, no available models
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = { launch: async () => ({ id: "task-123" }) }
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
@@ -235,7 +251,7 @@ describe("orchestrator-task", () => {
           messages: async () => ({ data: [] }),
         },
       }
-      
+
       // Custom category with no model defined
       const tool = createDelegateTask({
         manager: mockManager,
@@ -244,14 +260,14 @@ describe("orchestrator-task", () => {
           "custom-no-model": { temperature: 0.5 }, // No model field
         },
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when delegating with a custom category that has no model
       const result = await tool.execute(
         {
@@ -263,7 +279,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then returns clear error message with configuration guidance
       expect(result).toContain("Model not configured")
       expect(result).toContain("custom-no-model")
@@ -614,7 +630,7 @@ describe("orchestrator-task", () => {
     test("skills parameter is required - throws error when not provided", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
@@ -625,19 +641,19 @@ describe("orchestrator-task", () => {
           messages: async () => ({ data: [] }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - skills not provided (undefined)
       // #then - should throw error about missing skills
       await expect(tool.execute(
@@ -654,7 +670,7 @@ describe("orchestrator-task", () => {
     test("null skills throws error", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
@@ -665,19 +681,19 @@ describe("orchestrator-task", () => {
           messages: async () => ({ data: [] }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - null passed
       // #then - should throw error about null
       await expect(tool.execute(
@@ -696,7 +712,7 @@ describe("orchestrator-task", () => {
       // #given
       const { createDelegateTask } = require("./tools")
       let promptBody: any
-      
+
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
@@ -714,19 +730,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: {} }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - empty array passed
       await tool.execute(
         {
@@ -738,143 +754,143 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should proceed without system content from skills
       expect(promptBody).toBeDefined()
     }, { timeout: 20000 })
   })
 
   describe("session_id with background parameter", () => {
-  test("session_id with background=false should wait for result and return content", async () => {
-    // Note: This test needs extended timeout because the implementation has MIN_STABILITY_TIME_MS = 5000
-    // #given
-    const { createDelegateTask } = require("./tools")
-    
-    const mockTask = {
-      id: "task-123",
-      sessionID: "ses_continue_test",
-      description: "Continued task",
-      agent: "explorer",
-      status: "running",
-    }
-    
-    const mockManager = {
-      resume: async () => mockTask,
-      launch: async () => mockTask,
-    }
-    
-    const mockClient = {
-      session: {
-        prompt: async () => ({ data: {} }),
-        messages: async () => ({
-          data: [
-            {
-              info: { role: "assistant", time: { created: Date.now() } },
-              parts: [{ type: "text", text: "This is the continued task result" }],
-            },
-          ],
-        }),
-      },
-      config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
-      app: {
-        agents: async () => ({ data: [] }),
-      },
-    }
-    
-    const tool = createDelegateTask({
-      manager: mockManager,
-      client: mockClient,
-    })
-    
-    const toolContext = {
-      sessionID: "parent-session",
-      messageID: "parent-message",
-      agent: "orchestrator",
-      abort: new AbortController().signal,
-    }
-    
-    // #when
-    const result = await tool.execute(
-      {
-        description: "Continue test",
-        prompt: "Continue the task",
-        session_id: "ses_continue_test",
-        run_in_background: false,
-        load_skills: ["git-master"],
-      },
-      toolContext
-    )
-    
-    // #then - should contain actual result, not just "Background task continued"
-    expect(result).toContain("This is the continued task result")
-    expect(result).not.toContain("Background task continued")
-  }, { timeout: 10000 })
+    test("session_id with background=false should wait for result and return content", async () => {
+      // Note: This test needs extended timeout because the implementation has MIN_STABILITY_TIME_MS = 5000
+      // #given
+      const { createDelegateTask } = require("./tools")
 
-  test("session_id with background=true should return immediately without waiting", async () => {
-    // #given
-    const { createDelegateTask } = require("./tools")
-    
-    const mockTask = {
-      id: "task-456",
-      sessionID: "ses_bg_continue",
-      description: "Background continued task",
-      agent: "explorer",
-      status: "running",
-    }
-    
-    const mockManager = {
-      resume: async () => mockTask,
-    }
-    
-    const mockClient = {
-      session: {
-        prompt: async () => ({ data: {} }),
-        messages: async () => ({
-          data: [],
-        }),
-      },
-      config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
-    }
-    
-    const tool = createDelegateTask({
-      manager: mockManager,
-      client: mockClient,
+      const mockTask = {
+        id: "task-123",
+        sessionID: "ses_continue_test",
+        description: "Continued task",
+        agent: "explorer",
+        status: "running",
+      }
+
+      const mockManager = {
+        resume: async () => mockTask,
+        launch: async () => mockTask,
+      }
+
+      const mockClient = {
+        session: {
+          prompt: async () => ({ data: {} }),
+          messages: async () => ({
+            data: [
+              {
+                info: { role: "assistant", time: { created: Date.now() } },
+                parts: [{ type: "text", text: "This is the continued task result" }],
+              },
+            ],
+          }),
+        },
+        config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
+        app: {
+          agents: async () => ({ data: [] }),
+        },
+      }
+
+      const tool = createDelegateTask({
+        manager: mockManager,
+        client: mockClient,
+      })
+
+      const toolContext = {
+        sessionID: "parent-session",
+        messageID: "parent-message",
+        agent: "orchestrator",
+        abort: new AbortController().signal,
+      }
+
+      // #when
+      const result = await tool.execute(
+        {
+          description: "Continue test",
+          prompt: "Continue the task",
+          session_id: "ses_continue_test",
+          run_in_background: false,
+          load_skills: ["git-master"],
+        },
+        toolContext
+      )
+
+      // #then - should contain actual result, not just "Background task continued"
+      expect(result).toContain("This is the continued task result")
+      expect(result).not.toContain("Background task continued")
+    }, { timeout: 10000 })
+
+    test("session_id with background=true should return immediately without waiting", async () => {
+      // #given
+      const { createDelegateTask } = require("./tools")
+
+      const mockTask = {
+        id: "task-456",
+        sessionID: "ses_bg_continue",
+        description: "Background continued task",
+        agent: "explorer",
+        status: "running",
+      }
+
+      const mockManager = {
+        resume: async () => mockTask,
+      }
+
+      const mockClient = {
+        session: {
+          prompt: async () => ({ data: {} }),
+          messages: async () => ({
+            data: [],
+          }),
+        },
+        config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
+      }
+
+      const tool = createDelegateTask({
+        manager: mockManager,
+        client: mockClient,
+      })
+
+      const toolContext = {
+        sessionID: "parent-session",
+        messageID: "parent-message",
+        agent: "orchestrator",
+        abort: new AbortController().signal,
+      }
+
+      // #when
+      const result = await tool.execute(
+        {
+          description: "Continue bg test",
+          prompt: "Continue in background",
+          session_id: "ses_bg_continue",
+          run_in_background: true,
+          load_skills: ["git-master"],
+        },
+        toolContext
+      )
+
+      // #then - should return background message
+      expect(result).toContain("Background task continued")
+      expect(result).toContain("task-456")
     })
-    
-    const toolContext = {
-      sessionID: "parent-session",
-      messageID: "parent-message",
-      agent: "orchestrator",
-      abort: new AbortController().signal,
-    }
-    
-    // #when
-    const result = await tool.execute(
-      {
-        description: "Continue bg test",
-        prompt: "Continue in background",
-        session_id: "ses_bg_continue",
-        run_in_background: true,
-        load_skills: ["git-master"],
-      },
-      toolContext
-    )
-    
-    // #then - should return background message
-    expect(result).toContain("Background task continued")
-    expect(result).toContain("task-456")
   })
-})
 
   describe("sync mode new task (run_in_background=false)", () => {
     test("sync mode prompt error returns error message immediately", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = {
         launch: async () => ({}),
       }
-      
+
       const mockClient = {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
@@ -890,19 +906,19 @@ describe("orchestrator-task", () => {
           agents: async () => ({ data: [{ name: "ultrabrain", mode: "subagent" }] }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when
       const result = await tool.execute(
         {
@@ -914,7 +930,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should return detailed error message with args and stack trace
       expect(result).toContain("Send prompt failed")
       expect(result).toContain("JSON Parse error")
@@ -925,11 +941,11 @@ describe("orchestrator-task", () => {
     test("sync mode success returns task result with content", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = {
         launch: async () => ({}),
       }
-      
+
       const mockClient = {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
@@ -950,19 +966,19 @@ describe("orchestrator-task", () => {
           agents: async () => ({ data: [{ name: "ultrabrain", mode: "subagent" }] }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when
       const result = await tool.execute(
         {
@@ -974,7 +990,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should return the task result content
       expect(result).toContain("Sync task completed successfully")
       expect(result).toContain("Task completed")
@@ -983,11 +999,11 @@ describe("orchestrator-task", () => {
     test("sync mode agent not found returns helpful error", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = {
         launch: async () => ({}),
       }
-      
+
       const mockClient = {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
@@ -1003,19 +1019,19 @@ describe("orchestrator-task", () => {
           agents: async () => ({ data: [{ name: "ultrabrain", mode: "subagent" }] }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when
       const result = await tool.execute(
         {
@@ -1027,7 +1043,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should return agent not found error
       expect(result).toContain("not found")
       expect(result).toContain("registered")
@@ -1093,7 +1109,7 @@ describe("orchestrator-task", () => {
       // #given - category using gemini model with run_in_background=false
       const { createDelegateTask } = require("./tools")
       let launchCalled = false
-      
+
       const mockManager = {
         launch: async () => {
           launchCalled = true
@@ -1106,7 +1122,7 @@ describe("orchestrator-task", () => {
           }
         },
       }
-      
+
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
         config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
@@ -1123,19 +1139,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: { "ses_unstable_gemini": { type: "idle" } } }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - using visual-engineering (gemini model) with run_in_background=false
       const result = await tool.execute(
         {
@@ -1147,7 +1163,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should launch as background BUT wait for and return actual result
       expect(launchCalled).toBe(true)
       expect(result).toContain("SUPERVISED TASK COMPLETED")
@@ -1158,7 +1174,7 @@ describe("orchestrator-task", () => {
       // #given - category using gemini model with run_in_background=true (normal background flow)
       const { createDelegateTask } = require("./tools")
       let launchCalled = false
-      
+
       const mockManager = {
         launch: async () => {
           launchCalled = true
@@ -1171,7 +1187,7 @@ describe("orchestrator-task", () => {
           }
         },
       }
-      
+
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
         config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
@@ -1181,19 +1197,19 @@ describe("orchestrator-task", () => {
           messages: async () => ({ data: [] }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - using visual-engineering with run_in_background=true (normal background)
       const result = await tool.execute(
         {
@@ -1205,7 +1221,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should NOT show unstable message (it's normal background flow)
       expect(launchCalled).toBe(true)
       expect(result).not.toContain("UNSTABLE AGENT MODE")
@@ -1217,14 +1233,14 @@ describe("orchestrator-task", () => {
       const { createDelegateTask } = require("./tools")
       let launchCalled = false
       let promptCalled = false
-      
+
       const mockManager = {
         launch: async () => {
           launchCalled = true
           return { id: "should-not-be-called", sessionID: "x", description: "x", agent: "x", status: "running" }
         },
       }
-      
+
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
         config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
@@ -1241,20 +1257,20 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: { "ses_sync_non_gemini": { type: "idle" } } }),
         },
       }
-      
+
       // Use ultrabrain which uses gpt-5.2 (non-gemini)
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - using ultrabrain (gpt model) with run_in_background=false
       const result = await tool.execute(
         {
@@ -1266,7 +1282,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should run sync, NOT forced to background
       expect(launchCalled).toBe(false)  // manager.launch should NOT be called
       expect(promptCalled).toBe(true)   // sync mode uses session.prompt
@@ -1277,7 +1293,7 @@ describe("orchestrator-task", () => {
       // #given - artistry also uses gemini model
       const { createDelegateTask } = require("./tools")
       let launchCalled = false
-      
+
       const mockManager = {
         launch: async () => {
           launchCalled = true
@@ -1290,7 +1306,7 @@ describe("orchestrator-task", () => {
           }
         },
       }
-      
+
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
         config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
@@ -1307,19 +1323,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: { "ses_artistry_gemini": { type: "idle" } } }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - artistry category (gemini-3-pro with max variant)
       const result = await tool.execute(
         {
@@ -1331,7 +1347,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should launch as background BUT wait for and return actual result
       expect(launchCalled).toBe(true)
       expect(result).toContain("SUPERVISED TASK COMPLETED")
@@ -1342,7 +1358,7 @@ describe("orchestrator-task", () => {
       // #given - writing uses gemini-3-flash
       const { createDelegateTask } = require("./tools")
       let launchCalled = false
-      
+
       const mockManager = {
         launch: async () => {
           launchCalled = true
@@ -1355,7 +1371,7 @@ describe("orchestrator-task", () => {
           }
         },
       }
-      
+
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
         config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
@@ -1372,19 +1388,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: { "ses_writing_gemini": { type: "idle" } } }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - writing category (gemini-3-flash)
       const result = await tool.execute(
         {
@@ -1396,7 +1412,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should launch as background BUT wait for and return actual result
       expect(launchCalled).toBe(true)
       expect(result).toContain("SUPERVISED TASK COMPLETED")
@@ -1407,7 +1423,7 @@ describe("orchestrator-task", () => {
       // #given - custom category with is_unstable_agent=true but non-gemini model
       const { createDelegateTask } = require("./tools")
       let launchCalled = false
-      
+
       const mockManager = {
         launch: async () => {
           launchCalled = true
@@ -1420,7 +1436,7 @@ describe("orchestrator-task", () => {
           }
         },
       }
-      
+
       const mockClient = {
         app: { agents: async () => ({ data: [] }) },
         config: { get: async () => ({ data: { model: SYSTEM_DEFAULT_MODEL } }) },
@@ -1436,7 +1452,7 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: { "ses_custom_unstable": { type: "idle" } } }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
@@ -1447,14 +1463,14 @@ describe("orchestrator-task", () => {
           },
         },
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - using custom unstable category with run_in_background=false
       const result = await tool.execute(
         {
@@ -1466,7 +1482,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should launch as background BUT wait for and return actual result
       expect(launchCalled).toBe(true)
       expect(result).toContain("SUPERVISED TASK COMPLETED")
@@ -1717,10 +1733,10 @@ describe("orchestrator-task", () => {
     test("catalog model is used for category with catalog entry", () => {
       // #given - ultrabrain has catalog entry
       const categoryName = "ultrabrain"
-      
+
       // #when
       const resolved = resolveCategoryConfig(categoryName, { systemDefaultModel: SYSTEM_DEFAULT_MODEL })
-      
+
       // #then - catalog model is used
       expect(resolved).not.toBeNull()
       expect(resolved!.config.model).toBe("openai/gpt-5.2-codex")
@@ -1730,10 +1746,10 @@ describe("orchestrator-task", () => {
     test("default model is used for category with default entry", () => {
       // #given - unspecified-low has default model
       const categoryName = "unspecified-low"
-      
+
       // #when
       const resolved = resolveCategoryConfig(categoryName, { systemDefaultModel: SYSTEM_DEFAULT_MODEL })
-      
+
       // #then - default model from DEFAULT_CATEGORIES is used
       expect(resolved).not.toBeNull()
       expect(resolved!.config.model).toBe("anthropic/claude-sonnet-4-5")
@@ -1743,10 +1759,10 @@ describe("orchestrator-task", () => {
       // #given - builtin ultrabrain category with its own model, inherited model also provided
       const categoryName = "ultrabrain"
       const inheritedModel = "cliproxy/claude-opus-4-5"
-      
+
       // #when
       const resolved = resolveCategoryConfig(categoryName, { inheritedModel, systemDefaultModel: SYSTEM_DEFAULT_MODEL })
-      
+
       // #then - category's built-in model wins (ultrabrain uses gpt-5.2-codex)
       expect(resolved).not.toBeNull()
       const actualModel = resolved!.config.model
@@ -1758,10 +1774,10 @@ describe("orchestrator-task", () => {
       const categoryName = "ultrabrain"
       const userCategories = { "ultrabrain": { model: "my-provider/custom-model" } }
       const inheritedModel = "cliproxy/claude-opus-4-5"
-      
+
       // #when
       const resolved = resolveCategoryConfig(categoryName, { userCategories, inheritedModel, systemDefaultModel: SYSTEM_DEFAULT_MODEL })
-      
+
       // #then - actualModel should be userModel, type should be "user-defined"
       expect(resolved).not.toBeNull()
       const actualModel = resolved!.config.model
@@ -1776,21 +1792,21 @@ describe("orchestrator-task", () => {
       const categoryName = "ultrabrain"
       const inheritedModel = "cliproxy/claude-opus-4-5"
       const userCategories = { "ultrabrain": { model: "user/model" } }
-      
+
       // #when - user model wins
       const resolved = resolveCategoryConfig(categoryName, { userCategories, inheritedModel, systemDefaultModel: SYSTEM_DEFAULT_MODEL })
       const actualModel = resolved!.config.model
       const userDefinedModel = userCategories[categoryName]?.model
-      
+
       // #then - detection should compare against actual resolved model
-      const detectedType = actualModel === userDefinedModel 
-        ? "user-defined" 
-        : actualModel === inheritedModel 
-        ? "inherited" 
-        : actualModel === SYSTEM_DEFAULT_MODEL 
-        ? "system-default" 
-        : undefined
-      
+      const detectedType = actualModel === userDefinedModel
+        ? "user-defined"
+        : actualModel === inheritedModel
+          ? "inherited"
+          : actualModel === SYSTEM_DEFAULT_MODEL
+            ? "system-default"
+            : undefined
+
       expect(detectedType).toBe("user-defined")
       expect(actualModel).not.toBe(inheritedModel)
     })
@@ -1803,10 +1819,10 @@ describe("orchestrator-task", () => {
       // The CORRECT chain: userConfig?.model ?? categoryBuiltIn ?? systemDefaultModel
       const categoryName = "ultrabrain"
       const inheritedModel = "anthropic/claude-opus-4-5"
-      
+
       // #when category has a built-in model (gpt-5.2-codex for ultrabrain)
       const resolved = resolveCategoryConfig(categoryName, { inheritedModel, systemDefaultModel: SYSTEM_DEFAULT_MODEL })
-      
+
       // #then category's built-in model should be used, NOT inheritedModel
       expect(resolved).not.toBeNull()
       expect(resolved!.model).toBe("openai/gpt-5.2-codex")
@@ -1817,13 +1833,13 @@ describe("orchestrator-task", () => {
       const categoryName = "custom-no-default"
       const userCategories = { "custom-no-default": { temperature: 0.5 } } as unknown as Record<string, CategoryConfig>
       const systemDefaultModel = "anthropic/claude-sonnet-4-5"
-      
+
       // #when no inheritedModel is provided, only systemDefaultModel
-      const resolved = resolveCategoryConfig(categoryName, { 
-        userCategories, 
-        systemDefaultModel 
+      const resolved = resolveCategoryConfig(categoryName, {
+        userCategories,
+        systemDefaultModel
       })
-      
+
       // #then systemDefaultModel should be returned
       expect(resolved).not.toBeNull()
       expect(resolved!.model).toBe("anthropic/claude-sonnet-4-5")
@@ -1835,14 +1851,14 @@ describe("orchestrator-task", () => {
       const userCategories = { "ultrabrain": { model: "custom/user-model" } }
       const inheritedModel = "anthropic/claude-opus-4-5"
       const systemDefaultModel = "anthropic/claude-sonnet-4-5"
-      
+
       // #when resolveCategoryConfig is called with all sources
-      const resolved = resolveCategoryConfig(categoryName, { 
-        userCategories, 
-        inheritedModel, 
-        systemDefaultModel 
+      const resolved = resolveCategoryConfig(categoryName, {
+        userCategories,
+        inheritedModel,
+        systemDefaultModel
       })
-      
+
       // #then userConfig.model should win
       expect(resolved).not.toBeNull()
       expect(resolved!.model).toBe("custom/user-model")
@@ -1853,10 +1869,10 @@ describe("orchestrator-task", () => {
       const categoryName = "custom-empty-model"
       const userCategories = { "custom-empty-model": { model: "", temperature: 0.3 } }
       const inheritedModel = "anthropic/claude-opus-4-5"
-      
+
       // #when resolveCategoryConfig is called
       const resolved = resolveCategoryConfig(categoryName, { userCategories, inheritedModel, systemDefaultModel: SYSTEM_DEFAULT_MODEL })
-      
+
       // #then should fall back to systemDefaultModel since custom category has no built-in model
       expect(resolved).not.toBeNull()
       expect(resolved!.model).toBe(SYSTEM_DEFAULT_MODEL)
@@ -1868,10 +1884,10 @@ describe("orchestrator-task", () => {
       // Using type assertion since we're testing fallback behavior for categories without model
       const userCategories = { "visual-engineering": { temperature: 0.2 } } as unknown as Record<string, CategoryConfig>
       const inheritedModel = "anthropic/claude-opus-4-5"
-      
+
       // #when resolveCategoryConfig is called
       const resolved = resolveCategoryConfig(categoryName, { userCategories, inheritedModel, systemDefaultModel: SYSTEM_DEFAULT_MODEL })
-      
+
       // #then should use category's built-in model (gemini-3-pro for visual-engineering)
       expect(resolved).not.toBeNull()
       expect(resolved!.model).toBe("google/gemini-3-pro")
@@ -1883,10 +1899,10 @@ describe("orchestrator-task", () => {
       // Using type assertion since we're testing fallback behavior for categories without model
       const userCategories = { "my-custom": { temperature: 0.5 } } as unknown as Record<string, CategoryConfig>
       const systemDefaultModel = "anthropic/claude-sonnet-4-5"
-      
+
       // #when
       const resolved = resolveCategoryConfig(categoryName, { userCategories, systemDefaultModel })
-      
+
       // #then - actualModel should be systemDefaultModel
       expect(resolved).not.toBeNull()
       expect(resolved!.model).toBe(systemDefaultModel)
@@ -1897,7 +1913,7 @@ describe("orchestrator-task", () => {
     test("planner cannot delegate to planner - returns error with guidance", async () => {
       // #given - current agent is planner
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         app: { agents: async () => ({ data: [{ name: "planner", mode: "subagent" }] }) },
@@ -1910,19 +1926,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: {} }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "planner",
         abort: new AbortController().signal,
       }
-      
+
       // #when - planner tries to delegate to planner
       const result = await tool.execute(
         {
@@ -1934,7 +1950,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should return error telling planner to create plan directly
       expect(result).toContain("planner")
       expect(result).toContain("directly")
@@ -1943,7 +1959,7 @@ describe("orchestrator-task", () => {
     test("non-planner agent CAN delegate to planner - proceeds normally", async () => {
       // #given - current agent is orchestrator
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         app: { agents: async () => ({ data: [{ name: "planner", mode: "subagent" }] }) },
@@ -1958,19 +1974,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: { "ses_planner_allowed": { type: "idle" } } }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - orchestrator delegates to planner
       const result = await tool.execute(
         {
@@ -1982,7 +1998,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should proceed normally
       expect(result).not.toContain("Cannot delegate")
       expect(result).toContain("Plan created successfully")
@@ -1991,7 +2007,7 @@ describe("orchestrator-task", () => {
     test("case-insensitive: Planner (capitalized) cannot delegate to planner", async () => {
       // #given - current agent is Planner (capitalized)
       const { createDelegateTask } = require("./tools")
-      
+
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         app: { agents: async () => ({ data: [{ name: "planner", mode: "subagent" }] }) },
@@ -2004,19 +2020,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: {} }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "Planner",
         abort: new AbortController().signal,
       }
-      
+
       // #when - Planner tries to delegate to planner
       const result = await tool.execute(
         {
@@ -2028,7 +2044,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - should still return error
       expect(result).toContain("planner")
       expect(result).toContain("directly")
@@ -2226,7 +2242,7 @@ describe("orchestrator-task", () => {
       // #given - orchestrator delegates to planner
       const { createDelegateTask } = require("./tools")
       let promptBody: any
-      
+
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         app: { agents: async () => ({ data: [{ name: "planner", mode: "subagent" }] }) },
@@ -2244,19 +2260,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: { "ses_planner_delegate": { type: "idle" } } }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - orchestrator delegates to planner
       await tool.execute(
         {
@@ -2268,7 +2284,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - planner should have delegate_task permission
       expect(promptBody.tools.delegate_task).toBe(true)
     }, { timeout: 20000 })
@@ -2277,7 +2293,7 @@ describe("orchestrator-task", () => {
       // #given - orchestrator delegates to architect (non-planner)
       const { createDelegateTask } = require("./tools")
       let promptBody: any
-      
+
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         app: { agents: async () => ({ data: [{ name: "architect", mode: "subagent" }] }) },
@@ -2295,19 +2311,19 @@ describe("orchestrator-task", () => {
           status: async () => ({ data: { "ses_architect_no_delegate": { type: "idle" } } }),
         },
       }
-      
+
       const tool = createDelegateTask({
         manager: mockManager,
         client: mockClient,
       })
-      
+
       const toolContext = {
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
         abort: new AbortController().signal,
       }
-      
+
       // #when - orchestrator delegates to architect
       await tool.execute(
         {
@@ -2319,7 +2335,7 @@ describe("orchestrator-task", () => {
         },
         toolContext
       )
-      
+
       // #then - architect should NOT have delegate_task permission
       expect(promptBody.tools.delegate_task).toBe(false)
     }, { timeout: 20000 })

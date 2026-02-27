@@ -226,4 +226,82 @@ describe("cli/memory/docker-manager", () => {
             expect(mockLog).toHaveBeenCalledWith("[docker-manager] Could not clear omo-memory data")
         })
     })
+
+    const extConfig: any = { mode: "external", enabled: true, port: 18000, auto_capture: true, user: "root", namespace: "omo", database: "memory" }
+
+    describe("getSurrealDBStatus (external mode)", () => {
+        test("returns running if external health check passes", async () => {
+            const res = await dockerManager.getSurrealDBStatus(extConfig)
+            expect(res).toBe("running")
+            expect(mockSpawnSync).not.toHaveBeenCalled()
+        })
+
+        test("returns stopped if external health check fails", async () => {
+            globalFetchSpy.mockRejectedValueOnce(new Error("conn refused"))
+            const res = await dockerManager.getSurrealDBStatus(extConfig)
+            expect(res).toBe("stopped")
+        })
+    })
+
+    describe("ensureSurrealDBRunning (external mode)", () => {
+        test("exits early without spawning docker", async () => {
+            await dockerManager.ensureSurrealDBRunning(extConfig)
+            expect(mockSpawnSync).not.toHaveBeenCalled()
+            expect(mockLog).toHaveBeenCalledWith("[docker-manager] External mode — skipping Docker management")
+        })
+    })
+
+    describe("detectExistingSurrealDB", () => {
+        test("detects docker containers correctly", async () => {
+            mockSpawnSync.mockImplementation((cmd, args: any[]) => {
+                if (args.includes("--version")) return { stdout: "Docker version 20.10.x\n" }
+                if (args.includes("ancestor=surrealdb/surrealdb")) {
+                    return { stdout: "abc12345\texisting-surreal\t0.0.0.0:8001->8000/tcp\n" }
+                }
+                return { stdout: "" }
+            })
+
+            globalFetchSpy.mockRejectedValue(new Error("no network service")) // skip network probe match
+
+            const res = await dockerManager.detectExistingSurrealDB()
+            expect(res.length).toBe(1)
+            expect(res[0].source).toBe("docker-container")
+            expect(res[0].port).toBe(8001)
+            expect(res[0].containerName).toBe("existing-surreal")
+        })
+
+        test("filters out managed container", async () => {
+            mockSpawnSync.mockImplementation((cmd, args: any[]) => {
+                if (args.includes("--version")) return { stdout: "Docker version 20.10.x\n" }
+                if (args.includes("ancestor=surrealdb/surrealdb")) {
+                    return { stdout: "def6789\tomo-surrealdb\t0.0.0.0:18000->8000/tcp\n" }
+                }
+                return { stdout: "" }
+            })
+
+            globalFetchSpy.mockRejectedValue(new Error("no network"))
+
+            const res = await dockerManager.detectExistingSurrealDB()
+            expect(res.length).toBe(0)
+        })
+
+        test("detects network service on standard ports", async () => {
+            mockSpawnSync.mockImplementation((cmd, args: any[]) => {
+                if (args.includes("--version")) return { stdout: "Docker version 20.10.x\n" }
+                return { stdout: "" } // no docker containers
+            })
+
+            let callCount = 0
+            globalFetchSpy.mockImplementation(async () => {
+                callCount++
+                if (callCount === 1) return { ok: true } // port 8000 succeeds
+                throw new Error("nope") // 18000 fails
+            })
+
+            const res = await dockerManager.detectExistingSurrealDB()
+            expect(res.length).toBe(1)
+            expect(res[0].source).toBe("network-service")
+            expect(res[0].port).toBe(8000)
+        })
+    })
 })

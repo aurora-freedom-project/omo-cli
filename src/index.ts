@@ -82,6 +82,8 @@ import { createModelCacheState, getModelLimit } from "./plugin-state";
 import { createConfigHandler } from "./plugin-handlers";
 import { createMemoryTools } from "./cli/memory/memory-tools";
 import { createMemoryCaptureHook } from "./hooks/memory-capture";
+import { createCodeIntelTools } from "./features/code-intel/code-intel-tools";
+import { startAutoInit } from "./features/code-intel/auto-init";
 
 const OmoCliPlugin: Plugin = async (ctx) => {
   log("[OmoCliPlugin] ENTRY - plugin loading", { directory: ctx.directory })
@@ -382,15 +384,25 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     ? createMemoryTools(ctx, pluginConfig.memory)
     : {};
 
+  const codeIntelTools = pluginConfig.memory?.enabled
+    ? createCodeIntelTools(ctx, pluginConfig.memory)
+    : {};
+
   const memoryCapture = pluginConfig.memory?.enabled && pluginConfig.memory?.auto_capture !== false
     ? createMemoryCaptureHook(pluginConfig.memory, ctx.directory)
     : null;
+
+  // Auto-start SurrealDB + incremental index in background (non-blocking)
+  if (pluginConfig.memory?.enabled) {
+    startAutoInit(ctx.directory, pluginConfig.memory);
+  }
 
   return {
     tool: {
       ...builtinTools,
       ...backgroundTools,
       ...memoryTools,
+      ...codeIntelTools,
       call_omo_agent: callOmoAgent,
       ...(lookAt ? { look_at: lookAt } : {}),
       delegate_task: delegateTask,

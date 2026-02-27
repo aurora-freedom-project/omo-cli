@@ -1854,6 +1854,39 @@ const thoughtsScaffoldSkill: BuiltinSkill = {
   template: "# Thoughts Scaffold\n\n```bash\nmkdir -p .opencode/thoughts/{architecture,research,plans,reviews}\ntouch .opencode/thoughts/{architecture,research,plans,reviews}/.gitkeep\n```",
 }
 
+const codeNavigationSkill: BuiltinSkill = {
+  name: "code-navigation",
+  description:
+    "Smart codebase navigation using pre-indexed structural data and impact analysis. Use code_search for finding functions/classes, code_callers for impact analysis before edits, code_deps for module boundaries, code_overview for project snapshot. Requires 'omo-cli index' to build the index.",
+  template: `# Code Navigation (Code Intel)
+
+Use these tools for efficient code exploration and impact analysis. They query a pre-built index (via \`omo-cli index\`) and are **faster than grep** for structural code queries.
+
+## Available Tools
+
+| Tool | Use when... |
+|------|------------|
+| \`code_search\` | Finding functions, classes, types by name or description |
+| \`code_callers\` | Checking who calls a function before modifying it |
+| \`code_deps\` | Understanding module import/export relationships |
+| \`code_overview\` | Getting project structure overview at session start |
+
+## Strategy
+
+1. **Session start**: Run \`code_overview\` to understand project shape
+2. **Finding code**: Use \`code_search\` instead of grep for structural queries
+3. **Before editing**: ALWAYS run \`code_callers\` to check blast radius
+4. **Module boundaries**: Use \`code_deps\` to understand import structure
+5. **Fallback**: Use grep/glob for runtime patterns, string matches, or configuration values
+
+## Prerequisites
+
+- SurrealDB must be running: \`omo-cli memory start\`
+- Index must be built: \`omo-cli index\`
+- For semantic search: \`omo-cli index --vector\``,
+  allowedTools: ["code_search", "code_callers", "code_deps", "code_overview"],
+}
+
 
 export interface CreateBuiltinSkillsOptions {
   browserProvider?: BrowserAutomationProvider
@@ -1864,5 +1897,5 @@ export function createBuiltinSkills(options: CreateBuiltinSkillsOptions = {}): B
 
   const browserSkill = browserProvider === "agent-browser" ? agentBrowserSkill : playwrightSkill
 
-  return [browserSkill, frontendUiUxSkill, gitMasterSkill, devBrowserSkill, publishSkill, removeDeadcodeSkill, omomomoSkill, openspecWorkflowSkill, thoughtsScaffoldSkill]
+  return [browserSkill, frontendUiUxSkill, gitMasterSkill, devBrowserSkill, publishSkill, removeDeadcodeSkill, omomomoSkill, openspecWorkflowSkill, thoughtsScaffoldSkill, codeNavigationSkill]
 }

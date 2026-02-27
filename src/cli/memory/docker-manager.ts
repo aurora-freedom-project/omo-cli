@@ -65,6 +65,19 @@ function isContainerRunning(containerName = CONTAINER_NAME): boolean {
     }
 }
 
+function doesContainerExist(containerName = CONTAINER_NAME): boolean {
+    try {
+        const result = spawnSync(
+            "docker",
+            ["inspect", "--format", "{{.Id}}", containerName],
+            { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+        )
+        return result.status === 0 && (result.stdout?.trim().length ?? 0) > 0
+    } catch {
+        return false
+    }
+}
+
 export async function isSurrealDBHealthy(port = DEFAULT_MANAGED_PORT): Promise<boolean> {
     try {
         const healthUrl = `http://localhost:${port}/health`
@@ -178,7 +191,40 @@ export async function ensureSurrealDBRunning(config?: MemoryConfig): Promise<voi
         return
     }
 
-    log("[docker-manager] Starting SurrealDB container...")
+    // Status is "stopped" — check if container exists but is stopped (e.g. after reboot)
+    const containerExists = doesContainerExist(CONTAINER_NAME)
+
+    if (containerExists) {
+        // Container exists but stopped → restart it (preserves all data)
+        log("[docker-manager] Restarting existing stopped container...")
+        const startResult = spawnSync("docker", ["start", CONTAINER_NAME], {
+            encoding: "utf-8",
+            timeout: 10000,
+        })
+
+        if (startResult.status !== 0) {
+            log("[docker-manager] docker start failed, removing and recreating", {
+                stderr: startResult.stderr,
+            })
+            // Remove broken container and fall through to create new one
+            spawnSync("docker", ["rm", "-f", CONTAINER_NAME], { stdio: "ignore" })
+        } else {
+            // Wait for health after restart
+            for (let i = 0; i < 15; i++) {
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+                if (await isSurrealDBHealthy(port)) {
+                    log("[docker-manager] SurrealDB restarted successfully")
+                    return
+                }
+            }
+            throw new Error(
+                "SurrealDB restarted but did not become healthy within 15s. Check: docker logs omo-surrealdb"
+            )
+        }
+    }
+
+    // No existing container → create new one
+    log("[docker-manager] Creating new SurrealDB container...")
 
     const composeFile = isDockerComposeInstalled() ? findComposeFile() : null
 

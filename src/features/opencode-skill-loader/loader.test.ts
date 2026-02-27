@@ -18,12 +18,23 @@ function createTestSkill(name: string, content: string, mcpJson?: object): strin
 }
 
 describe("skill loader MCP parsing", () => {
+  let originalConfigDir: string | undefined
+
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
+    // Override config dir to prevent scanning 952 global skills (causes 5s timeout)
+    originalConfigDir = process.env.OPENCODE_CONFIG_DIR
+    process.env.OPENCODE_CONFIG_DIR = join(TEST_DIR, ".config-test")
+    mkdirSync(join(TEST_DIR, ".config-test", "skills"), { recursive: true })
   })
 
   afterEach(() => {
     rmSync(TEST_DIR, { recursive: true, force: true })
+    if (originalConfigDir !== undefined) {
+      process.env.OPENCODE_CONFIG_DIR = originalConfigDir
+    } else {
+      delete process.env.OPENCODE_CONFIG_DIR
+    }
   })
 
   describe("parseSkillMcpConfig", () => {
@@ -268,7 +279,7 @@ Skill body.
       } finally {
         process.chdir(originalCwd)
       }
-      })
+    })
   })
 
   describe("allowed-tools parsing", () => {

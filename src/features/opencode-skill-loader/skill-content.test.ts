@@ -1,5 +1,29 @@
-import { describe, it, expect } from "bun:test"
-import { resolveSkillContent, resolveMultipleSkills, resolveSkillContentAsync, resolveMultipleSkillsAsync } from "./skill-content"
+import { describe, it, expect, beforeEach, afterEach } from "bun:test"
+import { resolveSkillContent, resolveMultipleSkills, resolveSkillContentAsync, resolveMultipleSkillsAsync, clearSkillCache } from "./skill-content"
+import { mkdirSync, rmSync } from "fs"
+import { join } from "path"
+import { tmpdir } from "os"
+
+const SKILL_CONTENT_TEST_DIR = join(tmpdir(), "skill-content-test-" + Date.now())
+let originalConfigDir: string | undefined
+
+beforeEach(() => {
+	// Override config dir to prevent scanning 952 global skills (causes 5s timeout)
+	originalConfigDir = process.env.OPENCODE_CONFIG_DIR
+	process.env.OPENCODE_CONFIG_DIR = join(SKILL_CONTENT_TEST_DIR, ".config-test")
+	mkdirSync(join(SKILL_CONTENT_TEST_DIR, ".config-test", "skills"), { recursive: true })
+	// Clear cached skills so each test starts fresh
+	clearSkillCache()
+})
+
+afterEach(() => {
+	if (originalConfigDir !== undefined) {
+		process.env.OPENCODE_CONFIG_DIR = originalConfigDir
+	} else {
+		delete process.env.OPENCODE_CONFIG_DIR
+	}
+	try { rmSync(SKILL_CONTENT_TEST_DIR, { recursive: true, force: true }) } catch { }
+})
 
 describe("resolveSkillContent", () => {
 	it("should return template for existing skill", () => {

@@ -31,7 +31,7 @@ import { migrateAgentConfig } from "../shared/permission-compat";
 import { AGENT_NAME_MAP } from "../shared/migration";
 import { resolveModelWithFallback } from "../shared/model-resolver";
 import { AGENT_MODEL_REQUIREMENTS } from "../shared/model-requirements";
-import { CODER_SYSTEM_PROMPT, CODER_PERMISSION } from "../agents/coder-prompt";
+import { CODER_SYSTEM_PROMPT, CODER_PERMISSION } from "../agents/coder";
 import { DEFAULT_CATEGORIES } from "../tools/delegate-task/constants";
 import type { ModelCacheState } from "../plugin-state";
 import type { CategoryConfig } from "../config/schema";

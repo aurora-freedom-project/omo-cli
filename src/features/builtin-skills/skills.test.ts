@@ -84,7 +84,7 @@ describe("createBuiltinSkills", () => {
 		const agentBrowserSkills = createBuiltinSkills({ browserProvider: "agent-browser" })
 
 		// #then
-		expect(defaultSkills).toHaveLength(9)
-		expect(agentBrowserSkills).toHaveLength(9)
+		expect(defaultSkills).toHaveLength(10)
+		expect(agentBrowserSkills).toHaveLength(10)
 	})
 })

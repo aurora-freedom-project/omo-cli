@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { CODER_SYSTEM_PROMPT } from "./coder-prompt"
+import { CODER_SYSTEM_PROMPT } from "./coder"
 
 describe("CODER_SYSTEM_PROMPT Reviewer invocation policy", () => {
   test("should direct providing ONLY the file path string when invoking Reviewer", () => {

@@ -4,6 +4,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { install } from "./install"
 import * as configManager from "./config-manager"
+import * as dockerManager from "./memory/docker-manager"
+import * as childProcess from "node:child_process"
 import type { InstallArgs } from "./types"
 
 describe("install CLI - binary check behavior", () => {
@@ -31,6 +33,18 @@ describe("install CLI - binary check behavior", () => {
     // Capture console output
     console.log = mockConsoleLog
     mockConsoleLog.mockClear()
+
+    // Mock Docker manager to avoid interactive prompts
+    spyOn(dockerManager, "detectExistingSurrealDB").mockResolvedValue([])
+
+    // Mock spawn to avoid running sync-skills which takes >5s
+    const mockChild = {
+      on: (event: string, cb: (...args: any[]) => void) => {
+        if (event === "close") cb(0) // immediately return success
+        return mockChild
+      }
+    }
+    spyOn(childProcess, "spawn").mockReturnValue(mockChild as any)
   })
 
   afterEach(() => {
