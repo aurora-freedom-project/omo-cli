@@ -47,7 +47,7 @@ describe("E2E: memory install → start → add/search/graph", () => {
     test("createMemoryTools returns all 3 tools with correct schema", async () => {
         const { createMemoryTools } = await import("../cli/memory/memory-tools")
 
-        const ctx = { directory: "/tmp/e2e-test" } as any
+        const ctx = { directory: "/tmp/e2e-test" } as never
         const config = { enabled: true, port: 18000, auto_capture: false, mode: "managed" as const, user: "root", namespace: "omo", database: "memory" }
         const tools = createMemoryTools(ctx, config)
 
@@ -137,7 +137,7 @@ describe("E2E: memory install → start → add/search/graph", () => {
     test("disabled config returns disabled message for all tools", async () => {
         const { createMemoryTools } = await import("../cli/memory/memory-tools")
 
-        const ctx = { directory: "/tmp/e2e-disabled" } as any
+        const ctx = { directory: "/tmp/e2e-disabled" } as never
         const config = { enabled: false, port: 18000, auto_capture: false, mode: "managed" as const, user: "root", namespace: "omo", database: "memory" }
         const tools = createMemoryTools(ctx, config)
 

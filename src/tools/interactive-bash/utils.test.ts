@@ -7,7 +7,7 @@ mock.module("child_process", () => {
     return {
         spawn: mock((cmd, args) => {
             return {
-                on: mock((event: string, cb: any) => {
+                on: mock((event: string, cb: (...args: unknown[]) => void) => {
                     if (event === "close") {
                         if (args && args.includes("-V")) {
                             cb(0) // verify returns 0
@@ -45,7 +45,7 @@ describe("interactive-bash/utils", () => {
         test("returns path if tmux is found", async () => {
             const mockSpawn = mock((cmd, args) => {
                 return {
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") {
                             cb(0)
                         }
@@ -59,7 +59,7 @@ describe("interactive-bash/utils", () => {
                     }
                 }
             })
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
             const path = await utils.getTmuxPath()
             expect(path).toBe("/usr/bin/tmux")
@@ -69,7 +69,7 @@ describe("interactive-bash/utils", () => {
         test("returns null if path resolution errors/exits non-zero", async () => {
             const mockSpawnError = mock((cmd, args) => {
                 return {
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") {
                             cb(1) // fail
                         }
@@ -79,7 +79,7 @@ describe("interactive-bash/utils", () => {
                     }
                 }
             })
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawnError as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawnError as never)
 
             const path = await utils.getTmuxPath()
             expect(path).toBeNull()
@@ -88,7 +88,7 @@ describe("interactive-bash/utils", () => {
         test("returns null if path verify exits non-zero", async () => {
             const mockSpawnVerifyFail = mock((cmd, args) => {
                 return {
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") {
                             if (args?.includes("-V")) {
                                 cb(1) // fail on verify step
@@ -106,7 +106,7 @@ describe("interactive-bash/utils", () => {
                     }
                 }
             })
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawnVerifyFail as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawnVerifyFail as never)
 
             const path = await utils.getTmuxPath()
             expect(path).toBeNull()
@@ -115,7 +115,7 @@ describe("interactive-bash/utils", () => {
         test("returns null if initial stdout doesn't match string", async () => {
             const mockSpawnVerifyFail = mock((cmd, args) => {
                 return {
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") {
                             cb(0)
                         }
@@ -129,7 +129,7 @@ describe("interactive-bash/utils", () => {
                     }
                 }
             })
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawnVerifyFail as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawnVerifyFail as never)
 
             const path = await utils.getTmuxPath()
             expect(path).toBeNull()
@@ -140,7 +140,7 @@ describe("interactive-bash/utils", () => {
             const mockSpawn = mock((cmd, args) => {
                 spawnCalls++
                 return {
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") {
                             cb(0)
                         }
@@ -154,7 +154,7 @@ describe("interactive-bash/utils", () => {
                     }
                 }
             })
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
             const promise1 = utils.getTmuxPath()
             const promise2 = utils.getTmuxPath()
@@ -169,7 +169,7 @@ describe("interactive-bash/utils", () => {
         test("initializes the cache via background promise", async () => {
             const mockSpawn = mock((cmd, args) => {
                 return {
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") {
                             cb(0)
                         }
@@ -183,7 +183,7 @@ describe("interactive-bash/utils", () => {
                     }
                 }
             })
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
             utils.startBackgroundCheck()
             const path = await utils.getTmuxPath()
@@ -194,7 +194,7 @@ describe("interactive-bash/utils", () => {
             const mockSpawn = mock((cmd, args) => {
                 throw new Error("Crash")
             })
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
             const path = await utils.getTmuxPath()
             expect(path).toBeNull()

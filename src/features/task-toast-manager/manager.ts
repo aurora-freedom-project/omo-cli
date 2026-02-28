@@ -1,6 +1,7 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import type { TrackedTask, TaskStatus, ModelFallbackInfo } from "./types"
 import type { ConcurrencyManager } from "../background-agent/concurrency"
+import type { TuiClientExtension } from "../../shared/sdk-types"
 
 type OpencodeClient = PluginInput["client"]
 
@@ -153,8 +154,7 @@ export class TaskToastManager {
    * Show consolidated toast with all running/queued tasks
    */
   private showTaskListToast(newTask: TrackedTask): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tuiClient = this.client as any
+    const tuiClient = this.client as unknown as TuiClientExtension
     if (!tuiClient.tui?.showToast) return
 
     const message = this.buildTaskListMessage(newTask)
@@ -172,15 +172,14 @@ export class TaskToastManager {
         variant: "info",
         duration: running.length + queued.length > 2 ? 5000 : 3000,
       },
-    }).catch(() => {})
+    }).catch(() => { })
   }
 
   /**
    * Show task completion toast
    */
   showCompletionToast(task: { id: string; description: string; duration: string }): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tuiClient = this.client as any
+    const tuiClient = this.client as unknown as TuiClientExtension
     if (!tuiClient.tui?.showToast) return
 
     this.removeTask(task.id)
@@ -200,7 +199,7 @@ export class TaskToastManager {
         variant: "success",
         duration: 5000,
       },
-    }).catch(() => {})
+    }).catch(() => { })
   }
 }
 

@@ -23,7 +23,7 @@ mock.module("./transformer", () => ({ transformMcpServer: mockTransformMcpServer
 import * as loader from "./loader"
 
 describe("features/claude-code-mcp-loader/loader", () => {
-  let bunFileSpy: any
+  let bunFileSpy: ReturnType<typeof spyOn>
 
   beforeEach(() => {
     mockExistsSync.mockClear()
@@ -33,7 +33,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
     mockLog.mockClear()
     mockTransformMcpServer.mockClear()
 
-    bunFileSpy = spyOn(Bun, "file").mockImplementation((path: any) => ({
+    bunFileSpy = spyOn(Bun, "file").mockImplementation((path: string) => ({
       text: async () => ""
     }) as any)
   })
@@ -51,7 +51,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
     test("parses files and collects non-disabled server names", () => {
       const configObj = { mcpServers: { "srv1": {}, "srv2": { disabled: true }, "srv3": {} } }
       // return true for first file, false for others to limit parsing
-      mockExistsSync.mockImplementation((path: any) => path.includes("claude"))
+      mockExistsSync.mockImplementation((path: string) => path.includes("claude"))
       mockReadFileSync.mockReturnValue(JSON.stringify(configObj))
 
       const names = loader.getSystemMcpServerNames()
@@ -82,7 +82,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
       const userConfig = { mcpServers: { srv1: { a: 1 }, srv2: { b: 2 } } }
       const projConfig = { mcpServers: { srv1: { disabled: true } } }
 
-      mockExistsSync.mockImplementation((p: any) => true)
+      mockExistsSync.mockImplementation((p: string) => true)
 
       bunFileSpy.mockImplementation((path: string) => ({
         text: async () => {
@@ -123,7 +123,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
     })
 
     test("handles transform throwing gracefully", async () => {
-      mockExistsSync.mockImplementation((p: any) => p === "/test/claude/config/.mcp.json") // STRICTLY ONE MATCH
+      mockExistsSync.mockImplementation((p: string) => p === "/test/claude/config/.mcp.json") // STRICTLY ONE MATCH
       const userConfig = { mcpServers: { srv1: { a: 1 } } }
 
       bunFileSpy.mockImplementation((path: string) => ({
@@ -161,7 +161,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
     })
 
     test("formats loaded servers neatly", () => {
-      const servers: any[] = [
+      const servers: Record<string, unknown>[] = [
         { name: "srvA", scope: "user" },
         { name: "srvB", scope: "project" }
       ]

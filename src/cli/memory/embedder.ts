@@ -6,9 +6,13 @@ const MODEL_ID = "Xenova/all-MiniLM-L6-v2"
 const EXPECTED_DIMS = 384
 const CACHE_DIR = join(homedir(), ".cache", "omo-cli", "models")
 
+/** Shape of transformer pipeline output tensor */
+interface EmbeddingOutput {
+    data: Float32Array | number[]
+}
+
 // Lazy-loaded — import only on first use to avoid 50MB startup cost
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let pipeline: ((text: string | string[]) => Promise<any>) | null = null
+let pipeline: ((text: string | string[]) => Promise<EmbeddingOutput[]>) | null = null
 
 async function getPipeline() {
     if (pipeline) return pipeline
@@ -16,8 +20,13 @@ async function getPipeline() {
     log("[embedder] Loading transformer model (first-time, may take a moment)...")
 
     // MUST be dynamic import — never top-level (50MB penalty)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { pipeline: createPipeline, env } = await import("@xenova/transformers") as any
+    const transformers = await import("@xenova/transformers") as Record<string, unknown>
+    const createPipeline = transformers.pipeline as (
+        task: string,
+        model: string,
+        options: Record<string, unknown>
+    ) => Promise<(text: string | string[], options?: Record<string, unknown>) => Promise<EmbeddingOutput[]>>
+    const env = transformers.env as { cacheDir: string; allowLocalModels: boolean }
 
     // Set cache dir to omo-cli models path
     env.cacheDir = CACHE_DIR
@@ -44,8 +53,7 @@ async function getPipeline() {
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
     const p = await getPipeline()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output = await p!(text) as any
+    const output = await p!(text)
 
     const vector = Array.from(output[0].data) as number[]
 
@@ -68,8 +76,7 @@ export async function generateEmbeddingBatch(
     if (texts.length === 0) return []
 
     const p = await getPipeline()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const outputs = await Promise.all(texts.map((t) => p!(t))) as any[]
+    const outputs = await Promise.all(texts.map((t) => p!(t)))
 
     return outputs.map((o) => Array.from(o[0].data) as number[])
 }

@@ -518,12 +518,10 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       input: Record<string, never>,
       output: { messages: Array<{ info: unknown; parts: unknown[] }> }
     ) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await contextInjectorMessagesTransform?.["experimental.chat.messages.transform"]?.(input, output as any);
+      await contextInjectorMessagesTransform?.["experimental.chat.messages.transform"]?.(input, output as never);
       await thinkingBlockValidator?.[
         "experimental.chat.messages.transform"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ]?.(input, output as any);
+      ]?.(input, output as never);
 
     },
 

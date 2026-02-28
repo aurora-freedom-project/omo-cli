@@ -18,39 +18,39 @@ import * as permissionCompat from "../shared/permission-compat"
 import * as modelResolver from "../shared/model-resolver"
 
 beforeEach(() => {
-  spyOn(agents, "createBuiltinAgents" as any).mockResolvedValue({
+  spyOn(agents, "createBuiltinAgents").mockResolvedValue({
     orchestrator: { name: "orchestrator", prompt: "test", mode: "primary" },
     architect: { name: "architect", prompt: "test", mode: "subagent" },
   })
 
-  spyOn(worker, "createWorkerAgentWithOverrides" as any).mockReturnValue({
+  spyOn(worker, "createWorkerAgentWithOverrides").mockReturnValue({
     name: "worker",
     prompt: "test",
     mode: "subagent",
   })
 
-  spyOn(commandLoader, "loadUserCommands" as any).mockResolvedValue({})
-  spyOn(commandLoader, "loadProjectCommands" as any).mockResolvedValue({})
-  spyOn(commandLoader, "loadOpencodeGlobalCommands" as any).mockResolvedValue({})
-  spyOn(commandLoader, "loadOpencodeProjectCommands" as any).mockResolvedValue({})
+  spyOn(commandLoader, "loadUserCommands").mockResolvedValue({})
+  spyOn(commandLoader, "loadProjectCommands").mockResolvedValue({})
+  spyOn(commandLoader, "loadOpencodeGlobalCommands").mockResolvedValue({})
+  spyOn(commandLoader, "loadOpencodeProjectCommands").mockResolvedValue({})
 
-  spyOn(builtinCommands, "loadBuiltinCommands" as any).mockReturnValue({})
+  spyOn(builtinCommands, "loadBuiltinCommands").mockReturnValue({})
 
-  spyOn(skillLoader, "loadUserSkills" as any).mockResolvedValue({})
-  spyOn(skillLoader, "loadProjectSkills" as any).mockResolvedValue({})
-  spyOn(skillLoader, "loadOpencodeGlobalSkills" as any).mockResolvedValue({})
-  spyOn(skillLoader, "loadOpencodeProjectSkills" as any).mockResolvedValue({})
-  spyOn(skillLoader, "discoverUserClaudeSkills" as any).mockResolvedValue([])
-  spyOn(skillLoader, "discoverProjectClaudeSkills" as any).mockResolvedValue([])
-  spyOn(skillLoader, "discoverOpencodeGlobalSkills" as any).mockResolvedValue([])
-  spyOn(skillLoader, "discoverOpencodeProjectSkills" as any).mockResolvedValue([])
+  spyOn(skillLoader, "loadUserSkills").mockResolvedValue({})
+  spyOn(skillLoader, "loadProjectSkills").mockResolvedValue({})
+  spyOn(skillLoader, "loadOpencodeGlobalSkills").mockResolvedValue({})
+  spyOn(skillLoader, "loadOpencodeProjectSkills").mockResolvedValue({})
+  spyOn(skillLoader, "discoverUserClaudeSkills").mockResolvedValue([])
+  spyOn(skillLoader, "discoverProjectClaudeSkills").mockResolvedValue([])
+  spyOn(skillLoader, "discoverOpencodeGlobalSkills").mockResolvedValue([])
+  spyOn(skillLoader, "discoverOpencodeProjectSkills").mockResolvedValue([])
 
-  spyOn(agentLoader, "loadUserAgents" as any).mockReturnValue({})
-  spyOn(agentLoader, "loadProjectAgents" as any).mockReturnValue({})
+  spyOn(agentLoader, "loadUserAgents").mockReturnValue({})
+  spyOn(agentLoader, "loadProjectAgents").mockReturnValue({})
 
-  spyOn(mcpLoader, "loadMcpConfigs" as any).mockResolvedValue({ servers: {} })
+  spyOn(mcpLoader, "loadMcpConfigs").mockResolvedValue({ servers: {}, loadedServers: [] })
 
-  spyOn(pluginLoader, "loadAllPluginComponents" as any).mockResolvedValue({
+  spyOn(pluginLoader, "loadAllPluginComponents").mockResolvedValue({
     commands: {},
     skills: {},
     agents: {},
@@ -60,49 +60,52 @@ beforeEach(() => {
     errors: [],
   })
 
-  spyOn(mcpModule, "createBuiltinMcps" as any).mockReturnValue({})
+  spyOn(mcpModule, "createBuiltinMcps").mockReturnValue({})
 
-  spyOn(shared, "log" as any).mockImplementation(() => { })
-  spyOn(shared, "fetchAvailableModels" as any).mockResolvedValue(new Set(["anthropic/claude-opus-4-5"]))
-  spyOn(shared, "readConnectedProvidersCache" as any).mockReturnValue(null)
+  spyOn(shared, "log").mockImplementation(() => { })
+  spyOn(shared, "fetchAvailableModels").mockResolvedValue(new Set(["anthropic/claude-opus-4-5"]))
+  spyOn(shared, "readConnectedProvidersCache").mockReturnValue(null)
 
-  spyOn(configDir, "getOpenCodeConfigPaths" as any).mockReturnValue({
-    global: "/tmp/.config/opencode",
-    project: "/tmp/.opencode",
+  spyOn(configDir, "getOpenCodeConfigPaths").mockReturnValue({
+    configDir: "/tmp/.config/opencode",
+    configJson: "/tmp/.config/opencode/opencode.json",
+    configJsonc: "/tmp/.config/opencode/opencode.jsonc",
+    packageJson: "/tmp/.config/opencode/package.json",
+    omoConfig: "/tmp/.config/opencode/omo-cli.json",
   })
 
-  spyOn(permissionCompat, "migrateAgentConfig" as any).mockImplementation((config: Record<string, unknown>) => config)
+  spyOn(permissionCompat, "migrateAgentConfig").mockImplementation((config: Record<string, unknown>) => config)
 
-  spyOn(modelResolver, "resolveModelWithFallback" as any).mockReturnValue({ model: "anthropic/claude-opus-4-5" })
+  spyOn(modelResolver, "resolveModelWithFallback").mockReturnValue({ model: "anthropic/claude-opus-4-5", source: "override" })
 })
 
 afterEach(() => {
-  (agents.createBuiltinAgents as any)?.mockRestore?.()
-    ; (worker.createWorkerAgentWithOverrides as any)?.mockRestore?.()
-    ; (commandLoader.loadUserCommands as any)?.mockRestore?.()
-    ; (commandLoader.loadProjectCommands as any)?.mockRestore?.()
-    ; (commandLoader.loadOpencodeGlobalCommands as any)?.mockRestore?.()
-    ; (commandLoader.loadOpencodeProjectCommands as any)?.mockRestore?.()
-    ; (builtinCommands.loadBuiltinCommands as any)?.mockRestore?.()
-    ; (skillLoader.loadUserSkills as any)?.mockRestore?.()
-    ; (skillLoader.loadProjectSkills as any)?.mockRestore?.()
-    ; (skillLoader.loadOpencodeGlobalSkills as any)?.mockRestore?.()
-    ; (skillLoader.loadOpencodeProjectSkills as any)?.mockRestore?.()
-    ; (skillLoader.discoverUserClaudeSkills as any)?.mockRestore?.()
-    ; (skillLoader.discoverProjectClaudeSkills as any)?.mockRestore?.()
-    ; (skillLoader.discoverOpencodeGlobalSkills as any)?.mockRestore?.()
-    ; (skillLoader.discoverOpencodeProjectSkills as any)?.mockRestore?.()
-    ; (agentLoader.loadUserAgents as any)?.mockRestore?.()
-    ; (agentLoader.loadProjectAgents as any)?.mockRestore?.()
-    ; (mcpLoader.loadMcpConfigs as any)?.mockRestore?.()
-    ; (pluginLoader.loadAllPluginComponents as any)?.mockRestore?.()
-    ; (mcpModule.createBuiltinMcps as any)?.mockRestore?.()
-    ; (shared.log as any)?.mockRestore?.()
-    ; (shared.fetchAvailableModels as any)?.mockRestore?.()
-    ; (shared.readConnectedProvidersCache as any)?.mockRestore?.()
-    ; (configDir.getOpenCodeConfigPaths as any)?.mockRestore?.()
-    ; (permissionCompat.migrateAgentConfig as any)?.mockRestore?.()
-    ; (modelResolver.resolveModelWithFallback as any)?.mockRestore?.()
+  (agents.createBuiltinAgents as { mockRestore?: () => void })?.mockRestore?.()
+    ; (worker.createWorkerAgentWithOverrides as { mockRestore?: () => void })?.mockRestore?.()
+    ; (commandLoader.loadUserCommands as { mockRestore?: () => void })?.mockRestore?.()
+    ; (commandLoader.loadProjectCommands as { mockRestore?: () => void })?.mockRestore?.()
+    ; (commandLoader.loadOpencodeGlobalCommands as { mockRestore?: () => void })?.mockRestore?.()
+    ; (commandLoader.loadOpencodeProjectCommands as { mockRestore?: () => void })?.mockRestore?.()
+    ; (builtinCommands.loadBuiltinCommands as { mockRestore?: () => void })?.mockRestore?.()
+    ; (skillLoader.loadUserSkills as { mockRestore?: () => void })?.mockRestore?.()
+    ; (skillLoader.loadProjectSkills as { mockRestore?: () => void })?.mockRestore?.()
+    ; (skillLoader.loadOpencodeGlobalSkills as { mockRestore?: () => void })?.mockRestore?.()
+    ; (skillLoader.loadOpencodeProjectSkills as { mockRestore?: () => void })?.mockRestore?.()
+    ; (skillLoader.discoverUserClaudeSkills as { mockRestore?: () => void })?.mockRestore?.()
+    ; (skillLoader.discoverProjectClaudeSkills as { mockRestore?: () => void })?.mockRestore?.()
+    ; (skillLoader.discoverOpencodeGlobalSkills as { mockRestore?: () => void })?.mockRestore?.()
+    ; (skillLoader.discoverOpencodeProjectSkills as { mockRestore?: () => void })?.mockRestore?.()
+    ; (agentLoader.loadUserAgents as { mockRestore?: () => void })?.mockRestore?.()
+    ; (agentLoader.loadProjectAgents as { mockRestore?: () => void })?.mockRestore?.()
+    ; (mcpLoader.loadMcpConfigs as { mockRestore?: () => void })?.mockRestore?.()
+    ; (pluginLoader.loadAllPluginComponents as { mockRestore?: () => void })?.mockRestore?.()
+    ; (mcpModule.createBuiltinMcps as { mockRestore?: () => void })?.mockRestore?.()
+    ; (shared.log as { mockRestore?: () => void })?.mockRestore?.()
+    ; (shared.fetchAvailableModels as { mockRestore?: () => void })?.mockRestore?.()
+    ; (shared.readConnectedProvidersCache as { mockRestore?: () => void })?.mockRestore?.()
+    ; (configDir.getOpenCodeConfigPaths as { mockRestore?: () => void })?.mockRestore?.()
+    ; (permissionCompat.migrateAgentConfig as { mockRestore?: () => void })?.mockRestore?.()
+    ; (modelResolver.resolveModelWithFallback as { mockRestore?: () => void })?.mockRestore?.()
 })
 
 describe("Plan agent demote behavior", () => {

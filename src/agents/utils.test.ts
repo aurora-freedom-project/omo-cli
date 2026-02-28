@@ -416,7 +416,7 @@ describe("override.category expansion in createBuiltinAgents", () => {
   test("standard agent override with category expands category properties", async () => {
     // #given
     const overrides = {
-      architect: { category: "ultrabrain" } as any,
+      architect: { category: "ultrabrain" } as never,
     }
 
     // #when
@@ -431,7 +431,7 @@ describe("override.category expansion in createBuiltinAgents", () => {
   test("standard agent override with category AND direct variant - direct wins", async () => {
     // #given - ultrabrain has variant=xhigh, but direct override says "max"
     const overrides = {
-      architect: { category: "ultrabrain", variant: "max" } as any,
+      architect: { category: "ultrabrain", variant: "max" } as never,
     }
 
     // #when
@@ -451,7 +451,7 @@ describe("override.category expansion in createBuiltinAgents", () => {
       },
     }
     const overrides = {
-      architect: { category: "test-cat", reasoningEffort: "low" } as any,
+      architect: { category: "test-cat", reasoningEffort: "low" } as never,
     }
 
     // #when
@@ -471,7 +471,7 @@ describe("override.category expansion in createBuiltinAgents", () => {
       },
     }
     const overrides = {
-      architect: { category: "reasoning-cat" } as any,
+      architect: { category: "reasoning-cat" } as never,
     }
 
     // #when
@@ -485,7 +485,7 @@ describe("override.category expansion in createBuiltinAgents", () => {
   test("orchestrator override with category expands category properties", async () => {
     // #given
     const overrides = {
-      orchestrator: { category: "ultrabrain" } as any,
+      orchestrator: { category: "ultrabrain" } as never,
     }
 
     // #when
@@ -500,7 +500,7 @@ describe("override.category expansion in createBuiltinAgents", () => {
   test("conductor override with category expands category properties", async () => {
     // #given
     const overrides = {
-      conductor: { category: "ultrabrain" } as any,
+      conductor: { category: "ultrabrain" } as never,
     }
 
     // #when
@@ -515,7 +515,7 @@ describe("override.category expansion in createBuiltinAgents", () => {
   test("override with non-existent category has no effect on config", async () => {
     // #given
     const overrides = {
-      architect: { category: "non-existent-category" } as any,
+      architect: { category: "non-existent-category" } as never,
     }
 
     // #when

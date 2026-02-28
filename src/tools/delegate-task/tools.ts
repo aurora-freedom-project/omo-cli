@@ -13,6 +13,7 @@ import { getTaskToastManager } from "../../features/task-toast-manager"
 import type { ModelFallbackInfo } from "../../features/task-toast-manager/types"
 import { subagentSessions, getSessionAgent } from "../../features/claude-code-session-state"
 import { log, getAgentToolRestrictions, resolveModel, getOpenCodeConfigPaths, findByNameCaseInsensitive, equalsIgnoreCase } from "../../shared"
+import type { SessionCreateBody } from "../../shared/sdk-types"
 import { fetchAvailableModels } from "../../shared/model-availability"
 import { readConnectedProvidersCache } from "../../shared/connected-providers-cache"
 import { resolveModelWithFallback } from "../../shared/model-resolver"
@@ -896,7 +897,7 @@ To continue this session: session_id="${task.sessionID}"`
             permission: [
               { permission: "question", action: "deny" as const, pattern: "*" },
             ],
-          } as any,
+          } as SessionCreateBody,
           query: {
             directory: parentDirectory,
           },

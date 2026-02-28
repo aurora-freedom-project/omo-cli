@@ -11,7 +11,7 @@ describe("memory-tools", () => {
         const { createMemoryTools } = await import("./memory-tools")
 
         // Minimal mock context
-        const ctx = { directory: "/tmp/test-project" } as any
+        const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
         const tools = createMemoryTools(ctx, config)
@@ -22,7 +22,7 @@ describe("memory-tools", () => {
     test("each tool has description, parameters, and execute", async () => {
         const { createMemoryTools } = await import("./memory-tools")
 
-        const ctx = { directory: "/tmp/test-project" } as any
+        const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
         const tools = createMemoryTools(ctx, config)
@@ -40,7 +40,7 @@ describe("memory-tools", () => {
     test("tools return disabled message when config.enabled is false", async () => {
         const { createMemoryTools } = await import("./memory-tools")
 
-        const ctx = { directory: "/tmp/test-project" } as any
+        const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
         const tools = createMemoryTools(ctx, config)
@@ -65,7 +65,7 @@ describe("memory-tools", () => {
     test("memory_add requires content and tags parameters", async () => {
         const { createMemoryTools } = await import("./memory-tools")
 
-        const ctx = { directory: "/tmp/test-project" } as any
+        const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
         const tools = createMemoryTools(ctx, config)
@@ -78,7 +78,7 @@ describe("memory-tools", () => {
     test("memory_search requires query parameter", async () => {
         const { createMemoryTools } = await import("./memory-tools")
 
-        const ctx = { directory: "/tmp/test-project" } as any
+        const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
         const tools = createMemoryTools(ctx, config)
@@ -90,7 +90,7 @@ describe("memory-tools", () => {
     test("memory_graph requires concept_id parameter", async () => {
         const { createMemoryTools } = await import("./memory-tools")
 
-        const ctx = { directory: "/tmp/test-project" } as any
+        const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
         const tools = createMemoryTools(ctx, config)

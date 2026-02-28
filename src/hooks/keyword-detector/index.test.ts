@@ -30,7 +30,7 @@ describe("keyword-detector message transform", () => {
           showToast: async () => { },
         },
       },
-    } as any
+    } as never
   }
 
   test("should prepend ultrawork message to text part", async () => {
@@ -123,7 +123,7 @@ describe("keyword-detector session filtering", () => {
           },
         },
       },
-    } as any
+    } as never
   }
 
   test("should skip non-ultrawork keywords in non-main session (using mainSessionID check)", async () => {
@@ -268,7 +268,7 @@ describe("keyword-detector word boundary", () => {
           },
         },
       },
-    } as any
+    } as never
   }
 
   test("should NOT trigger ultrawork on partial matches like 'StatefulWidget' containing 'ulw'", async () => {
@@ -363,7 +363,7 @@ describe("keyword-detector system-reminder filtering", () => {
           showToast: async () => { },
         },
       },
-    } as any
+    } as never
   }
 
   test("should NOT trigger search mode from keywords inside <system-reminder> tags", async () => {
@@ -554,7 +554,7 @@ describe("keyword-detector agent-specific ultrawork messages", () => {
           showToast: async () => { },
         },
       },
-    } as any
+    } as never
   }
 
   test("should skip ultrawork injection when agent is planner", async () => {

@@ -93,7 +93,7 @@ describe("features/hook-message-injector/injector", () => {
 
     describe("injectHookMessage", () => {
         test("early returns false string logic block if hook message is empty", () => {
-            const res = injector.injectHookMessage("sess1", "   ", {} as any)
+            const res = injector.injectHookMessage("sess1", "   ", {} as never)
             expect(res).toBe(false)
         })
 

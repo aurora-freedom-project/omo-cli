@@ -8,6 +8,7 @@ import type {
 import { log, getAgentToolRestrictions } from "../../shared"
 import { ConcurrencyManager } from "./concurrency"
 import type { BackgroundTaskConfig, TmuxConfig } from "../../config/schema"
+import type { SessionCreateBody } from "../../shared/sdk-types"
 import { isInsideTmux } from "../../shared/tmux"
 
 import { subagentSessions } from "../claude-code-session-state"
@@ -230,7 +231,7 @@ export class BackgroundManager {
         permission: [
           { permission: "question", action: "deny" as const, pattern: "*" },
         ],
-      } as any,
+      } as SessionCreateBody,
       query: {
         directory: parentDirectory,
       },
@@ -759,27 +760,21 @@ export class BackgroundManager {
       // - "tool" with .state.output property (tool call results)
       // - "text" with .text property (final text output)
       // - "step-start"/"step-finish" (metadata, no content)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const hasContent = messages.some((m: any) => {
-        if (m.info?.role !== "assistant" && m.info?.role !== "tool") return false
+      const hasContent = messages.some((m) => {
+        if (m.info?.role !== "assistant") return false
         const parts = m.parts ?? []
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return parts.some((p: any) => {
-          // Text content (final output)
-          if (p.type === "text" && p.text && p.text.trim().length > 0) return true
-          // Reasoning content (thinking blocks)
-          if (p.type === "reasoning" && p.text && p.text.trim().length > 0) return true
-          // Tool calls (indicates work was done)
-          if (p.type === "tool") return true
-          // Tool results (output from executed tools)
-          if (p.type === "tool_result") return true
-          // OpenCode-native tool invocation/result formats
-          if (p.type === "tool-invocation" || p.type === "tool-result") return true
-          // Step markers indicate work is in progress/done
+        return parts.some((p) => {
+          // SDK-typed part checks (discriminated union)
+          if (p.type === "text" && "text" in p && (p as { text: string }).text.trim().length > 0) return true
+          if (p.type === "reasoning" && "text" in p && (p as { text: string }).text.trim().length > 0) return true
           if (p.type === "step-start" || p.type === "step-finish") return true
-          // Fallback: any part with non-empty text/content indicates work
-          if (p.text && typeof p.text === "string" && p.text.trim().length > 0) return true
-          if (p.content && (typeof p.content === "string" ? p.content.trim().length > 0 : true)) return true
+          // Runtime-only part types not in SDK union — use Record cast
+          const raw = p as Record<string, unknown>
+          if (raw.type === "tool" || raw.type === "tool_result") return true
+          if (raw.type === "tool-invocation" || raw.type === "tool-result") return true
+          // Fallback: any part with non-empty text/content
+          if (typeof raw.text === "string" && raw.text.trim().length > 0) return true
+          if (raw.content && (typeof raw.content === "string" ? raw.content.trim().length > 0 : true)) return true
           return false
         })
       })

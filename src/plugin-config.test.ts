@@ -64,7 +64,7 @@ describe("plugin-config", () => {
       mockSafeParse.mockReturnValueOnce({
         success: false,
         error: { issues: [{ path: ["agents"], message: "Invalid type" }] }
-      } as any)
+      } as never)
 
       const res = loadConfigFromPath("/fake/path.json", {})
       expect(res).toBeNull()
@@ -75,7 +75,7 @@ describe("plugin-config", () => {
       mockExistsSync.mockReturnValueOnce(true)
       mockReadFileSync.mockReturnValueOnce("{}")
       mockParseJsonc.mockReturnValueOnce({ agents: {} })
-      mockSafeParse.mockReturnValueOnce({ success: true, data: { agents: {} } } as any)
+      mockSafeParse.mockReturnValueOnce({ success: true, data: { agents: {} } } as never)
 
       const res = loadConfigFromPath("/fake/path.json", {})
       expect(res).toEqual({ agents: {} })
@@ -91,7 +91,7 @@ describe("plugin-config", () => {
         disabled_hooks: ["hook1"],
         disabled_commands: [],
         disabled_skills: ["skill1"]
-      } as any
+      } as never
 
       const override = {
         disabled_agents: ["b", "c"],
@@ -99,7 +99,7 @@ describe("plugin-config", () => {
         disabled_hooks: ["hook2"],
         disabled_commands: ["cmd1"],
         disabled_skills: ["skill1", "skill2"]
-      } as any
+      } as never
 
       const res = mergeConfigs(base, override)
 
@@ -119,7 +119,7 @@ describe("plugin-config", () => {
       mockExistsSync.mockReturnValue(true) // pretend all exist
       mockReadFileSync.mockReturnValue("{}")
       mockParseJsonc.mockReturnValue({})
-      mockSafeParse.mockReturnValue({ success: true, data: {} } as any)
+      mockSafeParse.mockReturnValue({ success: true, data: {} } as never)
 
       const res = loadPluginConfig("/proj/dir", {})
       expect(res).toEqual({
@@ -144,7 +144,7 @@ describe("plugin-config", () => {
       mockExistsSync.mockReturnValue(true)
       mockReadFileSync.mockReturnValue("{}")
       mockParseJsonc.mockReturnValue({})
-      mockSafeParse.mockReturnValue({ success: true, data: { merged: true } } as any)
+      mockSafeParse.mockReturnValue({ success: true, data: { merged: true } } as never)
 
       const res = loadPluginConfig("/proj/dir", {})
       expect(res).toEqual({
@@ -157,7 +157,7 @@ describe("plugin-config", () => {
         disabled_mcps: [],
         disabled_skills: [],
         merged: true
-      } as any)
+      } as never)
     })
 
     test("does not merge if project config doesn't exist", () => {
@@ -173,7 +173,7 @@ describe("plugin-config", () => {
 
       mockReadFileSync.mockReturnValue("{}")
       mockParseJsonc.mockReturnValue({})
-      mockSafeParse.mockReturnValue({ success: true, data: { userOnly: true } } as any)
+      mockSafeParse.mockReturnValue({ success: true, data: { userOnly: true } } as never)
 
       const res = loadPluginConfig("/proj/dir", {})
       expect(res).toEqual({ userOnly: true })

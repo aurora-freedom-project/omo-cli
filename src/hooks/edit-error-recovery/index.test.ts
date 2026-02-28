@@ -5,7 +5,7 @@ describe("createEditErrorRecoveryHook", () => {
   let hook: ReturnType<typeof createEditErrorRecoveryHook>
 
   beforeEach(() => {
-    hook = createEditErrorRecoveryHook({} as any)
+    hook = createEditErrorRecoveryHook({} as never)
   })
 
   describe("tool.execute.after", () => {

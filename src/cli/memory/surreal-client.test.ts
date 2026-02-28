@@ -7,7 +7,7 @@ const mockLog = mock(() => { })
 mock.module("../../shared/logger", () => ({ log: mockLog }))
 
 describe("cli/memory/surreal-client", () => {
-    let globalFetchSpy: any
+    let globalFetchSpy: ReturnType<typeof spyOn>
 
     beforeEach(() => {
         mockLog.mockClear()
@@ -24,7 +24,7 @@ describe("cli/memory/surreal-client", () => {
                 ok: false,
                 status: 500,
                 text: async () => "Internal Server Error"
-            } as any)
+            } as never)
 
             await expect(surreal.addConcept({ content: "1", tags: [], embedding: [], source: "" })).rejects.toThrow(/SurrealDB HTTP 500: Internal Server Error/)
         })
@@ -33,7 +33,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ error: { message: "query failed syntax" } })
-            } as any)
+            } as never)
 
             await expect(surreal.addConcept({ content: "1", tags: [], embedding: [], source: "" })).rejects.toThrow(/SurrealDB RPC error: query failed syntax/)
         })
@@ -44,7 +44,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValue({
                 ok: true,
                 json: async () => ({ result: { ok: true } })
-            } as any)
+            } as never)
 
             await surreal.initSchema()
 
@@ -59,7 +59,7 @@ describe("cli/memory/surreal-client", () => {
                 .mockResolvedValue({
                     ok: true,
                     json: async () => ({ result: { ok: true } })
-                } as any)
+                } as never)
 
             await surreal.initSchema()
 
@@ -79,7 +79,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [{ id: "concept:xyz" }] }] })
-            } as any)
+            } as never)
 
             const id = await surreal.addConcept(mockConcept)
             expect(id).toBe("concept:xyz")
@@ -94,7 +94,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [] }] })
-            } as any)
+            } as never)
 
             await expect(surreal.addConcept(mockConcept)).rejects.toThrow(/no ID returned/)
         })
@@ -105,7 +105,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [] })
-            } as any)
+            } as never)
 
             const res = await surreal.searchSimilar([0.1])
             expect(res).toEqual([])
@@ -116,7 +116,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: similar }] })
-            } as any)
+            } as never)
 
             const res = await surreal.searchSimilar([0.1], 10, "proj1")
             expect(res).toEqual(similar)
@@ -133,7 +133,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({})
-            } as any)
+            } as never)
 
             const res = await surreal.graphTraverse("c1")
             expect(res).toEqual([])
@@ -144,7 +144,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: concepts }] })
-            } as any)
+            } as never)
 
             const res = await surreal.graphTraverse("c1", 3)
             expect(res).toEqual(concepts)
@@ -159,7 +159,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [] })
-            } as any)
+            } as never)
 
             await surreal.addRelation("f1", "t1", "rel")
 
@@ -174,7 +174,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: true })
-            } as any)
+            } as never)
 
             const res = await surreal.isConnected()
             expect(res).toBe(true)
@@ -192,7 +192,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [{ id: "code_element:123" }] }] })
-            } as any)
+            } as never)
 
             const id = await surreal.addCodeElement({
                 name: "testFn",
@@ -215,7 +215,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [] }] })
-            } as any)
+            } as never)
 
             await expect(surreal.addCodeElement({
                 name: "test", kind: "test", file: "test", lineStart: 1, lineEnd: 1, signature: "test", exported: false, project: "test"
@@ -228,7 +228,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [] })
-            } as any)
+            } as never)
 
             await surreal.addCodeRelation("123", "code_element:456", "calls")
 
@@ -245,7 +245,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: mockResult }] })
-            } as any)
+            } as never)
 
             const res = await surreal.searchCode("test", { kind: "function", project: "proj1" })
             expect(res).toEqual(mockResult)
@@ -263,7 +263,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: mockCallers }] })
-            } as any)
+            } as never)
 
             const res = await surreal.findCallers("targetFn", "proj1")
             expect(res).toEqual(mockCallers)
@@ -275,10 +275,10 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [] }] }) // empty relations
-            } as any).mockResolvedValueOnce({
+            } as never).mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: fallbackResults }] }) // fallback query
-            } as any)
+            } as never)
 
             const res = await surreal.findCallers("targetFn")
             expect(res).toEqual(fallbackResults)
@@ -290,10 +290,10 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [{ file: "a.ts" }] }] })
-            } as any).mockResolvedValueOnce({
+            } as never).mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [{ file: "b.ts" }] }] })
-            } as any)
+            } as never)
 
             const res = await surreal.findDependencies("target.ts")
             expect(res).toEqual({ imports: ["a.ts"], importedBy: ["b.ts"] })
@@ -305,13 +305,13 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [{ kind: "func", count: 5 }] }] })
-            } as any).mockResolvedValueOnce({
+            } as never).mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [{ count: 10 }] }] }) // files
-            } as any).mockResolvedValueOnce({
+            } as never).mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [{ count: 3 }] }] }) // exports
-            } as any)
+            } as never)
 
             const res = await surreal.getCodeOverview("proj1")
             expect(res.fileCount).toBe(10)
@@ -325,7 +325,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValue({
                 ok: true,
                 json: async () => ({ result: [] })
-            } as any)
+            } as never)
 
             await surreal.clearCodeIndex("proj1")
             expect(globalFetchSpy).toHaveBeenCalledTimes(2)
@@ -337,7 +337,7 @@ describe("cli/memory/surreal-client", () => {
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: [{ file: "test.ts", file_hash: "123" }] }] })
-            } as any)
+            } as never)
 
             const res = await surreal.getIndexedFiles("proj1")
             expect(res).toEqual([{ file: "test.ts", fileHash: "123" }])

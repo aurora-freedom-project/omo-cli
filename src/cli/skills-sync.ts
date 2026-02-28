@@ -37,16 +37,18 @@ export async function syncSkills(force: boolean = false) {
 
             p.log.info("   Fetching repository...")
             execSync("git pull origin main", { cwd: tmpRepoDir, stdio: "ignore" })
-        } catch (err: any) {
-            p.log.error(`❌ Failed to initialize shadow clone: ${err.message}`)
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            p.log.error(`❌ Failed to initialize shadow clone: ${message}`)
             return process.exit(1)
         }
     } else {
         try {
             p.log.info("   Pulling latest updates...")
             execSync("git pull origin main", { cwd: tmpRepoDir, stdio: "ignore" })
-        } catch (err: any) {
-            p.log.error(`❌ Failed to update shadow clone: ${err.message}`)
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            p.log.error(`❌ Failed to update shadow clone: ${message}`)
             return process.exit(1)
         }
     }

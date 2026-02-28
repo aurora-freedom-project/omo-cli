@@ -4,6 +4,7 @@ import { tool, type PluginInput, type ToolDefinition } from "@opencode-ai/plugin
 import { LOOK_AT_DESCRIPTION, MULTIMODAL_LOOKER_AGENT } from "./constants"
 import type { LookAtArgs } from "./types"
 import { log } from "../../shared/logger"
+import type { SessionCreateBody } from "../../shared/sdk-types"
 
 interface LookAtArgsWithAlias extends LookAtArgs {
   path?: string
@@ -105,7 +106,7 @@ If the requested information is not found, clearly state what is missing.`
           permission: [
             { permission: "question", action: "deny" as const, pattern: "*" },
           ],
-        } as any,
+        } as SessionCreateBody,
         query: {
           directory: parentDirectory,
         },
@@ -189,10 +190,9 @@ Original error: ${errorMessage}`
       const messages = messagesResult.data
       log(`[look_at] Got ${messages.length} messages`)
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const lastAssistantMessage = messages
-        .filter((m: any) => m.info.role === "assistant")
-        .sort((a: any, b: any) => (b.info.time?.created || 0) - (a.info.time?.created || 0))[0]
+        .filter((m) => m.info.role === "assistant")
+        .sort((a, b) => (b.info.time.created || 0) - (a.info.time.created || 0))[0]
 
       if (!lastAssistantMessage) {
         log(`[look_at] No assistant message found`)
@@ -201,10 +201,8 @@ Original error: ${errorMessage}`
 
       log(`[look_at] Found assistant message with ${lastAssistantMessage.parts.length} parts`)
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const textParts = lastAssistantMessage.parts.filter((p: any) => p.type === "text")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const responseText = textParts.map((p: any) => p.text).join("\n")
+      const textParts = lastAssistantMessage.parts.filter((p) => p.type === "text")
+      const responseText = textParts.map((p) => p.text).join("\n")
 
       log(`[look_at] Got response, length: ${responseText.length}`)
 

@@ -32,10 +32,10 @@ describe("command-executor", () => {
                     stdout: { on: () => { } },
                     stderr: { on: () => { } },
                     stdin: { write: () => { }, end: () => { } },
-                    on: (event: string, cb: any) => {
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     },
-                } as any
+                } as never
             })
 
             // The regex replaces ^~(/|$) and \s~(/)
@@ -58,10 +58,10 @@ describe("command-executor", () => {
                     stdout: { on: () => { } },
                     stderr: { on: () => { } },
                     stdin: { write: () => { }, end: () => { } },
-                    on: (event: string, cb: any) => {
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     },
-                } as any
+                } as never
             })
 
             await executeHookCommand(
@@ -81,10 +81,10 @@ describe("command-executor", () => {
                     stdout: { on: () => { } },
                     stderr: { on: () => { } },
                     stdin: { write: () => { }, end: () => { } },
-                    on: (event: string, cb: any) => {
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     },
-                } as any
+                } as never
             })
 
             spyOn(fs, "existsSync").mockImplementation((path) => path === "/bin/zsh")
@@ -102,10 +102,10 @@ describe("command-executor", () => {
                     stdout: { on: () => { } },
                     stderr: { on: () => { } },
                     stdin: { write: () => { }, end: () => { } },
-                    on: (event: string, cb: any) => {
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     },
-                } as any
+                } as never
             })
 
             spyOn(fs, "existsSync").mockImplementation((path) => path === "/bin/bash")
@@ -123,10 +123,10 @@ describe("command-executor", () => {
                     stdout: { on: () => { } },
                     stderr: { on: () => { } },
                     stdin: { write: () => { }, end: () => { } },
-                    on: (event: string, cb: any) => {
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     },
-                } as any
+                } as never
             })
 
             spyOn(fs, "existsSync").mockReturnValue(false)
@@ -140,20 +140,20 @@ describe("command-executor", () => {
             spyOn(child_process, "spawn").mockImplementation(() => {
                 return {
                     stdout: {
-                        on: (event: string, cb: any) => {
+                        on: (event: string, cb: (...args: unknown[]) => void) => {
                             if (event === "data") cb(Buffer.from("out data\n"))
                         },
                     },
                     stderr: {
-                        on: (event: string, cb: any) => {
+                        on: (event: string, cb: (...args: unknown[]) => void) => {
                             if (event === "data") cb(Buffer.from("err data\n"))
                         },
                     },
                     stdin: { write: () => { }, end: () => { } },
-                    on: (event: string, cb: any) => {
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     },
-                } as any
+                } as never
             })
 
             const result = await executeHookCommand("cmd", "input", "/cwd")
@@ -169,10 +169,10 @@ describe("command-executor", () => {
                     stdout: { on: () => { } },
                     stderr: { on: () => { } },
                     stdin: { write: () => { }, end: () => { } },
-                    on: (event: string, cb: any) => {
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "error") cb(new Error("spawn failed"))
                     },
-                } as any
+                } as never
             })
 
             const result = await executeHookCommand("cmd", "input", "/cwd")

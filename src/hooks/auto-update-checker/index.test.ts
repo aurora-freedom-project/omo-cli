@@ -4,7 +4,7 @@ import * as index from "./index"
 // Mock dependencies
 const mockGetCachedVersion = mock(() => null as string | null)
 const mockGetLocalDevVersion = mock(() => null as string | null)
-const mockFindPluginEntry = mock(() => null as any)
+const mockFindPluginEntry = mock(() => null as never)
 const mockGetLatestVersion = mock(async () => null as string | null)
 const mockUpdatePinnedVersion = mock(() => false)
 
@@ -110,7 +110,7 @@ describe("hooks/auto-update-checker/index", () => {
         client: {
           tui: { showToast }
         }
-      } as any
+      } as never
     }
 
     const runHook = async (hook: any, ctx: any, props?: any) => {

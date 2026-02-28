@@ -141,7 +141,7 @@ describe("executeCompact lock management", () => {
     await executeCompact(sessionID, msg, autoCompactState, mockClient, directory)
 
     // #then: Toast should be shown
-    const toastCalls = (mockClient.tui.showToast as any).mock.calls
+    const toastCalls = (mockClient.tui.showToast).mock.calls
     const blockedToast = toastCalls.find(
       (call: any) => call[0]?.body?.title === "Compact In Progress",
     )
@@ -173,7 +173,7 @@ describe("executeCompact lock management", () => {
     await executeCompact(sessionID, msg, autoCompactState, mockClient, directory)
 
     // #then: Should show failure toast
-    const toastCalls = (mockClient.tui.showToast as any).mock.calls
+    const toastCalls = (mockClient.tui.showToast).mock.calls
     const failureToast = toastCalls.find(
       (call: any) => call[0]?.body?.title === "Auto Compact Failed",
     )

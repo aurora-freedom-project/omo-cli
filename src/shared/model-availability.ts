@@ -3,6 +3,7 @@ import { join } from "path"
 import { log } from "./logger"
 import { getOpenCodeCacheDir } from "./data-path"
 import { readProviderModelsCache, hasProviderModelsCache } from "./connected-providers-cache"
+import type { OpencodeClient } from "./sdk-types"
 
 /**
  * Fuzzy match a target model name against available models
@@ -87,7 +88,7 @@ export function fuzzyMatchModel(
 	return result
 }
 
-export async function getConnectedProviders(client: any): Promise<string[]> {
+export async function getConnectedProviders(client: OpencodeClient): Promise<string[]> {
 	if (!client?.provider?.list) {
 		log("[getConnectedProviders] client.provider.list not available")
 		return []
@@ -105,14 +106,14 @@ export async function getConnectedProviders(client: any): Promise<string[]> {
 }
 
 export async function fetchAvailableModels(
-	_client?: any,
+	_client?: OpencodeClient,
 	options?: { connectedProviders?: string[] | null }
 ): Promise<Set<string>> {
 	const connectedProvidersUnknown = options?.connectedProviders === null || options?.connectedProviders === undefined
 
-	log("[fetchAvailableModels] CALLED", { 
+	log("[fetchAvailableModels] CALLED", {
 		connectedProvidersUnknown,
-		connectedProviders: options?.connectedProviders 
+		connectedProviders: options?.connectedProviders
 	})
 
 	if (connectedProvidersUnknown) {
@@ -127,7 +128,7 @@ export async function fetchAvailableModels(
 	const providerModelsCache = readProviderModelsCache()
 	if (providerModelsCache) {
 		log("[fetchAvailableModels] using provider-models cache (whitelist-filtered)")
-		
+
 		for (const [providerId, modelIds] of Object.entries(providerModelsCache.models)) {
 			if (!connectedSet.has(providerId)) {
 				continue
@@ -186,7 +187,7 @@ export async function fetchAvailableModels(
 	}
 }
 
-export function __resetModelCache(): void {}
+export function __resetModelCache(): void { }
 
 export function isModelCacheAvailable(): boolean {
 	if (hasProviderModelsCache()) {

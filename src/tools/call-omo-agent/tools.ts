@@ -6,6 +6,7 @@ import type { CallOmoAgentArgs } from "./types"
 import type { BackgroundManager } from "../../features/background-agent"
 import { log, getAgentToolRestrictions, includesCaseInsensitive } from "../../shared"
 import { consumeNewMessages } from "../../shared/session-cursor"
+import type { SessionCreateBody, MessageWithParts } from "../../shared/sdk-types"
 import { findFirstMessageWithAgent, findNearestMessageWithFields, MESSAGE_STORAGE } from "../../features/hook-message-injector"
 import { getSessionAgent } from "../../features/claude-code-session-state"
 
@@ -61,7 +62,7 @@ export function createCallOmoAgent(
       if (!includesCaseInsensitive([...ALLOWED_AGENTS], args.subagent_type)) {
         return `Error: Invalid agent type "${args.subagent_type}". Only ${ALLOWED_AGENTS.join(", ")} are allowed.`
       }
-      
+
       const normalizedAgent = args.subagent_type.toLowerCase() as typeof ALLOWED_AGENTS[number]
       args = { ...args, subagent_type: normalizedAgent }
 
@@ -88,7 +89,7 @@ async function executeBackground(
     const firstMessageAgent = messageDir ? findFirstMessageWithAgent(messageDir) : null
     const sessionAgent = getSessionAgent(toolContext.sessionID)
     const parentAgent = toolContext.agent ?? sessionAgent ?? firstMessageAgent ?? prevMessage?.agent
-    
+
     log("[call_omo_agent] parentAgent resolution", {
       sessionID: toolContext.sessionID,
       messageDir,
@@ -166,7 +167,7 @@ async function executeSync(
         permission: [
           { permission: "question", action: "deny" as const, pattern: "*" },
         ],
-      } as any,
+      } as SessionCreateBody,
       query: {
         directory: parentDirectory,
       },
@@ -289,9 +290,8 @@ Original error: ${createResult.error}`
 
   // Include both assistant messages AND tool messages
   // Tool results (grep, glob, bash output) come from role "tool"
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const relevantMessages = messages.filter(
-    (m: any) => m.info?.role === "assistant" || m.info?.role === "tool"
+    (m) => m.info.role === "assistant"
   )
 
   if (relevantMessages.length === 0) {
@@ -303,10 +303,9 @@ Original error: ${createResult.error}`
   log(`[call_omo_agent] Found ${relevantMessages.length} relevant messages`)
 
   // Sort by time ascending (oldest first) to process messages in order
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sortedMessages = [...relevantMessages].sort((a: any, b: any) => {
-    const timeA = a.info?.time?.created ?? 0
-    const timeB = b.info?.time?.created ?? 0
+  const sortedMessages = [...relevantMessages].sort((a, b) => {
+    const timeA = a.info.time.created ?? 0
+    const timeB = b.info.time.created ?? 0
     return timeA - timeB
   })
 
@@ -321,8 +320,7 @@ Original error: ${createResult.error}`
   const extractedContent: string[] = []
 
   for (const message of newMessages) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const part of (message as any).parts ?? []) {
+    for (const part of (message as MessageWithParts).parts ?? []) {
       // Handle both "text" and "reasoning" parts (thinking models use "reasoning")
       if ((part.type === "text" || part.type === "reasoning") && part.text) {
         extractedContent.push(part.text)

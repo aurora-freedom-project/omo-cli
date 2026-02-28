@@ -445,10 +445,10 @@ describe("orchestrator-task", () => {
     test("passes variant to background model payload", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-      let launchInput: any
+      let launchInput: Record<string, unknown>
 
       const mockManager = {
-        launch: async (input: any) => {
+        launch: async (input: Record<string, unknown>) => {
           launchInput = input
           return {
             id: "task-variant",
@@ -508,10 +508,10 @@ describe("orchestrator-task", () => {
     test("DEFAULT_CATEGORIES variant passes to background WITHOUT userCategories", async () => {
       // #given - NO userCategories, testing DEFAULT_CATEGORIES only
       const { createDelegateTask } = require("./tools")
-      let launchInput: any
+      let launchInput: Record<string, unknown>
 
       const mockManager = {
-        launch: async (input: any) => {
+        launch: async (input: Record<string, unknown>) => {
           launchInput = input
           return {
             id: "task-default-variant",
@@ -570,7 +570,7 @@ describe("orchestrator-task", () => {
     test("DEFAULT_CATEGORIES variant passes to sync session.prompt WITHOUT userCategories", async () => {
       // #given - NO userCategories, testing DEFAULT_CATEGORIES for sync mode
       const { createDelegateTask } = require("./tools")
-      let promptBody: any
+      let promptBody: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
 
@@ -581,7 +581,7 @@ describe("orchestrator-task", () => {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
           create: async () => ({ data: { id: "ses_sync_default_variant" } }),
-          prompt: async (input: any) => {
+          prompt: async (input: Record<string, unknown>) => {
             promptBody = input.body
             return { data: {} }
           },
@@ -711,7 +711,7 @@ describe("orchestrator-task", () => {
     test("empty array [] is allowed and proceeds without skill content", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-      let promptBody: any
+      let promptBody: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -720,7 +720,7 @@ describe("orchestrator-task", () => {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
           create: async () => ({ data: { id: "test-session" } }),
-          prompt: async (input: any) => {
+          prompt: async (input: Record<string, unknown>) => {
             promptBody = input.body
             return { data: {} }
           },
@@ -1052,14 +1052,14 @@ describe("orchestrator-task", () => {
     test("sync mode passes category model to prompt", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-      let promptBody: any
+      let promptBody: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
           create: async () => ({ data: { id: "ses_sync_model" } }),
-          prompt: async (input: any) => {
+          prompt: async (input: Record<string, unknown>) => {
             promptBody = input.body
             return { data: {} }
           },
@@ -1494,7 +1494,7 @@ describe("orchestrator-task", () => {
     test("should resolve agent-browser skill when browserProvider is passed", async () => {
       // #given - delegate_task configured with browserProvider: "agent-browser"
       const { createDelegateTask } = require("./tools")
-      let promptBody: any
+      let promptBody: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -1503,7 +1503,7 @@ describe("orchestrator-task", () => {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
           create: async () => ({ data: { id: "ses_browser_provider" } }),
-          prompt: async (input: any) => {
+          prompt: async (input: Record<string, unknown>) => {
             promptBody = input.body
             return { data: {} }
           },
@@ -2055,10 +2055,10 @@ describe("orchestrator-task", () => {
     test("background mode passes matched agent model to manager.launch", async () => {
       // #given - agent with model registered, using subagent_type with run_in_background=true
       const { createDelegateTask } = require("./tools")
-      let launchInput: any
+      let launchInput: Record<string, unknown>
 
       const mockManager = {
-        launch: async (input: any) => {
+        launch: async (input: Record<string, unknown>) => {
           launchInput = input
           return {
             id: "task-explorer",
@@ -2120,7 +2120,7 @@ describe("orchestrator-task", () => {
     test("sync mode passes matched agent model to session.prompt", async () => {
       // #given - agent with model registered, using subagent_type with run_in_background=false
       const { createDelegateTask } = require("./tools")
-      let promptBody: any
+      let promptBody: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
 
@@ -2136,7 +2136,7 @@ describe("orchestrator-task", () => {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
           create: async () => ({ data: { id: "ses_architect_model" } }),
-          prompt: async (input: any) => {
+          prompt: async (input: Record<string, unknown>) => {
             promptBody = input.body
             return { data: {} }
           },
@@ -2181,7 +2181,7 @@ describe("orchestrator-task", () => {
     test("agent without model does not override categoryModel", async () => {
       // #given - agent registered without model field
       const { createDelegateTask } = require("./tools")
-      let promptBody: any
+      let promptBody: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
 
@@ -2197,7 +2197,7 @@ describe("orchestrator-task", () => {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
           create: async () => ({ data: { id: "ses_no_model_agent" } }),
-          prompt: async (input: any) => {
+          prompt: async (input: Record<string, unknown>) => {
             promptBody = input.body
             return { data: {} }
           },
@@ -2241,7 +2241,7 @@ describe("orchestrator-task", () => {
     test("planner subagent should have delegate_task permission enabled", async () => {
       // #given - orchestrator delegates to planner
       const { createDelegateTask } = require("./tools")
-      let promptBody: any
+      let promptBody: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -2250,7 +2250,7 @@ describe("orchestrator-task", () => {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
           create: async () => ({ data: { id: "ses_planner_delegate" } }),
-          prompt: async (input: any) => {
+          prompt: async (input: Record<string, unknown>) => {
             promptBody = input.body
             return { data: {} }
           },
@@ -2292,7 +2292,7 @@ describe("orchestrator-task", () => {
     test("non-planner subagent should NOT have delegate_task permission", async () => {
       // #given - orchestrator delegates to architect (non-planner)
       const { createDelegateTask } = require("./tools")
-      let promptBody: any
+      let promptBody: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -2301,7 +2301,7 @@ describe("orchestrator-task", () => {
         session: {
           get: async () => ({ data: { directory: "/project" } }),
           create: async () => ({ data: { id: "ses_architect_no_delegate" } }),
-          prompt: async (input: any) => {
+          prompt: async (input: Record<string, unknown>) => {
             promptBody = input.body
             return { data: {} }
           },

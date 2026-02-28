@@ -18,7 +18,7 @@ mock.module("child_process", () => {
     return {
         spawn: mock(() => {
             return {
-                on: mock((event: string, cb: any) => {
+                on: mock((event: string, cb: (...args: unknown[]) => void) => {
                     if (event === "close") cb(0)
                 }),
                 stderr: {
@@ -53,7 +53,7 @@ describe("zip-extractor", () => {
             Object.defineProperty(process, 'platform', { value: 'darwin' })
 
             const mockSpawn = mock().mockReturnValue({
-                on: mock((event: string, cb: any) => {
+                on: mock((event: string, cb: (...args: unknown[]) => void) => {
                     if (event === "close") cb(0)
                 }),
                 stderr: {
@@ -61,7 +61,7 @@ describe("zip-extractor", () => {
                 }
             })
 
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
             await extractZip("test.zip", "/dest")
 
@@ -76,18 +76,18 @@ describe("zip-extractor", () => {
             Object.defineProperty(process, 'platform', { value: 'darwin' })
 
             const mockSpawn = mock().mockReturnValue({
-                on: mock((event: string, cb: any) => {
+                on: mock((event: string, cb: (...args: unknown[]) => void) => {
                     if (event === "close") cb(1) // Simulate exit code 1
                 }),
                 stderr: {
                     // Simulate receiving some error text from stderr
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "data") cb(Buffer.from("Mock error chunk"))
                     })
                 }
             })
 
-            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+            spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
             await expect(extractZip("test.zip", "/dest")).rejects.toThrow("zip extraction failed (exit 1): Mock error chunk")
         })
@@ -99,15 +99,15 @@ describe("zip-extractor", () => {
 
             test("uses tar on windows build >= 17134", async () => {
                 currentOsRelease = "10.0.19045"
-                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as any)
+                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as never)
 
                 const mockSpawn = mock().mockReturnValue({
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     }),
                     stderr: { on: mock() }
                 })
-                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
                 await extractZip("test.zip", "/dest")
 
@@ -120,15 +120,15 @@ describe("zip-extractor", () => {
 
             test("uses pwsh if available and tar is not", async () => {
                 currentOsRelease = "10.0.15000"
-                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 0 } as any)
+                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 0 } as never)
 
                 const mockSpawn = mock().mockReturnValue({
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     }),
                     stderr: { on: mock() }
                 })
-                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
                 await extractZip("test'path.zip", "/dest")
 
@@ -141,15 +141,15 @@ describe("zip-extractor", () => {
 
             test("falls back to powershell if tar and pwsh are unavailable", async () => {
                 currentOsRelease = "10.0.15000"
-                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as any)
+                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as never)
 
                 const mockSpawn = mock().mockReturnValue({
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     }),
                     stderr: { on: mock() }
                 })
-                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
                 await extractZip("test.zip", "/dest")
 
@@ -162,15 +162,15 @@ describe("zip-extractor", () => {
 
             test("handles missing windows build number (NaN behavior)", async () => {
                 currentOsRelease = "10.0.invalid"
-                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as any)
+                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as never)
 
                 const mockSpawn = mock().mockReturnValue({
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     }),
                     stderr: { on: mock() }
                 })
-                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
                 await extractZip("test.zip", "/dest")
 
@@ -179,15 +179,15 @@ describe("zip-extractor", () => {
 
             test("handles release string with too few parts", async () => {
                 currentOsRelease = "10.0"
-                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as any)
+                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as never)
 
                 const mockSpawn = mock().mockReturnValue({
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "close") cb(0)
                     }),
                     stderr: { on: mock() }
                 })
-                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
                 await extractZip("test.zip", "/dest")
 
@@ -196,15 +196,15 @@ describe("zip-extractor", () => {
 
             test("handles process error event explicitly", async () => {
                 currentOsRelease = "10.0"
-                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as any)
+                const mockSpawnSync = spyOn(await import("child_process"), "spawnSync").mockReturnValue({ status: 1 } as never)
 
                 const mockSpawn = mock().mockReturnValue({
-                    on: mock((event: string, cb: any) => {
+                    on: mock((event: string, cb: (...args: unknown[]) => void) => {
                         if (event === "error") cb(new Error("binary missing"))
                     }),
                     stderr: { on: mock() }
                 })
-                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as any)
+                spyOn(await import("child_process"), "spawn").mockImplementation(mockSpawn as never)
 
                 await expect(extractZip("test.zip", "/dest")).rejects.toThrow("zip extraction child process error: binary missing")
             })

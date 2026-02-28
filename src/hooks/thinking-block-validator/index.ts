@@ -14,7 +14,7 @@
  * - User never sees the error vs User sees error then recovery
  */
 
-import type { Message, Part } from "@opencode-ai/sdk"
+import type { Message, Part, UserMessage } from "@opencode-ai/sdk"
 
 interface MessageWithParts {
   info: Message
@@ -91,7 +91,8 @@ function findPreviousThinkingContent(
     for (const part of msg.parts) {
       const type = part.type as string
       if (type === "thinking" || type === "reasoning") {
-        const thinking = (part as any).thinking || (part as any).text
+        const partData = part as Record<string, unknown>
+        const thinking = (partData.thinking as string) || (partData.text as string)
         if (thinking && typeof thinking === "string" && thinking.trim().length > 0) {
           return thinking
         }
@@ -117,7 +118,7 @@ function prependThinkingBlock(
   const thinkingPart = {
     type: "thinking" as const,
     id: `prt_0000000000_synthetic_thinking`,
-    sessionID: (message.info as any).sessionID || "",
+    sessionID: (message.info as UserMessage).sessionID || "",
     messageID: message.info.id,
     thinking: thinkingContent,
     synthetic: true,
@@ -141,7 +142,7 @@ export function createThinkingBlockValidatorHook(): MessagesTransformHook {
 
       // Get the model info from the last user message
       const lastUserMessage = messages.findLast(m => m.info.role === "user")
-      const modelID = (lastUserMessage?.info as any)?.modelID || ""
+      const modelID = (lastUserMessage?.info as UserMessage)?.model?.modelID || ""
 
       // Only process if extended thinking might be enabled
       if (!isExtendedThinkingModel(modelID)) {

@@ -46,7 +46,7 @@ describe("auto-init", () => {
             output: [],
             stderr: null,
             signal: null
-        } as any)
+        } as never)
     })
 
     afterEach(() => {
@@ -117,7 +117,7 @@ describe("auto-init", () => {
             status: 0,
             stdout: "", // No changed files
             pid: 1, output: [], stderr: null, signal: null
-        } as any)
+        } as never)
 
         // getIndexedFiles returns [] by default in beforeEach
         const indexSpy = spyOn(indexer, "indexProject")
@@ -134,7 +134,7 @@ describe("auto-init", () => {
             status: 0,
             stdout: "", // No changed files
             pid: 1, output: [], stderr: null, signal: null
-        } as any)
+        } as never)
 
         const fs = require("fs")
         const path = require("path")

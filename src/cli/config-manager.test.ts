@@ -55,7 +55,7 @@ const mockBunSpawn = mock(() => ({
 mock.module("bun", () => ({ spawn: mockBunSpawn }))
 spyOn(Bun, "spawn").mockImplementation(mockBunSpawn as any)
 
-globalThis.Response = mock((body: any) => ({
+globalThis.Response = mock((body: unknown) => ({
     text: async () => body === "mock_stdout" ? mockStdoutText() : mockStderrText()
 })) as any
 
@@ -176,7 +176,7 @@ describe("cli/config-manager", () => {
         test("fail code mapped variables mapping variables check map array strings tracking logic looping arrays checks target parameters variables bounding targets", async () => {
             mockBunSpawn.mockImplementation(() => ({
                 exited: Promise.resolve(), exitCode: 1, stdout: "mock_stdout", stderr: "mock_stderr", kill: () => { }
-            } as any))
+            } as never))
             mockStderrText.mockReturnValue("failed string missing array map bounds string tracking array target value string targets mapping boundaries")
             const res = await configManager.runBunInstallWithDetails()
             expect(res.success).toBe(false)
@@ -185,7 +185,7 @@ describe("cli/config-manager", () => {
         test("timeout map loops variable target logical mapping strings map checks map tracking strings array bounds loops variables value targets strings schemas limits limit string checks loop mapping string bounds parameters string", async () => {
             mockExited.mockReturnValue(new Promise(() => { }))
             const orig = globalThis.setTimeout
-            globalThis.setTimeout = ((cb: any) => { cb(); return 1 }) as any
+            globalThis.setTimeout = ((cb: (...args: unknown[]) => void) => { cb(); return 1 }) as any
             const res = await configManager.runBunInstallWithDetails()
             globalThis.setTimeout = orig
             expect(res.timedOut).toBe(true)
@@ -202,14 +202,14 @@ describe("cli/config-manager", () => {
     describe("addAuthPlugins limits variables limiting", () => {
         test("creates config format none checks boundaries targets maps mapping targets values checks strings check logic targets mapping value array tracking arrays schemas mapped natively bounding strings string limits target string schema parameters maps arrays mapping variables constraints limitations missing targets checks map target tracking testing bounds values loop loop targets map loop", async () => {
             mockExistsSync.mockReturnValue(false)
-            const res = await configManager.addAuthPlugins({ providers: new Set(["google"]) } as any)
+            const res = await configManager.addAuthPlugins({ providers: new Set(["google"]) } as never)
             expect(res.success).toBe(true)
         })
 
         test("updates existing mapping checking checks tracking targets bounding array array natively mappings schema parameter string mapping missing variables bounding variable strings testing strings logic limits string string boundaries map logic variables variables variables limits mappings map mapped loop bounds", async () => {
             mockExistsSync.mockReturnValue(true) // json format limit boundaries checks tracking values boundaries missing array limiting mappings strings schema array logic value variables loop strings mapped maps strings variables string value targeting
             mockReadFileSync.mockReturnValue(JSON.stringify({ plugin: ["other"] }))
-            const res = await configManager.addAuthPlugins({ providers: new Set(["google"]) } as any)
+            const res = await configManager.addAuthPlugins({ providers: new Set(["google"]) } as never)
             expect(res.success).toBe(true)
             expect(mockWriteFileSync).toHaveBeenCalled()
         })
@@ -218,7 +218,7 @@ describe("cli/config-manager", () => {
             mockMkdirSync.mockImplementation(() => {
                 const e = new Error("msg") as any; e.code = "EACCES"; throw e
             })
-            const res = await configManager.addAuthPlugins({ providers: new Set(["google"]) } as any)
+            const res = await configManager.addAuthPlugins({ providers: new Set(["google"]) } as never)
             expect(res.success).toBe(false)
             expect(res.error).toContain("Permission denied")
         })
@@ -228,14 +228,14 @@ describe("cli/config-manager", () => {
         test("appends google tracking limit values mapped check limits targeting maps mapping loops logic maps strings constraints mapping checks loops bounds loops target boundaries limit mapping natively values array targeting mapping checking schema target boundaries bounding check array bounding parameters mapped mapping boundaries values logic bounds parameters variables boundaries arrays checks string values bounds mappings map testing mapping boundaries", async () => {
             mockExistsSync.mockReturnValue(true)
             mockReadFileSync.mockReturnValue(JSON.stringify({ provider: { openai: {} } }))
-            const res = await configManager.addProviderConfig({ providers: new Set(["google"]) } as any)
+            const res = await configManager.addProviderConfig({ providers: new Set(["google"]) } as never)
             expect(res.success).toBe(true)
         })
 
         test("works natively with existing targeting map strings limits strings check checking mapping checks array variable parameters limit tracking loop loop mapped arrays strings array loop boundaries values variables maps strings schema maps target bounds map constraints loop logic variables bounding checks values strings bound limits array loops arrays", async () => {
             mockExistsSync.mockReturnValue(true)
             mockReadFileSync.mockReturnValue("{}")
-            const res = await configManager.addProviderConfig({ providers: new Set([]) } as any)
+            const res = await configManager.addProviderConfig({ providers: new Set([]) } as never)
             expect(res.success).toBe(true)
         })
     })
@@ -243,7 +243,7 @@ describe("cli/config-manager", () => {
     describe("writeOmoConfig map", () => {
         test("creates natively fallback empty boundary values bounds mapping arrays limitations variables targeting parameters loops limit checks variables string testing checking loops targets limit targets limits target loops string maps target boundaries loops loops mapping limits tracking limit maps logical values array targets variables targeting mapped map parameters limits mapping string strings missing constraint schema maps limits missing bounds logic values missing objects arrays loops constraints schemas map boundaries targets logical logic string bounding", async () => {
             mockExistsSync.mockReturnValue(false)
-            const res = await configManager.writeOmoConfig({} as any)
+            const res = await configManager.writeOmoConfig({} as never)
             expect(res.success).toBe(true)
             expect(mockWriteFileSync).toHaveBeenCalled()
         })

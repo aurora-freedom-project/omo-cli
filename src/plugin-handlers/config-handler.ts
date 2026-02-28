@@ -1,3 +1,4 @@
+import type { OpencodeClient } from "../shared/sdk-types";
 import { createBuiltinAgents } from "../agents";
 import { createWorkerAgentWithOverrides } from "../agents/worker";
 import {
@@ -37,7 +38,7 @@ import type { ModelCacheState } from "../plugin-state";
 import type { CategoryConfig } from "../config/schema";
 
 export interface ConfigHandlerDeps {
-  ctx: { directory: string; client?: any };
+  ctx: { directory: string; client?: OpencodeClient };
   pluginConfig: OmoCliConfig;
   modelCacheState: ModelCacheState;
 }

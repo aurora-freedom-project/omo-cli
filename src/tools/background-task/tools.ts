@@ -211,8 +211,8 @@ async function formatTaskResult(task: BackgroundTask, client: OpencodeClient): P
   }
 
   // Handle both SDK response structures: direct array or wrapped in .data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const messages = ((messagesResult as any).data ?? messagesResult) as Array<{
+  const messagesData = (messagesResult as { data?: unknown }).data ?? messagesResult
+  const messages = messagesData as Array<{
     info?: { role?: string; time?: string }
     parts?: Array<{
       type?: string

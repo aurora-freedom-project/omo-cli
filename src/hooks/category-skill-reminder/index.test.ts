@@ -26,7 +26,7 @@ describe("category-skill-reminder hook", () => {
           showToast: async () => {},
         },
       },
-    } as any
+    } as never
   }
 
   describe("target agent detection", () => {

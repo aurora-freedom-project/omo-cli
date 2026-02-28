@@ -90,7 +90,7 @@ describe("shared/connected-providers-cache", () => {
 
     describe("writeProviderModelsCache", () => {
         test("creates directory if not exists and writes file successfully", () => {
-            mockExistsSync.mockImplementation((path: any) => {
+            mockExistsSync.mockImplementation((path: string) => {
                 if (String(path) === "/test/cache") return false
                 return true
             })
@@ -109,7 +109,7 @@ describe("shared/connected-providers-cache", () => {
 
     describe("updateConnectedProvidersCache", () => {
         test("returns early if list method missing", async () => {
-            await cache.updateConnectedProvidersCache({} as any)
+            await cache.updateConnectedProvidersCache({} as never)
             expect(mockLog).toHaveBeenCalledWith("[connected-providers-cache] client.provider.list not available")
         })
 

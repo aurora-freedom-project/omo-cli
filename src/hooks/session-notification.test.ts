@@ -26,7 +26,7 @@ describe("session-notification", () => {
         },
       },
       directory: "/tmp/test",
-    } as any
+    } as never
   }
 
   beforeEach(() => {

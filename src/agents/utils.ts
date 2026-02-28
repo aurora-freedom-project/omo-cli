@@ -1,4 +1,5 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
+import type { OpencodeClient } from "../shared/sdk-types"
 import type { BuiltinAgentName, AgentOverrideConfig, AgentOverrides, AgentFactory, AgentPromptMetadata } from "./types"
 import type { CategoriesConfig, CategoryConfig, GitMasterConfig } from "../config/schema"
 import { createOrchestratorAgent } from "./orchestrator"
@@ -176,7 +177,7 @@ export async function createBuiltinAgents(
   categories?: CategoriesConfig,
   gitMasterConfig?: GitMasterConfig,
   discoveredSkills: LoadedSkill[] = [],
-  client?: any,
+  client?: OpencodeClient,
   browserProvider?: BrowserAutomationProvider,
   uiSelectedModel?: string
 ): Promise<Record<string, AgentConfig>> {

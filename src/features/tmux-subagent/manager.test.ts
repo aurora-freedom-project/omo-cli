@@ -82,7 +82,7 @@ function createMockContext(overrides?: {
         }),
       },
     },
-  } as any
+  } as never
 }
 
 function createSessionCreatedEvent(
