@@ -168,8 +168,8 @@ describe("Plan agent demote behavior", () => {
 
     // #then
     const agents = config.agent as Record<string, { mode?: string }>
-    expect(agents.coder).toBeDefined()
-    expect(agents.coder.mode).toBe("all")
+    expect(agents.planner).toBeDefined()
+    expect(agents.planner.mode).toBe("all")
   })
 })
 
@@ -287,7 +287,7 @@ describe("Planner direct override priority over category", () => {
         },
       },
       agents: {
-        coder: {
+        planner: {
           category: "test-planning",
           reasoningEffort: "low",
         },
@@ -311,8 +311,8 @@ describe("Planner direct override priority over category", () => {
 
     // #then - direct override's reasoningEffort wins
     const agents = config.agent as Record<string, { reasoningEffort?: string }>
-    expect(agents.coder).toBeDefined()
-    expect(agents.coder.reasoningEffort).toBe("low")
+    expect(agents.planner).toBeDefined()
+    expect(agents.planner.reasoningEffort).toBe("low")
   })
 
   test("category reasoningEffort applied when no direct override", async () => {
@@ -328,7 +328,7 @@ describe("Planner direct override priority over category", () => {
         },
       },
       agents: {
-        coder: {
+        planner: {
           category: "reasoning-cat",
         },
       },
@@ -351,8 +351,8 @@ describe("Planner direct override priority over category", () => {
 
     // #then - category's reasoningEffort is applied
     const agents = config.agent as Record<string, { reasoningEffort?: string }>
-    expect(agents.coder).toBeDefined()
-    expect(agents.coder.reasoningEffort).toBe("high")
+    expect(agents.planner).toBeDefined()
+    expect(agents.planner.reasoningEffort).toBe("high")
   })
 
   test("direct temperature takes priority over category temperature", async () => {
@@ -368,7 +368,7 @@ describe("Planner direct override priority over category", () => {
         },
       },
       agents: {
-        coder: {
+        planner: {
           category: "temp-cat",
           temperature: 0.1,
         },
@@ -392,7 +392,7 @@ describe("Planner direct override priority over category", () => {
 
     // #then - direct temperature wins over category
     const agents = config.agent as Record<string, { temperature?: number }>
-    expect(agents.coder).toBeDefined()
-    expect(agents.coder.temperature).toBe(0.1)
+    expect(agents.planner).toBeDefined()
+    expect(agents.planner.temperature).toBe(0.1)
   })
 })

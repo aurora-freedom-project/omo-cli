@@ -162,7 +162,7 @@ describe("tools/look-at", () => {
       const lookAt = createLookAt(ctx)
 
       const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as any, { sessionID: "s1" } as any)
-      expect(res).toContain("No response from multimodal-looker")
+      expect(res).toContain("No response from vision agent")
     })
 
     test("sorts messages pulling latest array bounds map natively arrays logic boundaries loop tracking logic mapped targets map boundaries check mapping loops checks tracking mapping map arrays values logical mapping", async () => {
