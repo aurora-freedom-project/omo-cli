@@ -859,6 +859,39 @@ export class BackgroundManager {
     return true
   }
 
+  /**
+   * Cancels a running task: aborts session, releases concurrency, cleans up tracking.
+   * Returns true if cancelled successfully, false if task not found or not running.
+   */
+  cancelRunningTask(taskId: string): boolean {
+    const task = this.tasks.get(taskId)
+    if (!task || task.status !== "running") {
+      return false
+    }
+
+    // Abort the session (fire-and-forget)
+    if (task.sessionID) {
+      this.client.session.abort({
+        path: { id: task.sessionID },
+      }).catch(() => { })
+    }
+
+    task.status = "cancelled"
+    task.completedAt = new Date()
+
+    // Release concurrency slot to prevent deadlock
+    if (task.concurrencyKey) {
+      this.concurrencyManager.release(task.concurrencyKey)
+      task.concurrencyKey = undefined
+    }
+
+    // Clean up pending tracking so allComplete batching works correctly
+    this.cleanupPendingByParent(task)
+
+    log("[background-agent] Cancelled running task:", { taskId, sessionID: task.sessionID })
+    return true
+  }
+
   private startPolling(): void {
     if (this.pollingInterval) return
 
@@ -1137,7 +1170,14 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
           this.concurrencyManager.release(task.concurrencyKey)
           task.concurrencyKey = undefined
         }
-        // Clean up pendingByParent to prevent stale entries
+        // Notify parent about TTL pruning (previously silent — caused missing notifications)
+        this.markForNotification(task)
+        this.notifyParentSession(task).catch(err => {
+          log("[background-agent] Failed to notify on TTL prune:", { taskId, error: err })
+        })
+        // Clean up immediately to prevent re-prune on next poll cycle.
+        // notifyParentSession handles pendingByParent cleanup internally
+        // and its setTimeout(5min) delete will be a no-op since task already removed.
         this.cleanupPendingByParent(task)
         this.clearNotificationsForTask(taskId)
         this.tasks.delete(taskId)

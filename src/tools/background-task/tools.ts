@@ -426,13 +426,8 @@ export function createBackgroundCancel(manager: BackgroundManager, client: Openc
                 status: "pending",
                 sessionID: undefined,
               })
-            } else if (task.sessionID) {
-              client.session.abort({
-                path: { id: task.sessionID },
-              }).catch(() => { })
-
-              task.status = "cancelled"
-              task.completedAt = new Date()
+            } else if (task.status === "running") {
+              manager.cancelRunningTask(task.id)
               cancelledInfo.push({
                 id: task.id,
                 description: task.description,
@@ -491,17 +486,9 @@ Description: ${task.description}
 Status: ${task.status}`
         }
 
-        // Running task: abort session
-        // Fire-and-forget: abort 요청을 보내고 await 하지 않음
-        // await 하면 메인 세션까지 abort 되는 문제 발생
-        if (task.sessionID) {
-          client.session.abort({
-            path: { id: task.sessionID },
-          }).catch(() => { })
-        }
-
-        task.status = "cancelled"
-        task.completedAt = new Date()
+        // Running task: use manager method for proper lifecycle cleanup
+        // (releases concurrency slot, cleans pendingByParent, aborts session)
+        manager.cancelRunningTask(task.id)
 
         return `Task cancelled successfully
 
