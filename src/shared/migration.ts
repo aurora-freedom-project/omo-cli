@@ -44,12 +44,9 @@ export const AGENT_NAME_MAP: Record<string, string> = {
   // Already new names - passthrough
   build: "build",
   orchestrator: "orchestrator",
-  coder: "coder",
-  navigator: "navigator",
   planner: "planner",
   reviewer: "reviewer",
   worker: "worker",
-  advisor: "advisor",
   researcher: "researcher",
   explorer: "explorer",
   vision: "vision",
@@ -60,14 +57,14 @@ export const AGENT_NAME_MAP: Record<string, string> = {
 
 export const BUILTIN_AGENT_NAMES = new Set([
   "orchestrator",
-  "advisor",
+  "architect",
   "researcher",
   "explorer",
   "vision",
   "planner",
+  "consultant",
+  "conductor",
   "reviewer",
-  "coder",
-  "navigator",
   "worker",
   "build",
 ])

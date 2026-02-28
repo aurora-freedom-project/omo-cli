@@ -12,7 +12,7 @@ services:
     command: >
       start --user root --pass omo-secret rocksdb:/data/omo.db
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      test: [ "CMD", "/surreal", "version" ]
       interval: 10s
       timeout: 5s
       retries: 5

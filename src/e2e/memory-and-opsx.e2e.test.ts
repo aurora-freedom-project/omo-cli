@@ -48,7 +48,7 @@ describe("E2E: memory install → start → add/search/graph", () => {
         const { createMemoryTools } = await import("../cli/memory/memory-tools")
 
         const ctx = { directory: "/tmp/e2e-test" } as any
-        const config = { enabled: true, port: 18000, auto_capture: false }
+        const config = { enabled: true, port: 18000, auto_capture: false, mode: "managed" as const, user: "root", namespace: "omo", database: "memory" }
         const tools = createMemoryTools(ctx, config)
 
         // All 4 tools exist
@@ -85,7 +85,7 @@ describe("E2E: memory install → start → add/search/graph", () => {
             `${import.meta.dir}/../cli/memory/surreal-client.ts`
         ).text()
 
-        expect(src).toContain("http://localhost:18000/rpc")
+        expect(src).toContain("http://127.0.0.1:18000/rpc")
         expect(src).not.toContain("ws://localhost:18000")
     })
 
@@ -94,9 +94,9 @@ describe("E2E: memory install → start → add/search/graph", () => {
             `${import.meta.dir}/../../docker-compose.yml`
         ).text()
 
-        expect(composeSrc).toContain("curl")
-        expect(composeSrc).toContain("http://localhost:8000/health")
-        expect(composeSrc).not.toMatch(/test:.*"CMD".*"health"\s*\]/)
+        expect(composeSrc).toContain("/surreal")
+        expect(composeSrc).toContain("version")
+        expect(composeSrc).not.toContain("curl")
     })
 
     test("docker-manager uses findComposeFile fallback (not hardcoded __dirname)", async () => {
@@ -138,7 +138,7 @@ describe("E2E: memory install → start → add/search/graph", () => {
         const { createMemoryTools } = await import("../cli/memory/memory-tools")
 
         const ctx = { directory: "/tmp/e2e-disabled" } as any
-        const config = { enabled: false, port: 18000, auto_capture: false }
+        const config = { enabled: false, port: 18000, auto_capture: false, mode: "managed" as const, user: "root", namespace: "omo", database: "memory" }
         const tools = createMemoryTools(ctx, config)
 
         const addResult = await tools.memory_add.execute({ content: "test", tags: ["x"] })

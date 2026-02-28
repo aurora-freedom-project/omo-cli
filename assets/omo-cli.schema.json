@@ -65,6 +65,7 @@
         "enum": [
           "todo-continuation-enforcer",
           "context-window-monitor",
+          "cost-metering",
           "session-recovery",
           "session-notification",
           "comment-checker",
@@ -6904,6 +6905,61 @@
         "database": {
           "default": "memory",
           "type": "string"
+        }
+      }
+    },
+    "cost_metering": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "show_idle_summary": {
+          "default": true,
+          "type": "boolean"
+        },
+        "monthly_budget_usd": {
+          "type": "number"
+        },
+        "daily_budget_usd": {
+          "type": "number"
+        },
+        "model_pricing": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "number"
+              },
+              "output": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "input",
+              "output"
+            ]
+          }
+        },
+        "default_pricing": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "number"
+            },
+            "output": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ]
         }
       }
     }

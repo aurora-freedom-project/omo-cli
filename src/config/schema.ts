@@ -98,6 +98,7 @@ export const AgentNameSchema = BuiltinAgentNameSchema
 export const HookNameSchema = z.enum([
   "todo-continuation-enforcer",
   "context-window-monitor",
+  "cost-metering",
   "session-recovery",
   "session-notification",
   "comment-checker",
@@ -492,6 +493,28 @@ export const MemoryConfigSchema = z.object({
   database: z.string().default("memory"),
 })
 
+const ModelPriceSchema = z.object({
+  /** Cost per million input tokens (USD) */
+  input: z.number(),
+  /** Cost per million output tokens (USD) */
+  output: z.number(),
+})
+
+export const CostMeteringConfigSchema = z.object({
+  /** Enable cost metering (default: false) */
+  enabled: z.boolean().default(false),
+  /** Show cost summary toast when session goes idle (default: true) */
+  show_idle_summary: z.boolean().default(true),
+  /** Monthly budget limit in USD. Warns when exceeded (default: no limit) */
+  monthly_budget_usd: z.number().optional(),
+  /** Daily budget limit in USD (default: no limit) */
+  daily_budget_usd: z.number().optional(),
+  /** Model pricing overrides — key is model name prefix, value is USD/million tokens */
+  model_pricing: z.record(z.string(), ModelPriceSchema).optional(),
+  /** Default pricing for unknown models (default: { input: 3.00, output: 15.00 }) */
+  default_pricing: ModelPriceSchema.optional(),
+})
+
 export const OmoCliConfigSchema = z.object({
   $schema: z.string().optional(),
   disabled_mcps: z.array(AnyMcpNameSchema).optional(),
@@ -520,6 +543,8 @@ export const OmoCliConfigSchema = z.object({
   privacy: PrivacyConfigSchema.optional(),
   /** omo-memory: Persistent memory via SurrealDB v3 */
   memory: MemoryConfigSchema.optional(),
+  /** Cost metering: Track token usage and estimate USD costs */
+  cost_metering: CostMeteringConfigSchema.optional(),
 })
 
 export type OmoCliConfig = z.infer<typeof OmoCliConfigSchema>
@@ -552,5 +577,6 @@ export type SisyphusConfig = z.infer<typeof SisyphusConfigSchema>
 export type CodingLevel = z.infer<typeof CodingLevelSchema>
 export type PrivacyConfig = z.infer<typeof PrivacyConfigSchema>
 export type MemoryConfig = z.infer<typeof MemoryConfigSchema>
+export type CostMeteringConfig = z.infer<typeof CostMeteringConfigSchema>
 
 export { AnyMcpNameSchema, type AnyMcpName, McpNameSchema, type McpName } from "../mcp/types"

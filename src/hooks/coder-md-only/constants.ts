@@ -3,7 +3,7 @@ import { getAgentDisplayName } from "../../shared/agent-display-names"
 
 export const HOOK_NAME = "coder-md-only"
 
-export const PROMETHEUS_AGENTS = ["planner"]
+export const PLANNER_AGENTS = ["planner"]
 
 export const ALLOWED_EXTENSIONS = [".md"]
 
@@ -15,7 +15,7 @@ export const PLANNING_CONSULT_WARNING = `
 
 ---
 
-${formatSystemDirective(SystemDirectiveTypes.PROMETHEUS_READ_ONLY)}
+${formatSystemDirective(SystemDirectiveTypes.PLANNER_READ_ONLY)}
 
 You are being invoked by ${getAgentDisplayName("planner")}, a READ-ONLY planning agent.
 
@@ -32,11 +32,11 @@ Return your findings and recommendations. The actual implementation will be hand
 
 `
 
-export const PROMETHEUS_WORKFLOW_REMINDER = `
+export const PLANNER_WORKFLOW_REMINDER = `
 
 ---
 
-${formatSystemDirective(SystemDirectiveTypes.PROMETHEUS_READ_ONLY)}
+${formatSystemDirective(SystemDirectiveTypes.PLANNER_READ_ONLY)}
 
 ## PROMETHEUS MANDATORY WORKFLOW REMINDER
 

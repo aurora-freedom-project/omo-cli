@@ -22,7 +22,7 @@ async function ensureReady(config: MemoryConfig) {
     if (config.mode === "external") {
         const port = config.port ?? 18000
         configureSurreal({
-            url: config.url ?? `http://localhost:${port}/rpc`,
+            url: config.url ?? `http://127.0.0.1:${port}/rpc`,
             user: config.user ?? "root",
             pass: config.pass ?? "omo-secret",
             namespace: config.namespace ?? "omo",
@@ -33,7 +33,7 @@ async function ensureReady(config: MemoryConfig) {
         // Managed mode: configure with managed defaults, start Docker if needed
         const port = config.port ?? 18000
         configureSurreal({
-            url: `http://localhost:${port}/rpc`,
+            url: `http://127.0.0.1:${port}/rpc`,
             user: config.user ?? "root",
             pass: config.pass ?? "omo-secret",
             namespace: config.namespace ?? "omo",

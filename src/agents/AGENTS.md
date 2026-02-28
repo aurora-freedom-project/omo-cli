@@ -1,66 +1,66 @@
 # AGENTS KNOWLEDGE BASE
 
 ## OVERVIEW
-10 AI agents for multi-model orchestration. Orchestrator (primary), Conductor (orchestrator), architect, researcher, explorer, multimodal-looker, Planner, Consultant, Reviewer, Orchestrator-Junior.
+10 AI agents for multi-model orchestration. Orchestrator (primary), Conductor (master orchestrator), Architect, Researcher, Explorer, Vision, Planner, Consultant, Reviewer, Worker.
 
 ## STRUCTURE
 ```
 agents/
-├── conductor.ts                    # Master Orchestrator (holds todo list)
-├── orchestrator.ts                 # Main prompt (SF Bay Area engineer identity)
-├── orchestrator-junior.ts          # Delegated task executor (category-spawned)
-├── architect.ts                   # Strategic advisor (GPT-5.2)
-├── researcher.ts                # Multi-repo research (GitHub CLI, Context7)
-├── explorer.ts                  # Fast contextual grep (Grok Code)
-├── multimodal-looker.ts        # Media analyzer (Gemini 3 Flash)
-├── planner-prompt.ts        # Planning (Interview/Consultant mode, 1196 lines)
-├── consultant.ts                    # Pre-planning analysis (Gap detection)
-├── reviewer.ts                    # Plan reviewer (Ruthless fault-finding)
+├── orchestrator.ts                  # Main agent (SF Bay Area engineer identity)
+├── navigator.ts                     # Conductor - Master Orchestrator (holds todo list)
+├── conductor.ts                     # Consultant - Pre-planning analysis (Gap detection)
+├── architect.ts                     # Architect - Strategic advisor
+├── coder.ts                         # Planner - Strategic Planning (Interview/Consultant mode, 1320 lines)
+├── worker.ts                        # Worker - Delegated task executor (category-spawned)
+├── researcher.ts                    # Researcher - Multi-repo research (GitHub CLI, Context7)
+├── explorer.ts                      # Explorer - Fast contextual grep
+├── vision.ts                        # Vision - Media analyzer (Gemini 3 Flash)
+├── reviewer.ts                      # Reviewer - Plan reviewer (Ruthless fault-finding)
 ├── dynamic-agent-prompt-builder.ts  # Dynamic prompt generation
-├── types.ts                    # AgentModelConfig, AgentPromptMetadata
-├── utils.ts                    # createBuiltinAgents(), resolveModelWithFallback()
-└── index.ts                    # builtinAgents export
+├── types.ts                         # AgentModelConfig, AgentPromptMetadata
+├── utils.ts                         # createBuiltinAgents(), agent registration
+└── index.ts                         # Barrel exports
 ```
 
-## AGENT MODELS (Recommended Configuration)
+## AGENT → FILE → FACTORY MAP
+| Config Key | Display Name | File | Factory |
+|-----------|-------------|------|---------|
+| orchestrator | Orchestrator | orchestrator.ts | `createOrchestratorAgent` |
+| conductor | Conductor | navigator.ts | `createConductorAgent` |
+| consultant | Consultant | conductor.ts | `createConsultantAgent` |
+| architect | Architect | architect.ts | `createArchitectAgent` |
+| planner/coder | Planner | coder.ts | registered in config-handler.ts |
+| worker | Worker | worker.ts | `createWorkerAgentWithOverrides` |
+| researcher | Researcher | researcher.ts | `createResearcherAgent` |
+| explorer | Explorer | explorer.ts | `createExplorerAgent` |
+| vision | Vision | vision.ts | `createVisionAgent` |
+| reviewer | Reviewer | reviewer.ts | `createReviewerAgent` |
+
+## AGENT MODELS (Recommended)
 | Agent | Model | Temp | Purpose |
-|-------|-------|------|---------| 
-| Orchestrator | claude-opus-4-5-thinking (max) | 0.1 | Primary orchestrator, Thinking enabled |
-| Conductor | claude-opus-4-5-thinking (max) | 0.1 | Master orchestrator, Thinking enabled |
-| architect | claude-opus-4-5-thinking (max) | 0.1 | Consultation, debugging, code review |
-| Planner | claude-opus-4-5-thinking (max) | 0.1 | Strategic planning, Thinking enabled |
-| Consultant | claude-sonnet-4-5-thinking (max) | 0.3 | Pre-planning analysis, gap detection |
-| Reviewer | claude-sonnet-4-5-thinking (max) | 0.1 | Plan validation |
-| Orchestrator-Junior | claude-sonnet-4-5-thinking (max) | 0.1 | Category-spawned executor |
-| multimodal-looker | gemini-3-pro (high) | 0.1 | PDF/image analysis |
-| researcher | minimax-m2.1 (Ollama) | 0.1 | Docs, GitHub search (fast/cheap) |
-| explorer | minimax-m2.1 (Ollama) | 0.1 | Fast contextual grep (fast/cheap) |
-
-> Models configurable via `omo-cli.json`. Above = recommended cost/performance balance.
-
-## HOW TO ADD
-1. Create `src/agents/my-agent.ts` exporting factory + metadata.
-2. Add to `agentSources` in `src/agents/utils.ts`.
-3. Update `AgentNameSchema` in `src/config/schema.ts`.
-4. Register in `src/index.ts` initialization.
+|-------|-------|------|---------|
+| Orchestrator | claude-opus-4-5 (max) | 0.1 | Primary orchestrator, Thinking enabled |
+| Conductor | claude-sonnet-4-5 | 0.1 | Master orchestrator, Thinking enabled |
+| Architect | gpt-5.2 (high) | 0.1 | Consultation, debugging, code review |
+| Planner | claude-opus-4-5 (max) | 0.1 | Strategic planning, Thinking enabled |
+| Consultant | claude-opus-4-5 (max) | 0.3 | Pre-planning analysis, gap detection |
+| Reviewer | gpt-5.2 (medium) | 0.1 | Plan validation |
+| Worker | claude-sonnet-4-5 | 0.1 | Category-spawned executor |
+| Vision | gemini-3-flash | 0.1 | PDF/image analysis |
+| Researcher | glm-4.7 | 0.1 | Docs, GitHub search |
+| Explorer | claude-haiku-4-5 | 0.1 | Fast contextual grep |
 
 ## TOOL RESTRICTIONS
 | Agent | Denied Tools |
 |-------|-------------|
-| architect | write, edit, task, delegate_task |
-| researcher | write, edit, task, delegate_task, call_omo_agent |
-| explorer | write, edit, task, delegate_task, call_omo_agent |
-| multimodal-looker | Allowlist: read only |
-| Orchestrator-Junior | task, delegate_task |
+| Architect | write, edit, task, delegate_task |
+| Researcher | write, edit, task, delegate_task, call_omo_agent |
+| Explorer | write, edit, task, delegate_task, call_omo_agent |
+| Vision | Allowlist: read only |
+| Worker | task, delegate_task |
 
 ## PATTERNS
-- **Factory**: `createXXXAgent(model: string): AgentConfig`
-- **Metadata**: `XXX_PROMPT_METADATA` with category, cost, triggers.
+- **Factory**: `create*Agent(model: string): AgentConfig`
+- **Metadata**: `*PromptMetadata` with category, cost, triggers.
 - **Tool restrictions**: `createAgentToolRestrictions(tools)` or `createAgentToolAllowlist(tools)`.
 - **Thinking**: 32k budget tokens for Orchestrator, Architect, Planner, Conductor.
-
-## ANTI-PATTERNS
-- **Trust reports**: NEVER trust "I'm done" - verify outputs.
-- **High temp**: Don't use >0.3 for code agents.
-- **Sequential calls**: Use `delegate_task` with `run_in_background` for exploration.
-- **Planner writing code**: Planner only - never implements.

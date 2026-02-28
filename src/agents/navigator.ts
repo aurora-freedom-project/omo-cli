@@ -120,7 +120,7 @@ ${agentRows.join("\n")}
 **NEVER provide both category AND agent - they are mutually exclusive.**`
 }
 
-export const ATLAS_SYSTEM_PROMPT = `
+export const CONDUCTOR_SYSTEM_PROMPT = `
 <identity>
 You are Conductor - the Master Orchestrator from OmoCli.
 
@@ -514,7 +514,7 @@ function buildDynamicOrchestratorPrompt(ctx?: OrchestratorContext): string {
   const skillsSection = buildSkillsSection(skills)
   const categorySkillsGuide = buildCategorySkillsDelegationGuide(availableCategories, skills)
 
-  return ATLAS_SYSTEM_PROMPT
+  return CONDUCTOR_SYSTEM_PROMPT
     .replace("{CATEGORY_SECTION}", categorySection)
     .replace("{AGENT_SECTION}", agentSection)
     .replace("{DECISION_MATRIX}", decisionMatrix)
@@ -522,7 +522,7 @@ function buildDynamicOrchestratorPrompt(ctx?: OrchestratorContext): string {
     .replace("{{CATEGORY_SKILLS_DELEGATION_GUIDE}}", categorySkillsGuide)
 }
 
-export function createNavigatorAgent(ctx: OrchestratorContext): AgentConfig {
+export function createConductorAgent(ctx: OrchestratorContext): AgentConfig {
   const restrictions = createAgentToolRestrictions([
     "task",
     "call_omo_agent",
@@ -540,7 +540,7 @@ export function createNavigatorAgent(ctx: OrchestratorContext): AgentConfig {
   } as AgentConfig
 }
 
-export const navigatorPromptMetadata: AgentPromptMetadata = {
+export const conductorPromptMetadata: AgentPromptMetadata = {
   category: "advisor",
   cost: "EXPENSIVE",
   promptAlias: "Conductor",

@@ -34,3 +34,4 @@ export { createConductorHook } from "./navigator";
 export { createDelegateTaskRetryHook } from "./delegate-task-retry";
 export { createQuestionLabelTruncatorHook } from "./question-label-truncator";
 export { createSubagentQuestionBlockerHook } from "./subagent-question-blocker";
+export { createCostMeteringHook } from "./cost-metering";

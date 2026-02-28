@@ -16,7 +16,7 @@ import { createAgentToolRestrictions } from "../shared/permission-compat"
  * - Prepare directives for the planner agent
  */
 
-export const PLANNER_SYSTEM_PROMPT = `# Consultant - Pre-Planning Consultant
+export const CONSULTANT_SYSTEM_PROMPT = `# Consultant - Pre-Planning Consultant
 
 ## CONSTRAINTS
 
@@ -307,7 +307,7 @@ const consultantRestrictions = createAgentToolRestrictions([
   "delegate_task",
 ])
 
-export function createPlannerAgent(model: string): AgentConfig {
+export function createConsultantAgent(model: string): AgentConfig {
   return {
     description:
       "Pre-planning consultant that analyzes requests to identify hidden intentions, ambiguities, and AI failure points. (Consultant - OmoCli)",
@@ -315,13 +315,13 @@ export function createPlannerAgent(model: string): AgentConfig {
     model,
     temperature: 0.3,
     ...consultantRestrictions,
-    prompt: PLANNER_SYSTEM_PROMPT,
+    prompt: CONSULTANT_SYSTEM_PROMPT,
     thinking: { type: "enabled", budgetTokens: 32000 },
   } as AgentConfig
 }
 
 
-export const plannerPromptMetadata: AgentPromptMetadata = {
+export const consultantPromptMetadata: AgentPromptMetadata = {
   category: "advisor",
   cost: "EXPENSIVE",
   triggers: [

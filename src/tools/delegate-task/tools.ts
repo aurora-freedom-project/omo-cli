@@ -20,7 +20,7 @@ import { CATEGORY_MODEL_REQUIREMENTS } from "../../shared/model-requirements"
 
 type OpencodeClient = PluginInput["client"]
 
-const SISYPHUS_JUNIOR_AGENT = "worker"
+const WORKER_AGENT = "worker"
 
 function parseModelString(model: string): { providerID: string; modelID: string } | undefined {
   const parts = model.split("/")
@@ -223,7 +223,7 @@ MUTUALLY EXCLUSIVE: Provide EITHER category OR subagent_type, not both (unless c
 - category: Use predefined category → Spawns Orchestrator-Junior with category config
   Available categories:
 ${categoryList}
-- subagent_type: Use specific agent directly (e.g., "advisor", "explorer")
+- subagent_type: Use specific agent directly (e.g., "architect", "explorer")
 - run_in_background: true=async (returns task_id), false=sync (waits for result). Default: false. Use background=true ONLY for parallel exploration with 5+ independent queries.
 - session_id: Existing Task session to continue (from previous task output). Continues agent with FULL CONTEXT PRESERVED - saves tokens, maintains continuity.
 - command: The command that triggered this task (optional, for slash command tracking).
@@ -578,7 +578,7 @@ To continue this session: session_id="${args.session_id}"`
           }
         }
 
-        agentToUse = SISYPHUS_JUNIOR_AGENT
+        agentToUse = WORKER_AGENT
         if (!categoryModel && actualModel) {
           const parsedModel = parseModelString(actualModel)
           categoryModel = parsedModel ?? undefined
@@ -767,8 +767,8 @@ To continue this session: session_id="${sessionID}"`
         }
         const agentName = args.subagent_type.trim()
 
-        if (equalsIgnoreCase(agentName, SISYPHUS_JUNIOR_AGENT)) {
-          return `Cannot use subagent_type="${SISYPHUS_JUNIOR_AGENT}" directly. Use category parameter instead (e.g., ${categoryExamples}).
+        if (equalsIgnoreCase(agentName, WORKER_AGENT)) {
+          return `Cannot use subagent_type="${WORKER_AGENT}" directly. Use category parameter instead (e.g., ${categoryExamples}).
 
 Orchestrator-Junior is spawned automatically when you specify a category. Pick the appropriate category for your task domain.`
         }

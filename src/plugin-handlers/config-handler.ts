@@ -31,7 +31,7 @@ import { migrateAgentConfig } from "../shared/permission-compat";
 import { AGENT_NAME_MAP } from "../shared/migration";
 import { resolveModelWithFallback } from "../shared/model-resolver";
 import { AGENT_MODEL_REQUIREMENTS } from "../shared/model-requirements";
-import { CODER_SYSTEM_PROMPT, CODER_PERMISSION } from "../agents/coder";
+import { PLANNER_SYSTEM_PROMPT, PLANNER_PERMISSION } from "../agents/coder";
 import { DEFAULT_CATEGORIES } from "../tools/delegate-task/constants";
 import type { ModelCacheState } from "../plugin-state";
 import type { CategoryConfig } from "../config/schema";
@@ -226,7 +226,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
           planConfigWithoutName as Record<string, unknown>
         );
         const plannerOverride =
-          pluginConfig.agents?.["coder"] as
+          pluginConfig.agents?.["planner"] as
           | (Record<string, unknown> & {
             category?: string
             model?: string
@@ -247,7 +247,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
           )
           : undefined;
 
-        const plannerRequirement = AGENT_MODEL_REQUIREMENTS["coder"];
+        const plannerRequirement = AGENT_MODEL_REQUIREMENTS["planner"];
         const connectedProviders = readConnectedProvidersCache();
         const availableModels = ctx.client
           ? await fetchAvailableModels(ctx.client, { connectedProviders: connectedProviders ?? undefined })
@@ -271,12 +271,12 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
         const topPToUse = plannerOverride?.top_p ?? categoryConfig?.top_p;
         const maxTokensToUse = plannerOverride?.maxTokens ?? categoryConfig?.maxTokens;
         const plannerBase = {
-          name: "coder",
+          name: "planner",
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(variantToUse ? { variant: variantToUse } : {}),
           mode: "all" as const,
-          prompt: CODER_SYSTEM_PROMPT,
-          permission: CODER_PERMISSION,
+          prompt: PLANNER_SYSTEM_PROMPT,
+          permission: PLANNER_PERMISSION,
           description: `${configAgent?.plan?.description ?? "Plan agent"} (Planner - OmoCli)`,
           color: (configAgent?.plan?.color as string) ?? "#FF6347",
           ...(temperatureToUse !== undefined ? { temperature: temperatureToUse } : {}),
@@ -292,7 +292,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
             : {}),
         };
 
-        agentConfig["coder"] = plannerOverride
+        agentConfig["planner"] = plannerOverride
           ? { ...plannerBase, ...plannerOverride }
           : plannerBase;
       }
@@ -320,9 +320,9 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
         ? migrateAgentConfig(configAgent.build as Record<string, unknown>)
         : {};
 
-      const planDemoteConfig = replacePlan && agentConfig["coder"]
+      const planDemoteConfig = replacePlan && agentConfig["planner"]
         ? {
-          ...agentConfig["coder"],
+          ...agentConfig["planner"],
           name: "plan",
           mode: "subagent" as const
         }
@@ -378,8 +378,8 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
       const agent = agentResult.orchestrator as AgentWithPermission;
       agent.permission = { ...agent.permission, call_omo_agent: "deny", delegate_task: "allow", question: "allow" };
     }
-    if (agentResult["coder"]) {
-      const agent = agentResult["coder"] as AgentWithPermission;
+    if (agentResult["planner"]) {
+      const agent = agentResult["planner"] as AgentWithPermission;
       agent.permission = { ...agent.permission, call_omo_agent: "deny", delegate_task: "allow", question: "allow" };
     }
     if (agentResult["worker"]) {

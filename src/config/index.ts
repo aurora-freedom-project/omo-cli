@@ -13,6 +13,7 @@ export {
   TmuxLayoutSchema,
   CodingLevelSchema,
   PrivacyConfigSchema,
+  CostMeteringConfigSchema,
 } from "./schema"
 
 export type {
@@ -31,4 +32,5 @@ export type {
   TmuxLayout,
   CodingLevel,
   PrivacyConfig,
+  CostMeteringConfig,
 } from "./schema"

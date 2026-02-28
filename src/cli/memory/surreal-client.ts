@@ -10,7 +10,7 @@ export interface SurrealConnectionConfig {
 
 // Default connection config (managed mode defaults)
 let connectionConfig: SurrealConnectionConfig = {
-    url: "http://localhost:18000/rpc",
+    url: "http://127.0.0.1:18000/rpc",
     user: "root",
     pass: "omo-secret",
     namespace: "omo",

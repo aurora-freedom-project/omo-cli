@@ -80,7 +80,7 @@ function doesContainerExist(containerName = CONTAINER_NAME): boolean {
 
 export async function isSurrealDBHealthy(port = DEFAULT_MANAGED_PORT): Promise<boolean> {
     try {
-        const healthUrl = `http://localhost:${port}/health`
+        const healthUrl = `http://127.0.0.1:${port}/health`
         const res = await fetch(healthUrl, { signal: AbortSignal.timeout(3000) })
         return res.ok
     } catch {
@@ -133,7 +133,7 @@ export async function detectExistingSurrealDB(): Promise<DiscoveredSurrealDB[]> 
 
                 discovered.push({
                     source: "docker-container",
-                    url: `http://localhost:${port}`,
+                    url: `http://127.0.0.1:${port}`,
                     port,
                     containerName,
                     containerId,
@@ -151,13 +151,13 @@ export async function detectExistingSurrealDB(): Promise<DiscoveredSurrealDB[]> 
     for (const port of probePorts) {
         if (alreadyFoundPorts.has(port)) continue
         try {
-            const res = await fetch(`http://localhost:${port}/health`, {
+            const res = await fetch(`http://127.0.0.1:${port}/health`, {
                 signal: AbortSignal.timeout(2000),
             })
             if (res.ok) {
                 discovered.push({
                     source: "network-service",
-                    url: `http://localhost:${port}`,
+                    url: `http://127.0.0.1:${port}`,
                     port,
                 })
             }

@@ -1,3 +1,4 @@
+/// <reference types="bun-types" />
 import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test"
 
 import * as surreal from "./surreal-client"
@@ -84,7 +85,7 @@ describe("cli/memory/surreal-client", () => {
             expect(id).toBe("concept:xyz")
 
             const fetchArgs = globalFetchSpy.mock.calls[0]
-            expect(fetchArgs[0]).toBe("http://localhost:18000/rpc")
+            expect(fetchArgs[0]).toBe("http://127.0.0.1:18000/rpc")
             const body = JSON.parse(fetchArgs[1].body)
             expect(body.params[1].content).toBe("test")
         })
@@ -111,7 +112,7 @@ describe("cli/memory/surreal-client", () => {
         })
 
         test("binds limit boundaries to project scoped filters properly mapped array", async () => {
-            const similar = [{ id: "c1", score: 0.99 }]
+            const similar = [{ id: "c1", score: 0.99, content: "test", tags: ["t"], embedding: [0.1], source: "auto" }]
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: similar }] })
@@ -139,7 +140,7 @@ describe("cli/memory/surreal-client", () => {
         })
 
         test("queries using relationships out matching string bounds", async () => {
-            const concepts = [{ id: "c2" }]
+            const concepts = [{ id: "c2", content: "test", tags: ["t"], embedding: [0.1], source: "auto" }]
             globalFetchSpy.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ result: [{ result: concepts }] })

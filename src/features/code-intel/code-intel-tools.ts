@@ -40,7 +40,7 @@ async function ensureReady(config: MemoryConfig): Promise<boolean> {
         const port = config.port ?? 18000
         if (config.mode === "external") {
             configureSurreal({
-                url: config.url ?? `http://localhost:${port}/rpc`,
+                url: config.url ?? `http://127.0.0.1:${port}/rpc`,
                 user: config.user ?? "root",
                 pass: config.pass ?? "omo-secret",
                 namespace: config.namespace ?? "omo",
@@ -48,7 +48,7 @@ async function ensureReady(config: MemoryConfig): Promise<boolean> {
             })
         } else {
             configureSurreal({
-                url: `http://localhost:${port}/rpc`,
+                url: `http://127.0.0.1:${port}/rpc`,
                 user: config.user ?? "root",
                 pass: config.pass ?? "omo-secret",
                 namespace: config.namespace ?? "omo",

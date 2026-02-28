@@ -35,6 +35,7 @@ import {
   createWorkerNotepadHook,
   createQuestionLabelTruncatorHook,
   createSubagentQuestionBlockerHook,
+  createCostMeteringHook,
 } from "./hooks";
 import {
   contextCollector,
@@ -196,6 +197,9 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     createContextInjectorMessagesTransformHook(contextCollector);
   const agentUsageReminder = isHookEnabled("agent-usage-reminder")
     ? createAgentUsageReminderHook(ctx)
+    : null;
+  const costMetering = isHookEnabled("cost-metering") && pluginConfig.cost_metering?.enabled
+    ? createCostMeteringHook(ctx, pluginConfig.cost_metering)
     : null;
   const nonInteractiveEnv = isHookEnabled("non-interactive-env")
     ? createNonInteractiveEnvHook(ctx)
@@ -538,6 +542,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await thinkMode?.event(input);
       await anthropicContextWindowLimitRecovery?.event(input);
       await agentUsageReminder?.event(input);
+      await costMetering?.event(input);
       await categorySkillReminder?.event(input);
       await interactiveBashSession?.event(input);
       await ralphLoop?.event(input);
@@ -713,6 +718,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await editErrorRecovery?.["tool.execute.after"](input, output);
       await delegateTaskRetry?.["tool.execute.after"](input, output);
       await conductorHook?.["tool.execute.after"]?.(input, output);
+      await costMetering?.["tool.execute.after"]?.(input, output);
       await taskResumeInfo["tool.execute.after"](input, output);
     },
   };

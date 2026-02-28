@@ -646,7 +646,7 @@ export class BackgroundManager {
 
       const task = this.findBySession(sessionID)
       if (!task || task.status !== "running") return
-      
+
       const startedAt = task.startedAt
       if (!startedAt) return
 
@@ -704,10 +704,10 @@ export class BackgroundManager {
         task.error = "Session deleted"
       }
 
-       if (task.concurrencyKey) {
-         this.concurrencyManager.release(task.concurrencyKey)
-         task.concurrencyKey = undefined
-       }
+      if (task.concurrencyKey) {
+        this.concurrencyManager.release(task.concurrencyKey)
+        task.concurrencyKey = undefined
+      }
       // Clean up pendingByParent to prevent stale entries
       this.cleanupPendingByParent(task)
       this.tasks.delete(task.id)
@@ -741,10 +741,10 @@ export class BackgroundManager {
       })
 
       const messages = response.data ?? []
-      
+
       // Check for at least one assistant or tool message
       const hasAssistantOrToolMessage = messages.some(
-        (m: { info?: { role?: string } }) => 
+        (m: { info?: { role?: string } }) =>
           m.info?.role === "assistant" || m.info?.role === "tool"
       )
 
@@ -763,18 +763,25 @@ export class BackgroundManager {
       const hasContent = messages.some((m: any) => {
         if (m.info?.role !== "assistant" && m.info?.role !== "tool") return false
         const parts = m.parts ?? []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return parts.some((p: any) => 
-        // Text content (final output)
-        (p.type === "text" && p.text && p.text.trim().length > 0) ||
-        // Reasoning content (thinking blocks)
-        (p.type === "reasoning" && p.text && p.text.trim().length > 0) ||
-        // Tool calls (indicates work was done)
-        p.type === "tool" ||
-        // Tool results (output from executed tools) - important for tool-only tasks
-        (p.type === "tool_result" && p.content && 
-          (typeof p.content === "string" ? p.content.trim().length > 0 : p.content.length > 0))
-      )
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return parts.some((p: any) => {
+          // Text content (final output)
+          if (p.type === "text" && p.text && p.text.trim().length > 0) return true
+          // Reasoning content (thinking blocks)
+          if (p.type === "reasoning" && p.text && p.text.trim().length > 0) return true
+          // Tool calls (indicates work was done)
+          if (p.type === "tool") return true
+          // Tool results (output from executed tools)
+          if (p.type === "tool_result") return true
+          // OpenCode-native tool invocation/result formats
+          if (p.type === "tool-invocation" || p.type === "tool-result") return true
+          // Step markers indicate work is in progress/done
+          if (p.type === "step-start" || p.type === "step-finish") return true
+          // Fallback: any part with non-empty text/content indicates work
+          if (p.text && typeof p.text === "string" && p.text.trim().length > 0) return true
+          if (p.content && (typeof p.content === "string" ? p.content.trim().length > 0 : true)) return true
+          return false
+        })
       })
 
       if (!hasContent) {
@@ -827,7 +834,7 @@ export class BackgroundManager {
     }
 
     // Find and remove from queue
-    const key = task.model 
+    const key = task.model
       ? `${task.model.providerID}/${task.model.modelID}`
       : task.agent
     const queue = this.queuesByKey.get(key)
@@ -991,7 +998,7 @@ export class BackgroundManager {
 
     const statusText = task.status === "completed" ? "COMPLETED" : "CANCELLED"
     const errorInfo = task.error ? `\n**Error:** ${task.error}` : ""
-    
+
     let notification: string
     if (allComplete) {
       const completedTasks = Array.from(this.tasks.values())
@@ -1108,20 +1115,20 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
     const now = Date.now()
 
     for (const [taskId, task] of this.tasks.entries()) {
-      const timestamp = task.status === "pending" 
-        ? task.queuedAt?.getTime() 
+      const timestamp = task.status === "pending"
+        ? task.queuedAt?.getTime()
         : task.startedAt?.getTime()
-      
+
       if (!timestamp) {
         continue
       }
-      
+
       const age = now - timestamp
       if (age > TASK_TTL_MS) {
         const errorMessage = task.status === "pending"
           ? "Task timed out while queued (30 minutes)"
           : "Task timed out after 30 minutes"
-        
+
         log("[background-agent] Pruning stale task:", { taskId, status: task.status, age: Math.round(age / 1000) + "s" })
         task.status = "error"
         task.error = errorMessage
@@ -1165,7 +1172,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
     for (const task of this.tasks.values()) {
       if (task.status !== "running") continue
       if (!task.progress?.lastUpdate) continue
-      
+
       const startedAt = task.startedAt
       const sessionID = task.sessionID
       if (!startedAt || !sessionID) continue
@@ -1190,7 +1197,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
 
       this.client.session.abort({
         path: { id: sessionID },
-      }).catch(() => {})
+      }).catch(() => { })
 
       log(`[background-agent] Task ${task.id} interrupted: stale timeout`)
 
@@ -1206,18 +1213,30 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
     this.pruneStaleTasksAndNotifications()
     await this.checkAndInterruptStaleTasks()
 
+    // Diagnostic logging for stuck task debugging
+    const runningTasks = Array.from(this.tasks.values()).filter(t => t.status === "running")
+    if (runningTasks.length > 0) {
+      log("[background-agent] pollRunningTasks - active tasks:", runningTasks.map(t => ({
+        id: t.id,
+        sessionID: t.sessionID,
+        elapsed: t.startedAt ? Math.round((Date.now() - t.startedAt.getTime()) / 1000) + "s" : "unknown",
+        stablePolls: t.stablePolls ?? 0,
+        lastMsgCount: t.lastMsgCount ?? 0,
+      })))
+    }
+
     const statusResult = await this.client.session.status()
     const allStatuses = (statusResult.data ?? {}) as Record<string, { type: string }>
 
     for (const task of this.tasks.values()) {
       if (task.status !== "running") continue
-      
+
       const sessionID = task.sessionID
       if (!sessionID) continue
 
       try {
         const sessionStatus = allStatuses[sessionID]
-        
+
         // Don't skip if session not in status - fall through to message-based detection
         if (sessionStatus?.type === "idle") {
           // Edge guard: Validate session has actual output before completing
@@ -1285,7 +1304,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
           const currentMsgCount = messages.length
           const startedAt = task.startedAt
           if (!startedAt) continue
-          
+
           const elapsedMs = Date.now() - startedAt.getTime()
 
           if (elapsedMs >= MIN_STABILITY_TIME_MS) {
@@ -1296,11 +1315,14 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
                 const recheckStatus = await this.client.session.status()
                 const recheckData = (recheckStatus.data ?? {}) as Record<string, { type: string }>
                 const currentStatus = recheckData[sessionID]
-                
-                if (currentStatus?.type !== "idle") {
-                  log("[background-agent] Stability reached but session not idle, resetting:", { 
-                    taskId: task.id, 
-                    sessionStatus: currentStatus?.type ?? "not_in_status" 
+
+                // If session is actively working (not idle), reset stability.
+                // If session is absent from status (undefined), treat as completed/idle —
+                // OpenCode removes finished sessions from the status endpoint.
+                if (currentStatus && currentStatus.type !== "idle") {
+                  log("[background-agent] Stability reached but session not idle, resetting:", {
+                    taskId: task.id,
+                    sessionStatus: currentStatus.type
                   })
                   task.stablePolls = 0
                   continue
@@ -1354,7 +1376,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
       if (task.status === "running" && task.sessionID) {
         this.client.session.abort({
           path: { id: task.sessionID },
-        }).catch(() => {})
+        }).catch(() => { })
       }
     }
 

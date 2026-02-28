@@ -70,7 +70,7 @@ async function queryMemoryConcepts(project?: string): Promise<string | null> {
     const query = `SELECT content, tags FROM concept ${whereClause} ORDER BY created DESC LIMIT 10;`
 
     // Leverage the internal rpc-style endpoint via fetch
-    const res = await fetch("http://localhost:18000/rpc", {
+    const res = await fetch("http://127.0.0.1:18000/rpc", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

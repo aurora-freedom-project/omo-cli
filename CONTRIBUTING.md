@@ -109,16 +109,18 @@ After making changes, you can test your local build in OpenCode:
 ```
 omo-cli/
 ├── src/
-│   ├── agents/        # AI agents (OmO, oracle, librarian, explore, etc.)
-│   ├── hooks/         # 21 lifecycle hooks
-│   ├── tools/         # LSP (11), AST-Grep, Grep, Glob, etc.
-│   ├── mcp/           # MCP server integrations (context7, grep_app)
-│   ├── features/      # Claude Code compatibility layers
+│   ├── agents/        # 10 AI agents (Orchestrator, Conductor, Architect, etc.)
+│   ├── hooks/         # 40+ lifecycle hooks
+│   ├── tools/         # 20+ tools (LSP, AST-Grep, delegation, Code Intel)
+│   ├── mcp/           # MCP server integrations (context7, grep_app, websearch)
+│   ├── features/      # 17 feature modules (background agents, Claude Code compat, etc.)
 │   ├── config/        # Zod schemas and TypeScript types
-│   ├── auth/          # Google Antigravity OAuth
-│   ├── shared/        # Common utilities
+│   ├── shared/        # Common utilities (55+ modules)
+│   ├── cli/           # CLI installer, doctor, profile manager, skill tools
 │   └── index.ts       # Main plugin entry (OmoCliPlugin)
-├── script/            # Build utilities (build-schema.ts, publish.ts)
+├── profiles/          # Profile templates (mike, mike-local)
+├── script/            # Build utilities (build-schema.ts, build-binaries.ts)
+├── bin/               # Platform launcher
 ├── assets/            # JSON schema
 └── dist/              # Build output (ESM + .d.ts)
 ```
@@ -134,8 +136,8 @@ bun run typecheck
 # Full build (ESM + TypeScript declarations + JSON schema)
 bun run build
 
-# Clean build output and rebuild
-bun run rebuild
+# Clean build output
+bun run clean
 
 # Build schema only (after modifying src/config/schema.ts)
 bun run build:schema
@@ -166,23 +168,25 @@ bun run build:schema
 ### Adding a New Agent
 
 1. Create a new `.ts` file in `src/agents/`
-2. Define the agent configuration following existing patterns
-3. Add to `builtinAgents` in `src/agents/index.ts`
+2. Define the agent factory following existing patterns (e.g., `createArchitectAgent`)
+3. Add to `agentSources` in `src/agents/utils.ts`
 4. Update `src/agents/types.ts` if needed
 5. Run `bun run build:schema` to update the JSON schema
 
 ```typescript
 // src/agents/my-agent.ts
-import type { AgentConfig } from "./types";
+import type { AgentConfig } from "@opencode-ai/sdk";
 
-export const myAgent: AgentConfig = {
-  name: "my-agent",
-  model: "anthropic/claude-sonnet-4-5",
-  description: "Description of what this agent does",
-  prompt: `Your agent's system prompt here`,
-  temperature: 0.1,
-  // ... other config
-};
+export function createMyAgent(model: string): AgentConfig {
+  return {
+    name: "My Agent",
+    model,
+    description: "Description of what this agent does",
+    prompt: `Your agent's system prompt here`,
+    temperature: 0.1,
+    // ... other config
+  };
+}
 ```
 
 ### Adding a New Hook
@@ -212,7 +216,7 @@ export function createMyHook(input: PluginInput) {
    - `constants.ts` - Constants and tool descriptions
    - `tools.ts` - Tool implementations
    - `utils.ts` - Helper functions
-2. Add to `builtinTools` in `src/tools/index.ts`
+2. Add to tool registration in `src/tools/index.ts`
 
 ### Adding a New MCP Server
 

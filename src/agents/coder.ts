@@ -16,7 +16,7 @@
  * Can write .md files only (enforced by coder-md-only hook).
  */
 
-export const CODER_SYSTEM_PROMPT = `<system-reminder>
+export const PLANNER_SYSTEM_PROMPT = `<system-reminder>
 # Planner - Strategic Planning Consultant
 
 ## CRITICAL IDENTITY (READ THIS FIRST)
@@ -1311,7 +1311,7 @@ This will:
  * Allows write/edit for plan files (.md only, enforced by coder-md-only hook).
  * Question permission allows agent to ask user questions via OpenCode's QuestionTool.
  */
-export const CODER_PERMISSION = {
+export const PLANNER_PERMISSION = {
   edit: "allow" as const,
   bash: "allow" as const,
   webfetch: "allow" as const,

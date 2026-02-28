@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-01-26T14:50:00+09:00
-**Commit:** 9d66b807
+**Updated:** 2026-02-28
+**Version:** 3.2.14
 **Branch:** dev
 
 ---
@@ -18,7 +18,7 @@
 
 ## OVERVIEW
 
-OpenCode plugin: multi-model agent orchestration (Claude Opus 4.5, GPT-5.2, Gemini 3 Flash, Grok Code). 32 lifecycle hooks, 20+ tools (LSP, AST-Grep, delegation), 10 specialized agents, full Claude Code compatibility. "oh-my-zsh" for OpenCode.
+OpenCode plugin: multi-model agent orchestration (Claude Opus 4.6, Sonnet 4.5, Gemini 3 Pro, Minimax M2.1). 40+ lifecycle hooks, 20+ tools (LSP, AST-Grep, delegation), 10 specialized agents, full Claude Code compatibility. "oh-my-zsh" for OpenCode.
 
 ## STRUCTURE
 
@@ -26,16 +26,17 @@ OpenCode plugin: multi-model agent orchestration (Claude Opus 4.5, GPT-5.2, Gemi
 omo-cli/
 ├── src/
 │   ├── agents/        # 10 AI agents - see src/agents/AGENTS.md
-│   ├── hooks/         # 32 lifecycle hooks - see src/hooks/AGENTS.md
+│   ├── hooks/         # 40+ lifecycle hooks - see src/hooks/AGENTS.md
 │   ├── tools/         # 20+ tools - see src/tools/AGENTS.md
-│   ├── features/      # Background agents, Claude Code compat - see src/features/AGENTS.md
+│   ├── features/      # 17 feature modules - see src/features/AGENTS.md
 │   ├── shared/        # 55 cross-cutting utilities - see src/shared/AGENTS.md
 │   ├── cli/           # CLI installer, doctor - see src/cli/AGENTS.md
 │   ├── mcp/           # Built-in MCPs - see src/mcp/AGENTS.md
 │   ├── config/        # Zod schema, TypeScript types
-│   └── index.ts       # Main plugin entry (672 lines)
+│   └── index.ts       # Main plugin entry (736 lines)
+├── profiles/          # Profile templates (mike, mike-local)
 ├── script/            # build-schema.ts, build-binaries.ts
-├── packages/          # 7 platform-specific binaries
+├── bin/               # Platform launcher (omo-cli.js, platform.js)
 └── dist/              # Build output (ESM + .d.ts)
 ```
 
@@ -43,15 +44,15 @@ omo-cli/
 
 | Task | Location | Notes |
 |------|----------|-------|
-| Add agent | `src/agents/` | Create .ts with factory, add to `agentSources` |
+| Add agent | `src/agents/` | Create .ts with factory, add to `agentSources` in utils.ts |
 | Add hook | `src/hooks/` | Create dir with `createXXXHook()`, register in index.ts |
 | Add tool | `src/tools/` | Dir with index/types/constants/tools.ts |
 | Add MCP | `src/mcp/` | Create config, add to index.ts |
 | Add skill | `src/features/builtin-skills/` | Create dir with SKILL.md |
 | Add command | `src/features/builtin-commands/` | Add template + register in commands.ts |
 | Config schema | `src/config/schema.ts` | Zod schema, run `bun run build:schema` |
-| Background agents | `src/features/background-agent/` | manager.ts (1377 lines) |
-| Orchestrator | `src/hooks/navigator/` | Main orchestration hook (752 lines) |
+| Background agents | `src/features/background-agent/` | manager.ts (1418 lines) |
+| Orchestrator | `src/hooks/navigator/` | Main orchestration hook (757 lines) |
 
 ## TDD (Test-Driven Development)
 
@@ -63,7 +64,7 @@ omo-cli/
 **Rules:**
 - NEVER write implementation before test
 - NEVER delete failing tests - fix the code
-- Test file: `*.test.ts` alongside source (100 test files)
+- Test file: `*.test.ts` alongside source (141 test files)
 - BDD comments: `//#given`, `//#when`, `//#then`
 
 ## CONVENTIONS
@@ -73,7 +74,7 @@ omo-cli/
 - **Build**: `bun build` (ESM) + `tsc --emitDeclarationOnly`
 - **Exports**: Barrel pattern via index.ts
 - **Naming**: kebab-case dirs, `createXXXHook`/`createXXXTool` factories
-- **Testing**: BDD comments, 100 test files
+- **Testing**: BDD comments, 141 test files
 - **Temperature**: 0.1 for code agents, max 0.3
 
 ## ANTI-PATTERNS
@@ -94,18 +95,33 @@ omo-cli/
 | Temperature | >0.3 for code agents |
 | Trust | Agent self-reports - ALWAYS verify |
 
+## AGENT → FILE → FACTORY MAP
+
+| Config Key | Display Name | File | Factory |
+|-----------|-------------|------|---------|
+| orchestrator | Orchestrator | orchestrator.ts | `createOrchestratorAgent` |
+| conductor | Conductor | navigator.ts | `createConductorAgent` |
+| consultant | Consultant | conductor.ts | `createConsultantAgent` |
+| architect | Architect | architect.ts | `createArchitectAgent` |
+| planner/coder | Planner | coder.ts | registered in config-handler.ts |
+| worker | Worker | worker.ts | `createWorkerAgentWithOverrides` |
+| researcher | Researcher | researcher.ts | `createResearcherAgent` |
+| explorer | Explorer | explorer.ts | `createExplorerAgent` |
+| vision | Vision | vision.ts | `createVisionAgent` |
+| reviewer | Reviewer | reviewer.ts | `createReviewerAgent` |
+
 ## AGENT MODELS (Recommended Configuration)
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| orchestrator | claude-opus-4-5-thinking (max) | Primary orchestrator, Thinking mode enabled |
-| conductor | claude-opus-4-5-thinking (max) | Master orchestrator, Thinking mode enabled |
-| architect | claude-opus-4-5-thinking (max) | Consultation, debugging, code review |
-| planner | claude-opus-4-5-thinking (max) | Strategic planning, Thinking mode enabled |
+| orchestrator | claude-opus-4-6-thinking (max) | Primary orchestrator, Thinking mode enabled |
+| conductor | claude-opus-4-6-thinking (max) | Master orchestrator, Thinking mode enabled |
+| architect | claude-opus-4-6-thinking (max) | Consultation, debugging, code review |
+| planner | claude-opus-4-6-thinking (max) | Strategic planning, Thinking mode enabled |
 | consultant | claude-sonnet-4-5-thinking (max) | Pre-planning analysis, gap detection |
 | reviewer | claude-sonnet-4-5-thinking (max) | Plan validation |
 | worker | claude-sonnet-4-5-thinking (max) | Category-spawned executor |
-| vision | gemini-3-pro (high) | PDF/image analysis |
+| vision | gemini-3-pro-image (high) | PDF/image analysis |
 | researcher | minimax-m2.1 (Ollama) | Docs, GitHub search (fast/cheap) |
 | explorer | minimax-m2.1 (Ollama) | Fast codebase grep (fast/cheap) |
 
@@ -116,8 +132,8 @@ omo-cli/
 ```bash
 bun run typecheck      # Type check
 bun run build          # ESM + declarations + schema
-bun run rebuild        # Clean + Build
-bun test               # 100 test files
+bun run clean          # Remove dist/
+bun test               # 141 test files
 ```
 
 ## DEPLOYMENT
@@ -131,13 +147,13 @@ bun test               # 100 test files
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `src/features/builtin-skills/skills.ts` | 1729 | Skill definitions |
-| `src/features/background-agent/manager.ts` | 1377 | Task lifecycle, concurrency |
-| `src/agents/planner-prompt.ts` | 1196 | Planning agent |
-| `src/tools/delegate-task/tools.ts` | 1070 | Category-based delegation |
-| `src/hooks/navigator/index.ts` | 752 | Orchestrator hook |
-| `src/cli/config-manager.ts` | 664 | JSONC config parsing |
-| `src/index.ts` | 672 | Main plugin entry |
+| `src/features/builtin-skills/skills.ts` | 1901 | Skill definitions |
+| `src/features/background-agent/manager.ts` | 1418 | Task lifecycle, concurrency |
+| `src/agents/coder.ts` | 1319 | Planner agent (interview mode) |
+| `src/tools/delegate-task/tools.ts` | 1128 | Category-based delegation |
+| `src/hooks/navigator/index.ts` | 757 | Conductor orchestration hook |
+| `src/index.ts` | 736 | Main plugin entry |
+| `src/cli/config-manager.ts` | 691 | JSONC config parsing |
 | `src/features/builtin-commands/templates/refactor.ts` | 619 | Refactor command template |
 
 ## MCP ARCHITECTURE

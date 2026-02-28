@@ -1,7 +1,7 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import { existsSync, readdirSync } from "node:fs"
 import { join, resolve, relative, isAbsolute } from "node:path"
-import { HOOK_NAME, PROMETHEUS_AGENTS, ALLOWED_EXTENSIONS, ALLOWED_PATH_PREFIX, BLOCKED_TOOLS, PLANNING_CONSULT_WARNING, PROMETHEUS_WORKFLOW_REMINDER } from "./constants"
+import { HOOK_NAME, PLANNER_AGENTS, ALLOWED_EXTENSIONS, ALLOWED_PATH_PREFIX, BLOCKED_TOOLS, PLANNING_CONSULT_WARNING, PLANNER_WORKFLOW_REMINDER } from "./constants"
 import { findNearestMessageWithFields, findFirstMessageWithAgent, MESSAGE_STORAGE } from "../../features/hook-message-injector"
 import { getSessionAgent } from "../../features/claude-code-session-state"
 import { log } from "../../shared/logger"
@@ -82,7 +82,7 @@ export function createPlannerMdOnlyHook(ctx: PluginInput) {
     ): Promise<void> => {
       const agentName = getAgentFromSession(input.sessionID)
 
-      if (!agentName || !PROMETHEUS_AGENTS.includes(agentName)) {
+      if (!agentName || !PLANNER_AGENTS.includes(agentName)) {
         return
       }
 
@@ -119,9 +119,9 @@ export function createPlannerMdOnlyHook(ctx: PluginInput) {
           agent: agentName,
         })
         throw new Error(
-          `[${HOOK_NAME}] ${getAgentDisplayName("coder")} can only write/edit .md files inside .opencode/ directory. ` +
+          `[${HOOK_NAME}] ${getAgentDisplayName("planner")} can only write/edit .md files inside .opencode/ directory. ` +
           `Attempted to modify: ${filePath}. ` +
-          `${getAgentDisplayName("coder")} is a READ-ONLY planner. Use /start-work to execute the plan. ` +
+          `${getAgentDisplayName("planner")} is a READ-ONLY planner. Use /start-work to execute the plan. ` +
           `APOLOGIZE TO THE USER, REMIND OF YOUR PLAN WRITING PROCESSES, TELL USER WHAT YOU WILL GOING TO DO AS THE PROCESS, WRITE THE PLAN`
         )
       }
@@ -134,7 +134,7 @@ export function createPlannerMdOnlyHook(ctx: PluginInput) {
           filePath,
           agent: agentName,
         })
-        output.message = (output.message || "") + PROMETHEUS_WORKFLOW_REMINDER
+        output.message = (output.message || "") + PLANNER_WORKFLOW_REMINDER
       }
 
       log(`[${HOOK_NAME}] Allowed: .opencode/*.md write permitted`, {

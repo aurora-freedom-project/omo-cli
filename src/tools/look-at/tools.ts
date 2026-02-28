@@ -154,10 +154,10 @@ Original error: ${createResult.error}`
 
         const isJsonParseError = errorMessage.includes("JSON") && (errorMessage.includes("EOF") || errorMessage.includes("parse"))
         if (isJsonParseError) {
-          return `Error: Failed to analyze file - received malformed response from multimodal-looker agent.
+          return `Error: Failed to analyze file - received malformed response from vision agent.
 
 This typically occurs when:
-1. The multimodal-looker model is not available or not connected
+1. The vision model is not available or not connected
 2. The model does not support this file type (${mimeType})
 3. The API returned an empty or truncated response
 
@@ -172,7 +172,7 @@ Try:
 Original error: ${errorMessage}`
         }
 
-        return `Error: Failed to send prompt to multimodal-looker agent: ${errorMessage}`
+        return `Error: Failed to send prompt to vision agent: ${errorMessage}`
       }
 
       log(`[look_at] Prompt sent, fetching messages...`)
@@ -196,7 +196,7 @@ Original error: ${errorMessage}`
 
       if (!lastAssistantMessage) {
         log(`[look_at] No assistant message found`)
-        return `Error: No response from multimodal-looker agent`
+        return `Error: No response from vision agent`
       }
 
       log(`[look_at] Found assistant message with ${lastAssistantMessage.parts.length} parts`)

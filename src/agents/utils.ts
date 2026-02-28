@@ -2,12 +2,12 @@ import type { AgentConfig } from "@opencode-ai/sdk"
 import type { BuiltinAgentName, AgentOverrideConfig, AgentOverrides, AgentFactory, AgentPromptMetadata } from "./types"
 import type { CategoriesConfig, CategoryConfig, GitMasterConfig } from "../config/schema"
 import { createOrchestratorAgent } from "./orchestrator"
-import { createAdvisorAgent, ADVISOR_PROMPT_METADATA } from "./architect"
+import { createArchitectAgent, ARCHITECT_PROMPT_METADATA } from "./architect"
 import { createResearcherAgent, RESEARCHER_PROMPT_METADATA } from "./researcher"
 import { createExplorerAgent, EXPLORER_PROMPT_METADATA } from "./explorer"
 import { createVisionAgent, VISION_PROMPT_METADATA } from "./vision"
-import { createPlannerAgent } from "./conductor"
-import { createNavigatorAgent } from "./navigator"
+import { createConsultantAgent } from "./conductor"
+import { createConductorAgent } from "./navigator"
 import { createReviewerAgent } from "./reviewer"
 import type { AvailableAgent, AvailableCategory, AvailableSkill } from "./dynamic-agent-prompt-builder"
 import { deepMerge, fetchAvailableModels, resolveModelWithFallback, AGENT_MODEL_REQUIREMENTS, findCaseInsensitive, includesCaseInsensitive, readConnectedProvidersCache } from "../shared"
@@ -20,40 +20,27 @@ import type { BrowserAutomationProvider } from "../config/schema"
 type AgentSource = AgentFactory | AgentConfig
 
 const agentSources: Partial<Record<BuiltinAgentName, AgentSource>> = {
-  sisyphus: createOrchestratorAgent,
-  oracle: createAdvisorAgent,
-  librarian: createResearcherAgent,
-  explore: createExplorerAgent,
-  "multimodal-looker": createVisionAgent,
-  metis: createPlannerAgent,
-  momus: createReviewerAgent,
-  // Note: Atlas/Navigator is handled specially in createBuiltinAgents()
-  // because it needs OrchestratorContext, not just a model string
-  atlas: createNavigatorAgent as unknown as AgentFactory,
-  // New native names
+  // Canonical agent names only — no legacy duplicates
   orchestrator: createOrchestratorAgent,
-  architect: createAdvisorAgent,
+  architect: createArchitectAgent,
   researcher: createResearcherAgent,
   explorer: createExplorerAgent,
   vision: createVisionAgent,
-  consultant: createPlannerAgent,
+  consultant: createConsultantAgent,
   reviewer: createReviewerAgent,
-  conductor: createNavigatorAgent as unknown as AgentFactory,
-  planner: createOrchestratorAgent, // planner uses deep implementation factory
+  // Note: conductor is handled specially in createBuiltinAgents()
+  // because it needs OrchestratorContext, not just a model string
+  // Note: planner/coder is registered in config-handler.ts, not here
 }
 
 /**
- * Metadata for each agent, used to build Sisyphus's dynamic prompt sections
+ * Metadata for each agent, used to build Orchestrator's dynamic prompt sections
  * (Delegation Table, Tool Selection, Key Triggers, etc.)
  */
 const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
-  oracle: ADVISOR_PROMPT_METADATA,
-  architect: ADVISOR_PROMPT_METADATA,
-  librarian: RESEARCHER_PROMPT_METADATA,
+  architect: ARCHITECT_PROMPT_METADATA,
   researcher: RESEARCHER_PROMPT_METADATA,
-  explore: EXPLORER_PROMPT_METADATA,
   explorer: EXPLORER_PROMPT_METADATA,
-  "multimodal-looker": VISION_PROMPT_METADATA,
   vision: VISION_PROMPT_METADATA,
 }
 
@@ -344,7 +331,7 @@ export async function createBuiltinAgents(
     if (conductorResolution) {
       const { model: conductorModel, variant: conductorResolvedVariant } = conductorResolution
 
-      let orchestratorConfig = createNavigatorAgent({
+      let orchestratorConfig = createConductorAgent({
         model: conductorModel,
         availableAgents,
         availableSkills,
