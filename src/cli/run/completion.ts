@@ -1,21 +1,25 @@
 import pc from "picocolors"
+import { Effect } from "effect"
 import type { RunContext, Todo, ChildSession, SessionStatus } from "./types"
 
 export async function checkCompletionConditions(ctx: RunContext): Promise<boolean> {
-  try {
-    if (!await areAllTodosComplete(ctx)) {
-      return false
-    }
-
-    if (!await areAllChildrenIdle(ctx)) {
-      return false
-    }
-
-    return true
-  } catch (err) {
-    console.error(pc.red(`[completion] API error: ${err}`))
-    return false
-  }
+  return await Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        if (!await areAllTodosComplete(ctx)) {
+          return false
+        }
+        if (!await areAllChildrenIdle(ctx)) {
+          return false
+        }
+        return true
+      },
+      catch: (err) => false as never
+    }).pipe(Effect.catchAll(() => {
+      console.error(pc.red(`[completion] API error`))
+      return Effect.succeed(false)
+    }))
+  )
 }
 
 async function areAllTodosComplete(ctx: RunContext): Promise<boolean> {

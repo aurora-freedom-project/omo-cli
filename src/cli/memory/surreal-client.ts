@@ -1,4 +1,5 @@
 import { log } from "../../shared/logger"
+import { Effect } from "effect"
 
 export interface SurrealConnectionConfig {
     url: string        // e.g. "http://localhost:18000/rpc"
@@ -173,14 +174,22 @@ async function rpc<T = unknown>(
     params: unknown[]
 ): Promise<T> {
     const { url, user, pass, namespace, database } = connectionConfig
+
+    // SurrealDB v3 HTTP /rpc is stateless and ignores NS/DB HTTP headers.
+    // Prepend USE statement so the query runs in the correct namespace/database.
+    let prependedUse = false
+    if (method === "query" && typeof params[0] === "string") {
+        params = [...params]
+        params[0] = `USE NS ${namespace} DB ${database}; ${params[0]}`
+        prependedUse = true
+    }
+
     const payload = { id: "1", method, params }
     const res = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            NS: namespace,
-            DB: database,
             Authorization: `Basic ${btoa(`${user}:${pass}`)}`,
         },
         body: JSON.stringify(payload),
@@ -195,6 +204,11 @@ async function rpc<T = unknown>(
 
     if (data.error) {
         throw new Error(`SurrealDB RPC error: ${data.error.message}`)
+    }
+
+    // Strip the leading USE result so callers see the same shape as before
+    if (prependedUse && Array.isArray(data.result)) {
+        return data.result.slice(1) as T
     }
 
     return data.result as T
@@ -212,12 +226,15 @@ export async function initSchema(): Promise<void> {
         .filter(Boolean)
 
     for (const stmt of statements) {
-        try {
-            await rpc("query", [stmt + ";"])
-        } catch (err) {
-            // Log but don't throw — some statements may already exist
-            log("[surreal-client] Schema statement skipped", { stmt, err })
-        }
+        await Effect.runPromise(
+            Effect.tryPromise({
+                try: async () => { await rpc("query", [stmt + ";"]) },
+                catch: (err) => err as never
+            }).pipe(Effect.catchAll((err) => {
+                log("[surreal-client] Schema statement skipped", { stmt, err })
+                return Effect.void
+            }))
+        )
     }
 
     log("[surreal-client] Schema initialized")
@@ -314,12 +331,12 @@ export async function addRelation(
 }
 
 export async function isConnected(): Promise<boolean> {
-    try {
-        await rpc("ping", [])
-        return true
-    } catch {
-        return false
-    }
+    return await Effect.runPromise(
+        Effect.tryPromise({
+            try: async () => { await rpc("ping", []); return true },
+            catch: () => false as never
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import pc from "picocolors"
+import { Effect } from "effect"
 import type {
   RunContext,
   EventPayload,
@@ -43,13 +44,14 @@ export function serializeError(error: unknown): string {
       }
     }
 
-    try {
-      const json = JSON.stringify(error, null, 2)
-      if (json !== "{}") {
-        return json
-      }
-    } catch (_) {
-      void _
+    const json = Effect.runSync(
+      Effect.try({
+        try: () => JSON.stringify(error, null, 2),
+        catch: () => "" as never
+      }).pipe(Effect.catchAll(() => Effect.succeed("")))
+    )
+    if (json !== "{}" && json !== "") {
+      return json
     }
   }
 
@@ -311,10 +313,10 @@ function handleToolResult(
 
   const output = props?.output || ""
   const maxLen = 200
-  const preview = output.length > maxLen 
-    ? output.slice(0, maxLen) + "..." 
+  const preview = output.length > maxLen
+    ? output.slice(0, maxLen) + "..."
     : output
-  
+
   if (preview.trim()) {
     const lines = preview.split("\n").slice(0, 3)
     process.stdout.write(pc.dim(`   └─ ${lines.join("\n      ")}\n`))
