@@ -23,14 +23,28 @@ export const OPENCODE_NATIVE_AGENTS_INJECTION_VERSION = "1.1.37"
  */
 export const OPENCODE_NATIVE_SKILLS_VERSION = "1.0.190"
 
-const NOT_CACHED = Symbol("NOT_CACHED")
-let cachedVersion: string | null | typeof NOT_CACHED = NOT_CACHED
+const _versionCache = (() => {
+  let state: { resolved: boolean; value: string | null } = { resolved: false, value: null }
+  return {
+    get: () => state,
+    set: (v: string | null) => { state = { resolved: true, value: v } },
+    reset: () => { state = { resolved: false, value: null } },
+  }
+})()
 
+/**
+ * Parse a semver string into an array of numeric parts.
+ * Strips leading `v` and pre-release suffixes before parsing.
+ */
 export function parseVersion(version: string): number[] {
   const cleaned = version.replace(/^v/, "").split("-")[0]
   return cleaned.split(".").map((n) => parseInt(n, 10) || 0)
 }
 
+/**
+ * Compare two semver strings.
+ * @returns `-1` if a < b, `0` if equal, `1` if a > b.
+ */
 export function compareVersions(a: string, b: string): -1 | 0 | 1 {
   const partsA = parseVersion(a)
   const partsB = parseVersion(b)
@@ -45,17 +59,21 @@ export function compareVersions(a: string, b: string): -1 | 0 | 1 {
   return 0
 }
 
+/** Returns true if version `a` is greater than or equal to version `b`. */
 export function isVersionGte(a: string, b: string): boolean {
   return compareVersions(a, b) >= 0
 }
 
+/** Returns true if version `a` is less than version `b`. */
 export function isVersionLt(a: string, b: string): boolean {
   return compareVersions(a, b) < 0
 }
 
+/** Detect and cache the installed OpenCode version by running `opencode --version`. */
 export function getOpenCodeVersion(): string | null {
-  if (cachedVersion !== NOT_CACHED) {
-    return cachedVersion
+  const cache = _versionCache.get()
+  if (cache.resolved) {
+    return cache.value
   }
 
   try {
@@ -66,24 +84,28 @@ export function getOpenCodeVersion(): string | null {
     }).trim()
 
     const versionMatch = result.match(/(\d+\.\d+\.\d+(?:-[\w.]+)?)/)
-    cachedVersion = versionMatch?.[1] ?? null
-    return cachedVersion
+    const version = versionMatch?.[1] ?? null
+    _versionCache.set(version)
+    return version
   } catch {
-    cachedVersion = null
+    _versionCache.set(null)
     return null
   }
 }
 
+/** Check if the installed OpenCode version meets a minimum requirement. Returns true if unknown. */
 export function isOpenCodeVersionAtLeast(version: string): boolean {
   const current = getOpenCodeVersion()
   if (!current) return true
   return isVersionGte(current, version)
 }
 
+/** Reset the cached version so the next call to {@link getOpenCodeVersion} re-detects. */
 export function resetVersionCache(): void {
-  cachedVersion = NOT_CACHED
+  _versionCache.reset()
 }
 
+/** Override the cached version for testing purposes. */
 export function setVersionCache(version: string | null): void {
-  cachedVersion = version
+  _versionCache.set(version)
 }

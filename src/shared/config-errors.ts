@@ -3,16 +3,24 @@ export type ConfigLoadError = {
   error: string
 }
 
-let configLoadErrors: ConfigLoadError[] = []
+const _state = (() => {
+  let errors: ConfigLoadError[] = []
+  return {
+    get: (): readonly ConfigLoadError[] => errors,
+    add: (error: ConfigLoadError) => { errors.push(error) },
+    clear: () => { errors = [] },
+  }
+})()
 
-export function getConfigLoadErrors(): ConfigLoadError[] {
-  return configLoadErrors
+export function getConfigLoadErrors(): readonly ConfigLoadError[] {
+  return _state.get()
 }
 
 export function clearConfigLoadErrors(): void {
-  configLoadErrors = []
+  _state.clear()
 }
 
 export function addConfigLoadError(error: ConfigLoadError): void {
-  configLoadErrors.push(error)
+  _state.add(error)
 }
+
