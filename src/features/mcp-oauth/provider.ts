@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto"
 import { createServer } from "node:http"
 import { spawn } from "node:child_process"
+import { Effect } from "effect"
 import type { OAuthTokenData } from "./storage"
 import { loadToken, saveToken } from "./storage"
 import { discoverOAuthServerMetadata } from "./discovery"
@@ -121,13 +122,16 @@ function openBrowser(url: string): void {
     args = [url]
   }
 
-  try {
-    const child = spawn(cmd, args, { stdio: "ignore", detached: true })
-    child.on("error", () => {})
-    child.unref()
-  } catch {
-    // Browser open failed — user must navigate manually
-  }
+  Effect.runSync(
+    Effect.try({
+      try: () => {
+        const child = spawn(cmd, args, { stdio: "ignore", detached: true })
+        child.on("error", () => { })
+        child.unref()
+      },
+      catch: () => undefined as never
+    }).pipe(Effect.catchAll(() => Effect.void))
+  )
 }
 
 export class McpOAuthProvider {
@@ -256,16 +260,17 @@ export class McpOAuthProvider {
 
     if (!tokenResponse.ok) {
       let errorDetail = `${tokenResponse.status}`
-      try {
-        const body = (await tokenResponse.json()) as Record<string, unknown>
-        if (body.error) {
-          errorDetail = `${tokenResponse.status} ${body.error}`
-          if (body.error_description) {
-            errorDetail += `: ${body.error_description}`
-          }
+      const body = await Effect.runPromise(
+        Effect.tryPromise({
+          try: async () => (await tokenResponse.json()) as Record<string, unknown>,
+          catch: () => null as never
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+      )
+      if (body?.error) {
+        errorDetail = `${tokenResponse.status} ${body.error}`
+        if (body.error_description) {
+          errorDetail += `: ${body.error_description}`
         }
-      } catch {
-        // Response body not JSON
       }
       throw new Error(`Token exchange failed: ${errorDetail}`)
     }

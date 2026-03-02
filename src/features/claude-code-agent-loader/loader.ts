@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "fs"
 import { join, basename } from "path"
+import { Effect } from "effect"
 import type { AgentConfig } from "@opencode-ai/sdk"
 import { parseFrontmatter } from "../../shared/frontmatter"
 import { isMarkdownFile } from "../../shared/file-utils"
@@ -33,34 +34,34 @@ function loadAgentsFromDir(agentsDir: string, scope: AgentScope): LoadedAgent[] 
     const agentPath = join(agentsDir, entry.name)
     const agentName = basename(entry.name, ".md")
 
-    try {
-      const content = readFileSync(agentPath, "utf-8")
-      const { data, body } = parseFrontmatter<AgentFrontmatter>(content)
+    const agent = Effect.runSync(
+      Effect.try({
+        try: () => {
+          const content = readFileSync(agentPath, "utf-8")
+          const { data, body } = parseFrontmatter<AgentFrontmatter>(content)
 
-       const name = data.name || agentName
-       const originalDescription = data.description || ""
+          const name = data.name || agentName
+          const originalDescription = data.description || ""
+          const formattedDescription = `(${scope}) ${originalDescription}`
 
-       const formattedDescription = `(${scope}) ${originalDescription}`
+          const config: AgentConfig = {
+            description: formattedDescription,
+            mode: "subagent",
+            prompt: body.trim(),
+          }
 
-       const config: AgentConfig = {
-         description: formattedDescription,
-         mode: "subagent",
-         prompt: body.trim(),
-       }
+          const toolsConfig = parseToolsConfig(data.tools)
+          if (toolsConfig) {
+            config.tools = toolsConfig
+          }
 
-       const toolsConfig = parseToolsConfig(data.tools)
-      if (toolsConfig) {
-        config.tools = toolsConfig
-      }
-
-      agents.push({
-        name,
-        path: agentPath,
-        config,
-        scope,
-      })
-    } catch {
-      continue
+          return { name, path: agentPath, config, scope } as LoadedAgent
+        },
+        catch: () => null as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+    )
+    if (agent) {
+      agents.push(agent)
     }
   }
 

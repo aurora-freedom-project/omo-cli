@@ -5,9 +5,11 @@ import type { CommandDefinition } from "../claude-code-command-loader/types"
 import { readFileSync, existsSync } from "fs"
 import { dirname, resolve, isAbsolute } from "path"
 import { homedir } from "os"
+import { Effect } from "effect"
 import { parseFrontmatter } from "../../shared/frontmatter"
 import { sanitizeModelField } from "../../shared/model-sanitizer"
 import { deepMerge } from "../../shared/deep-merge"
+
 
 function parseAllowedToolsFromMetadata(allowedTools: string | string[] | undefined): string[] | undefined {
   if (!allowedTools) return undefined
@@ -70,14 +72,17 @@ function resolveFilePath(from: string, configDir?: string): string {
 }
 
 function loadSkillFromFile(filePath: string): { template: string; metadata: SkillMetadata } | null {
-  try {
-    if (!existsSync(filePath)) return null
-    const content = readFileSync(filePath, "utf-8")
-    const { data, body } = parseFrontmatter<SkillMetadata>(content)
-    return { template: body, metadata: data }
-  } catch {
-    return null
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        if (!existsSync(filePath)) return null
+        const content = readFileSync(filePath, "utf-8")
+        const { data, body } = parseFrontmatter<SkillMetadata>(content)
+        return { template: body, metadata: data }
+      },
+      catch: () => null as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
 }
 
 function configEntryToLoaded(
