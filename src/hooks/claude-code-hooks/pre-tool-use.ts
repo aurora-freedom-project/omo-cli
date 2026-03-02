@@ -7,6 +7,7 @@ import type {
 import { findMatchingHooks, executeHookCommand, objectToSnakeCase, transformToolName, log } from "../../shared"
 import { DEFAULT_CONFIG } from "./plugin-config"
 import { isHookCommandDisabled, type PluginExtendedConfig } from "./config-loader"
+import { Effect } from "effect"
 
 export interface PreToolUseContext {
   sessionId: string
@@ -116,21 +117,25 @@ export async function executePreToolUseHooks(
       }
 
       if (result.stdout) {
-        try {
-          const output = JSON.parse(result.stdout || "{}") as PreToolUseOutput
+        const parsed = Effect.runSync(
+          Effect.try({
+            try: () => JSON.parse(result.stdout || "{}") as PreToolUseOutput,
+            catch: () => null as never
+          }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+        )
 
+        if (parsed) {
           // Handle deprecated decision/reason fields (Claude Code backward compat)
           let decision: PermissionDecision | undefined
           let reason: string | undefined
           let modifiedInput: Record<string, unknown> | undefined
 
-          if (output.hookSpecificOutput?.permissionDecision) {
-            decision = output.hookSpecificOutput.permissionDecision
-            reason = output.hookSpecificOutput.permissionDecisionReason
-            modifiedInput = output.hookSpecificOutput.updatedInput
-          } else if (output.decision) {
-            // Map deprecated values: approve->allow, block->deny, ask->ask
-            const legacyDecision = output.decision
+          if (parsed.hookSpecificOutput?.permissionDecision) {
+            decision = parsed.hookSpecificOutput.permissionDecision
+            reason = parsed.hookSpecificOutput.permissionDecisionReason
+            modifiedInput = parsed.hookSpecificOutput.updatedInput
+          } else if (parsed.decision) {
+            const legacyDecision = parsed.decision
             if (legacyDecision === "approve" || legacyDecision === "allow") {
               decision = "allow"
             } else if (legacyDecision === "block" || legacyDecision === "deny") {
@@ -138,14 +143,13 @@ export async function executePreToolUseHooks(
             } else if (legacyDecision === "ask") {
               decision = "ask"
             }
-            reason = output.reason
+            reason = parsed.reason
           }
 
-          // Return if decision is set OR if any common fields are set (fallback to allow)
-          const hasCommonFields = output.continue !== undefined || 
-            output.stopReason !== undefined || 
-            output.suppressOutput !== undefined || 
-            output.systemMessage !== undefined
+          const hasCommonFields = parsed.continue !== undefined ||
+            parsed.stopReason !== undefined ||
+            parsed.suppressOutput !== undefined ||
+            parsed.systemMessage !== undefined
 
           if (decision || hasCommonFields) {
             return {
@@ -156,13 +160,12 @@ export async function executePreToolUseHooks(
               hookName: firstHookName,
               toolName: transformedToolName,
               inputLines,
-              continue: output.continue,
-              stopReason: output.stopReason,
-              suppressOutput: output.suppressOutput,
-              systemMessage: output.systemMessage,
+              continue: parsed.continue,
+              stopReason: parsed.stopReason,
+              suppressOutput: parsed.suppressOutput,
+              systemMessage: parsed.systemMessage,
             }
           }
-        } catch {
         }
       }
     }

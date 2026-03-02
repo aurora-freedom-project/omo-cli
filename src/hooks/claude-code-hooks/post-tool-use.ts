@@ -7,6 +7,7 @@ import { findMatchingHooks, executeHookCommand, objectToSnakeCase, transformTool
 import { DEFAULT_CONFIG } from "./plugin-config"
 import { buildTranscriptFromSession, deleteTempTranscript } from "./transcript"
 import { isHookCommandDisabled, type PluginExtendedConfig } from "./config-loader"
+import { Effect } from "effect"
 
 export interface PostToolUseClient {
   session: {
@@ -122,25 +123,30 @@ export async function executePostToolUseHooks(
         }
 
         if (result.exitCode === 0 && result.stdout) {
-          try {
-            const output = JSON.parse(result.stdout || "{}") as PostToolUseOutput
-            if (output.decision === "block") {
+          const parsed = Effect.runSync(
+            Effect.try({
+              try: () => JSON.parse(result.stdout || "{}") as PostToolUseOutput,
+              catch: () => null as never
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+          )
+          if (parsed) {
+            if (parsed.decision === "block") {
               return {
                 block: true,
-                reason: output.reason || result.stderr,
+                reason: parsed.reason || result.stderr,
                 message: messages.join("\n"),
                 warnings: warnings.length > 0 ? warnings : undefined,
                 elapsedMs: Date.now() - startTime,
                 hookName: firstHookName,
                 toolName: transformedToolName,
-                additionalContext: output.hookSpecificOutput?.additionalContext,
-                continue: output.continue,
-                stopReason: output.stopReason,
-                suppressOutput: output.suppressOutput,
-                systemMessage: output.systemMessage,
+                additionalContext: parsed.hookSpecificOutput?.additionalContext,
+                continue: parsed.continue,
+                stopReason: parsed.stopReason,
+                suppressOutput: parsed.suppressOutput,
+                systemMessage: parsed.systemMessage,
               }
             }
-            if (output.hookSpecificOutput?.additionalContext || output.continue !== undefined || output.systemMessage || output.suppressOutput === true || output.stopReason !== undefined) {
+            if (parsed.hookSpecificOutput?.additionalContext || parsed.continue !== undefined || parsed.systemMessage || parsed.suppressOutput === true || parsed.stopReason !== undefined) {
               return {
                 block: false,
                 message: messages.join("\n"),
@@ -148,35 +154,36 @@ export async function executePostToolUseHooks(
                 elapsedMs: Date.now() - startTime,
                 hookName: firstHookName,
                 toolName: transformedToolName,
-                additionalContext: output.hookSpecificOutput?.additionalContext,
-                continue: output.continue,
-                stopReason: output.stopReason,
-                suppressOutput: output.suppressOutput,
-                systemMessage: output.systemMessage,
+                additionalContext: parsed.hookSpecificOutput?.additionalContext,
+                continue: parsed.continue,
+                stopReason: parsed.stopReason,
+                suppressOutput: parsed.suppressOutput,
+                systemMessage: parsed.systemMessage,
               }
             }
-          } catch {
           }
         } else if (result.exitCode !== 0 && result.exitCode !== 2) {
-          try {
-            const output = JSON.parse(result.stdout || "{}") as PostToolUseOutput
-            if (output.decision === "block") {
-              return {
-                block: true,
-                reason: output.reason || result.stderr,
-                message: messages.join("\n"),
-                warnings: warnings.length > 0 ? warnings : undefined,
-                elapsedMs: Date.now() - startTime,
-                hookName: firstHookName,
-                toolName: transformedToolName,
-                additionalContext: output.hookSpecificOutput?.additionalContext,
-                continue: output.continue,
-                stopReason: output.stopReason,
-                suppressOutput: output.suppressOutput,
-                systemMessage: output.systemMessage,
-              }
+          const parsed = Effect.runSync(
+            Effect.try({
+              try: () => JSON.parse(result.stdout || "{}") as PostToolUseOutput,
+              catch: () => null as never
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+          )
+          if (parsed?.decision === "block") {
+            return {
+              block: true,
+              reason: parsed.reason || result.stderr,
+              message: messages.join("\n"),
+              warnings: warnings.length > 0 ? warnings : undefined,
+              elapsedMs: Date.now() - startTime,
+              hookName: firstHookName,
+              toolName: transformedToolName,
+              additionalContext: parsed.hookSpecificOutput?.additionalContext,
+              continue: parsed.continue,
+              stopReason: parsed.stopReason,
+              suppressOutput: parsed.suppressOutput,
+              systemMessage: parsed.systemMessage,
             }
-          } catch {
           }
         }
       }

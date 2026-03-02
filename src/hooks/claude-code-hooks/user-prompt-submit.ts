@@ -6,6 +6,7 @@ import type {
 import { findMatchingHooks, executeHookCommand, log } from "../../shared"
 import { DEFAULT_CONFIG } from "./plugin-config"
 import { isHookCommandDisabled, type PluginExtendedConfig } from "./config-loader"
+import { Effect } from "effect"
 
 const USER_PROMPT_SUBMIT_TAG_OPEN = "<user-prompt-submit-hook>"
 const USER_PROMPT_SUBMIT_TAG_CLOSE = "</user-prompt-submit-hook>"
@@ -96,19 +97,20 @@ export async function executeUserPromptSubmitHooks(
       }
 
       if (result.exitCode !== 0) {
-        try {
-          const output = JSON.parse(result.stdout || "{}") as PostToolUseOutput
-          if (output.decision === "block") {
-            return {
-              block: true,
-              reason: output.reason || result.stderr,
-              modifiedParts,
-              messages,
-            }
+        const parsed = Effect.runSync(
+          Effect.try({
+            try: () => JSON.parse(result.stdout || "{}") as PostToolUseOutput,
+            catch: () => null as never
+          }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+        )
+        if (parsed?.decision === "block") {
+          return {
+            block: true,
+            reason: parsed.reason || result.stderr,
+            modifiedParts,
+            messages,
           }
-         } catch {
-          // Ignore JSON parse errors
-         }
+        }
       }
     }
   }

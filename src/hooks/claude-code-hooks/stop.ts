@@ -7,6 +7,7 @@ import { findMatchingHooks, executeHookCommand, log } from "../../shared"
 import { DEFAULT_CONFIG } from "./plugin-config"
 import { getTodoPath } from "./todo"
 import { isHookCommandDisabled, type PluginExtendedConfig } from "./config-loader"
+import { Effect } from "effect"
 
 // Module-level state to track stop_hook_active per session
 const stopHookActiveState = new Map<string, boolean>()
@@ -17,6 +18,10 @@ export function setStopHookActive(sessionId: string, active: boolean): void {
 
 export function getStopHookActive(sessionId: string): boolean {
   return stopHookActiveState.get(sessionId) ?? false
+}
+
+export function cleanupStopHookState(sessionId: string): void {
+  stopHookActiveState.delete(sessionId)
 }
 
 export interface StopContext {
@@ -91,26 +96,28 @@ export async function executeStopHooks(
         }
       }
 
-       if (result.stdout) {
-         try {
-           const output = JSON.parse(result.stdout || "{}") as StopOutput
-           if (output.stop_hook_active !== undefined) {
-             stopHookActiveState.set(ctx.sessionId, output.stop_hook_active)
-           }
-           const isBlock = output.decision === "block"
-           // Determine inject_prompt: prefer explicit value, fallback to reason if blocking
-           const injectPrompt = output.inject_prompt ?? (isBlock && output.reason ? output.reason : undefined)
-           return {
-             block: isBlock,
-             reason: output.reason,
-             stopHookActive: output.stop_hook_active,
-             permissionMode: output.permission_mode,
-             injectPrompt,
-           }
-         } catch {
-           // Ignore JSON parse errors - hook may return non-JSON output
-         }
-       }
+      if (result.stdout) {
+        const parsed = Effect.runSync(
+          Effect.try({
+            try: () => JSON.parse(result.stdout || "{}") as StopOutput,
+            catch: () => null as never
+          }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+        )
+        if (parsed) {
+          if (parsed.stop_hook_active !== undefined) {
+            stopHookActiveState.set(ctx.sessionId, parsed.stop_hook_active)
+          }
+          const isBlock = parsed.decision === "block"
+          const injectPrompt = parsed.inject_prompt ?? (isBlock && parsed.reason ? parsed.reason : undefined)
+          return {
+            block: isBlock,
+            reason: parsed.reason,
+            stopHookActive: parsed.stop_hook_active,
+            permissionMode: parsed.permission_mode,
+            injectPrompt,
+          }
+        }
+      }
     }
   }
 

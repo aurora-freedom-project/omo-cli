@@ -6,6 +6,7 @@ import type {
 import { findMatchingHooks, executeHookCommand, log } from "../../shared"
 import { DEFAULT_CONFIG } from "./plugin-config"
 import { isHookCommandDisabled, type PluginExtendedConfig } from "./config-loader"
+import { Effect } from "effect"
 
 export interface PreCompactContext {
   sessionId: string
@@ -72,27 +73,32 @@ export async function executePreCompactHooks(
       }
 
       if (result.stdout) {
-        try {
-          const output = JSON.parse(result.stdout || "{}") as PreCompactOutput
+        const parsed = Effect.runSync(
+          Effect.try({
+            try: () => JSON.parse(result.stdout || "{}") as PreCompactOutput,
+            catch: () => null as never
+          }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+        )
 
-          if (output.hookSpecificOutput?.additionalContext) {
-            collectedContext.push(...output.hookSpecificOutput.additionalContext)
-          } else if (output.context) {
-            collectedContext.push(...output.context)
+        if (parsed) {
+          if (parsed.hookSpecificOutput?.additionalContext) {
+            collectedContext.push(...parsed.hookSpecificOutput.additionalContext)
+          } else if (parsed.context) {
+            collectedContext.push(...parsed.context)
           }
 
-          if (output.continue === false) {
+          if (parsed.continue === false) {
             return {
               context: collectedContext,
               elapsedMs: Date.now() - startTime,
               hookName: firstHookName,
-              continue: output.continue,
-              stopReason: output.stopReason,
-              suppressOutput: output.suppressOutput,
-              systemMessage: output.systemMessage,
+              continue: parsed.continue,
+              stopReason: parsed.stopReason,
+              suppressOutput: parsed.suppressOutput,
+              systemMessage: parsed.systemMessage,
             }
           }
-        } catch {
+        } else {
           if (result.stdout.trim()) {
             collectedContext.push(result.stdout.trim())
           }
