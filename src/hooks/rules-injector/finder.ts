@@ -5,6 +5,7 @@ import {
   statSync,
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
+import { Effect } from "effect";
 import {
   GITHUB_INSTRUCTIONS_PATTERN,
   PROJECT_MARKERS,
@@ -34,14 +35,15 @@ function isValidRuleFile(fileName: string, dir: string): boolean {
  * @returns Project root path or null if not found
  */
 export function findProjectRoot(startPath: string): string | null {
-  let current: string;
-
-  try {
-    const stat = statSync(startPath);
-    current = stat.isDirectory() ? startPath : dirname(startPath);
-  } catch {
-    current = dirname(startPath);
-  }
+  let current = Effect.runSync(
+    Effect.try({
+      try: () => {
+        const stat = statSync(startPath);
+        return stat.isDirectory() ? startPath : dirname(startPath);
+      },
+      catch: () => "fallback" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(dirname(startPath))))
+  );
 
   while (true) {
     for (const marker of PROJECT_MARKERS) {
@@ -68,22 +70,25 @@ export function findProjectRoot(startPath: string): string | null {
 function findRuleFilesRecursive(dir: string, results: string[]): void {
   if (!existsSync(dir)) return;
 
-  try {
-    const entries = readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = join(dir, entry.name);
+  Effect.runSync(
+    Effect.try({
+      try: () => {
+        const entries = readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = join(dir, entry.name);
 
-      if (entry.isDirectory()) {
-        findRuleFilesRecursive(fullPath, results);
-      } else if (entry.isFile()) {
-        if (isValidRuleFile(entry.name, dir)) {
-          results.push(fullPath);
+          if (entry.isDirectory()) {
+            findRuleFilesRecursive(fullPath, results);
+          } else if (entry.isFile()) {
+            if (isValidRuleFile(entry.name, dir)) {
+              results.push(fullPath);
+            }
+          }
         }
-      }
-    }
-  } catch {
-    // Permission denied or other errors - silently skip
-  }
+      },
+      catch: () => "ignored" as const,
+    }).pipe(Effect.catchAll(() => Effect.void))
+  );
 }
 
 /**
@@ -93,11 +98,12 @@ function findRuleFilesRecursive(dir: string, results: string[]): void {
  * @returns Real path or original path if resolution fails
  */
 function safeRealpathSync(filePath: string): string {
-  try {
-    return realpathSync(filePath);
-  } catch {
-    return filePath;
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => realpathSync(filePath),
+      catch: () => "fallback" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(filePath)))
+  );
 }
 
 /**
@@ -118,38 +124,40 @@ export function calculateDistance(
     return 9999;
   }
 
-  try {
-    const ruleDir = dirname(rulePath);
-    const currentDir = dirname(currentFile);
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const ruleDir = dirname(rulePath);
+        const currentDir = dirname(currentFile);
 
-    const ruleRel = relative(projectRoot, ruleDir);
-    const currentRel = relative(projectRoot, currentDir);
+        const ruleRel = relative(projectRoot, ruleDir);
+        const currentRel = relative(projectRoot, currentDir);
 
-    // Handle paths outside project root
-    if (ruleRel.startsWith("..") || currentRel.startsWith("..")) {
-      return 9999;
-    }
+        // Handle paths outside project root
+        if (ruleRel.startsWith("..") || currentRel.startsWith("..")) {
+          return 9999;
+        }
 
-    // Split by both forward and back slashes for cross-platform compatibility
-    // path.relative() returns OS-native separators (backslashes on Windows)
-    const ruleParts = ruleRel ? ruleRel.split(/[/\\]/) : [];
-    const currentParts = currentRel ? currentRel.split(/[/\\]/) : [];
+        // Split by both forward and back slashes for cross-platform compatibility
+        const ruleParts = ruleRel ? ruleRel.split(/[/\\]/) : [];
+        const currentParts = currentRel ? currentRel.split(/[/\\]/) : [];
 
-    // Find common prefix length
-    let common = 0;
-    for (let i = 0; i < Math.min(ruleParts.length, currentParts.length); i++) {
-      if (ruleParts[i] === currentParts[i]) {
-        common++;
-      } else {
-        break;
-      }
-    }
+        // Find common prefix length
+        let common = 0;
+        for (let i = 0; i < Math.min(ruleParts.length, currentParts.length); i++) {
+          if (ruleParts[i] === currentParts[i]) {
+            common++;
+          } else {
+            break;
+          }
+        }
 
-    // Distance is how many directories up from current file to common ancestor
-    return currentParts.length - common;
-  } catch {
-    return 9999;
-  }
+        // Distance is how many directories up from current file to common ancestor
+        return currentParts.length - common;
+      },
+      catch: () => "fallback" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(9999)))
+  );
 }
 
 /**
@@ -211,23 +219,27 @@ export function findRuleFiles(
     for (const ruleFile of PROJECT_RULE_FILES) {
       const filePath = join(projectRoot, ruleFile);
       if (existsSync(filePath)) {
-        try {
-          const stat = statSync(filePath);
-          if (stat.isFile()) {
-            const realPath = safeRealpathSync(filePath);
-            if (!seenRealPaths.has(realPath)) {
-              seenRealPaths.add(realPath);
-              candidates.push({
-                path: filePath,
-                realPath,
-                isGlobal: false,
-                distance: 0,
-                isSingleFile: true,
-              });
-            }
+        const statResult = Effect.runSync(
+          Effect.try({
+            try: () => {
+              const stat = statSync(filePath);
+              return stat.isFile() ? filePath : null;
+            },
+            catch: () => "skip" as const,
+          }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+        );
+        if (statResult) {
+          const realPath = safeRealpathSync(statResult);
+          if (!seenRealPaths.has(realPath)) {
+            seenRealPaths.add(realPath);
+            candidates.push({
+              path: statResult,
+              realPath,
+              isGlobal: false,
+              distance: 0,
+              isSingleFile: true,
+            });
           }
-        } catch {
-          // Skip if file can't be read
         }
       }
     }

@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import { Effect } from "effect"
 import { CACHE_DIR, PACKAGE_NAME } from "./constants"
 import { log } from "../../shared/logger"
 
@@ -20,70 +21,78 @@ function removeFromBunLock(packageName: string): boolean {
   const lockPath = path.join(CACHE_DIR, "bun.lock")
   if (!fs.existsSync(lockPath)) return false
 
-  try {
-    const content = fs.readFileSync(lockPath, "utf-8")
-    const lock = JSON.parse(stripTrailingCommas(content)) as BunLockfile
-    let modified = false
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const content = fs.readFileSync(lockPath, "utf-8")
+        const lock = JSON.parse(stripTrailingCommas(content)) as BunLockfile
+        let modified = false
 
-    if (lock.workspaces?.[""]?.dependencies?.[packageName]) {
-      delete lock.workspaces[""].dependencies[packageName]
-      modified = true
-    }
+        if (lock.workspaces?.[""]?.dependencies?.[packageName]) {
+          delete lock.workspaces[""].dependencies[packageName]
+          modified = true
+        }
 
-    if (lock.packages?.[packageName]) {
-      delete lock.packages[packageName]
-      modified = true
-    }
+        if (lock.packages?.[packageName]) {
+          delete lock.packages[packageName]
+          modified = true
+        }
 
-    if (modified) {
-      fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2))
-      log(`[auto-update-checker] Removed from bun.lock: ${packageName}`)
-    }
+        if (modified) {
+          fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2))
+          log(`[auto-update-checker] Removed from bun.lock: ${packageName}`)
+        }
 
-    return modified
-  } catch {
-    return false
-  }
+        return modified
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }
 
 export function invalidatePackage(packageName: string = PACKAGE_NAME): boolean {
-  try {
-    const pkgDir = path.join(CACHE_DIR, "node_modules", packageName)
-    const pkgJsonPath = path.join(CACHE_DIR, "package.json")
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const pkgDir = path.join(CACHE_DIR, "node_modules", packageName)
+        const pkgJsonPath = path.join(CACHE_DIR, "package.json")
 
-    let packageRemoved = false
-    let dependencyRemoved = false
-    let lockRemoved = false
+        let packageRemoved = false
+        let dependencyRemoved = false
+        let lockRemoved = false
 
-    if (fs.existsSync(pkgDir)) {
-      fs.rmSync(pkgDir, { recursive: true, force: true })
-      log(`[auto-update-checker] Package removed: ${pkgDir}`)
-      packageRemoved = true
-    }
+        if (fs.existsSync(pkgDir)) {
+          fs.rmSync(pkgDir, { recursive: true, force: true })
+          log(`[auto-update-checker] Package removed: ${pkgDir}`)
+          packageRemoved = true
+        }
 
-    if (fs.existsSync(pkgJsonPath)) {
-      const content = fs.readFileSync(pkgJsonPath, "utf-8")
-      const pkgJson = JSON.parse(content)
-      if (pkgJson.dependencies?.[packageName]) {
-        delete pkgJson.dependencies[packageName]
-        fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2))
-        log(`[auto-update-checker] Dependency removed from package.json: ${packageName}`)
-        dependencyRemoved = true
-      }
-    }
+        if (fs.existsSync(pkgJsonPath)) {
+          const content = fs.readFileSync(pkgJsonPath, "utf-8")
+          const pkgJson = JSON.parse(content)
+          if (pkgJson.dependencies?.[packageName]) {
+            delete pkgJson.dependencies[packageName]
+            fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2))
+            log(`[auto-update-checker] Dependency removed from package.json: ${packageName}`)
+            dependencyRemoved = true
+          }
+        }
 
-    lockRemoved = removeFromBunLock(packageName)
+        lockRemoved = removeFromBunLock(packageName)
 
-    if (!packageRemoved && !dependencyRemoved && !lockRemoved) {
-      log(`[auto-update-checker] Package not found, nothing to invalidate: ${packageName}`)
-      return false
-    }
+        if (!packageRemoved && !dependencyRemoved && !lockRemoved) {
+          log(`[auto-update-checker] Package not found, nothing to invalidate: ${packageName}`)
+          return false
+        }
 
-    return true
-  } catch (err) {
-    log("[auto-update-checker] Failed to invalidate package:", err)
-    return false
-  }
+        return true
+      },
+      catch: (err) => err as never,
+    }).pipe(Effect.catchAll((err) => {
+      log("[auto-update-checker] Failed to invalidate package:", err)
+      return Effect.succeed(false)
+    }))
+  )
 }
 
 /** @deprecated Use invalidatePackage instead - this nukes ALL plugins */

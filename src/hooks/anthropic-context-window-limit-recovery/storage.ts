@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { Effect } from "effect"
 import { getOpenCodeStorageDir } from "../../shared/data-path"
 
 const OPENCODE_STORAGE = getOpenCodeStorageDir()
@@ -81,23 +82,28 @@ export function findToolResultsBySize(sessionID: string): ToolResultInfo[] {
 
     for (const file of readdirSync(partDir)) {
       if (!file.endsWith(".json")) continue
-      try {
-        const partPath = join(partDir, file)
-        const content = readFileSync(partPath, "utf-8")
-        const part = JSON.parse(content) as StoredToolPart
+      const partItem = Effect.runSync(
+        Effect.try({
+          try: () => {
+            const partPath = join(partDir, file)
+            const content = readFileSync(partPath, "utf-8")
+            const part = JSON.parse(content) as StoredToolPart
 
-        if (part.type === "tool" && part.state?.output && !part.truncated) {
-          results.push({
-            partPath,
-            partId: part.id,
-            messageID,
-            toolName: part.tool,
-            outputSize: part.state.output.length,
-          })
-        }
-      } catch {
-        continue
-      }
+            if (part.type === "tool" && part.state?.output && !part.truncated) {
+              return {
+                partPath,
+                partId: part.id,
+                messageID,
+                toolName: part.tool,
+                outputSize: part.state.output.length,
+              } as ToolResultInfo
+            }
+            return null
+          },
+          catch: () => "skip" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+      )
+      if (partItem) results.push(partItem)
     }
   }
 
@@ -114,32 +120,35 @@ export function truncateToolResult(partPath: string): {
   toolName?: string
   originalSize?: number
 } {
-  try {
-    const content = readFileSync(partPath, "utf-8")
-    const part = JSON.parse(content) as StoredToolPart
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const content = readFileSync(partPath, "utf-8")
+        const part = JSON.parse(content) as StoredToolPart
 
-    if (!part.state?.output) {
-      return { success: false }
-    }
+        if (!part.state?.output) {
+          return { success: false as const }
+        }
 
-    const originalSize = part.state.output.length
-    const toolName = part.tool
+        const originalSize = part.state.output.length
+        const toolName = part.tool
 
-    part.truncated = true
-    part.originalSize = originalSize
-    part.state.output = TRUNCATION_MESSAGE
+        part.truncated = true
+        part.originalSize = originalSize
+        part.state.output = TRUNCATION_MESSAGE
 
-    if (!part.state.time) {
-      part.state.time = { start: Date.now() }
-    }
-    part.state.time.compacted = Date.now()
+        if (!part.state.time) {
+          part.state.time = { start: Date.now() }
+        }
+        part.state.time.compacted = Date.now()
 
-    writeFileSync(partPath, JSON.stringify(part, null, 2))
+        writeFileSync(partPath, JSON.stringify(part, null, 2))
 
-    return { success: true, toolName, originalSize }
-  } catch {
-    return { success: false }
-  }
+        return { success: true as const, toolName, originalSize }
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed({ success: false as const })))
+  )
 }
 
 export function getTotalToolOutputSize(sessionID: string): number {
@@ -157,15 +166,17 @@ export function countTruncatedResults(sessionID: string): number {
 
     for (const file of readdirSync(partDir)) {
       if (!file.endsWith(".json")) continue
-      try {
-        const content = readFileSync(join(partDir, file), "utf-8")
-        const part = JSON.parse(content)
-        if (part.truncated === true) {
-          count++
-        }
-      } catch {
-        continue
-      }
+      const isTruncated = Effect.runSync(
+        Effect.try({
+          try: () => {
+            const content = readFileSync(join(partDir, file), "utf-8")
+            const part = JSON.parse(content)
+            return part.truncated === true
+          },
+          catch: () => "skip" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+      )
+      if (isTruncated) count++
     }
   }
 
@@ -230,7 +241,7 @@ export function truncateUntilTargetTokens(
         toolName: truncateResult.toolName ?? result.toolName,
         originalSize: removedSize,
       })
-      
+
       if (totalRemoved >= charsToReduce) {
         break
       }
