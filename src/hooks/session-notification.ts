@@ -1,4 +1,5 @@
 import type { PluginInput } from "@opencode-ai/plugin"
+import { Effect } from "effect"
 import { platform } from "os"
 import { subagentSessions, getMainSessionID } from "../features/claude-code-session-state"
 import {
@@ -65,14 +66,14 @@ async function sendNotification(
 
       const esTitle = title.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
       const esMessage = message.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
-      await ctx.$`${osascriptPath} -e ${"display notification \"" + esMessage + "\" with title \"" + esTitle + "\""}`.catch(() => {})
+      await ctx.$`${osascriptPath} -e ${"display notification \"" + esMessage + "\" with title \"" + esTitle + "\""}`.catch(() => { })
       break
     }
     case "linux": {
       const notifySendPath = await getNotifySendPath()
       if (!notifySendPath) return
 
-      await ctx.$`${notifySendPath} ${title} ${message} 2>/dev/null`.catch(() => {})
+      await ctx.$`${notifySendPath} ${title} ${message} 2>/dev/null`.catch(() => { })
       break
     }
     case "win32": {
@@ -93,7 +94,7 @@ $Toast = [Windows.UI.Notifications.ToastNotification]::new($SerializedXml)
 $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('OpenCode')
 $Notifier.Show($Toast)
 `.trim().replace(/\n/g, "; ")
-      await ctx.$`${powershellPath} -Command ${toastScript}`.catch(() => {})
+      await ctx.$`${powershellPath} -Command ${toastScript}`.catch(() => { })
       break
     }
   }
@@ -104,17 +105,17 @@ async function playSound(ctx: PluginInput, p: Platform, soundPath: string): Prom
     case "darwin": {
       const afplayPath = await getAfplayPath()
       if (!afplayPath) return
-      ctx.$`${afplayPath} ${soundPath}`.catch(() => {})
+      ctx.$`${afplayPath} ${soundPath}`.catch(() => { })
       break
     }
     case "linux": {
       const paplayPath = await getPaplayPath()
       if (paplayPath) {
-        ctx.$`${paplayPath} ${soundPath} 2>/dev/null`.catch(() => {})
+        ctx.$`${paplayPath} ${soundPath} 2>/dev/null`.catch(() => { })
       } else {
         const aplayPath = await getAplayPath()
         if (aplayPath) {
-          ctx.$`${aplayPath} ${soundPath} 2>/dev/null`.catch(() => {})
+          ctx.$`${aplayPath} ${soundPath} 2>/dev/null`.catch(() => { })
         }
       }
       break
@@ -122,21 +123,29 @@ async function playSound(ctx: PluginInput, p: Platform, soundPath: string): Prom
     case "win32": {
       const powershellPath = await getPowershellPath()
       if (!powershellPath) return
-      ctx.$`${powershellPath} -Command ${"(New-Object Media.SoundPlayer '" + soundPath.replace(/'/g, "''") + "').PlaySync()"}`.catch(() => {})
+      ctx.$`${powershellPath} -Command ${"(New-Object Media.SoundPlayer '" + soundPath.replace(/'/g, "''") + "').PlaySync()"}`.catch(() => { })
       break
     }
   }
 }
 
+/**
+ * Effect variant: checks for incomplete todos via SDK.
+ * Returns false on any error (fire-and-forget safety).
+ */
+export const hasIncompleteTodosEffect = (ctx: PluginInput, sessionID: string): Effect.Effect<boolean, never> =>
+  Effect.tryPromise({
+    try: async () => {
+      const response = await ctx.client.session.todo({ path: { id: sessionID } })
+      const todos = (response.data ?? response) as Todo[]
+      if (!todos || todos.length === 0) return false
+      return todos.some((t) => t.status !== "completed" && t.status !== "cancelled")
+    },
+    catch: () => false as never
+  }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+
 async function hasIncompleteTodos(ctx: PluginInput, sessionID: string): Promise<boolean> {
-  try {
-    const response = await ctx.client.session.todo({ path: { id: sessionID } })
-    const todos = (response.data ?? response) as Todo[]
-    if (!todos || todos.length === 0) return false
-    return todos.some((t) => t.status !== "completed" && t.status !== "cancelled")
-  } catch {
-    return false
-  }
+  return Effect.runPromise(hasIncompleteTodosEffect(ctx, sessionID))
 }
 
 export function createSessionNotification(
@@ -286,7 +295,7 @@ export function createSessionNotification(
       if (executingNotifications.has(sessionID)) return
 
       sessionActivitySinceIdle.delete(sessionID)
-      
+
       const currentVersion = (notificationVersions.get(sessionID) ?? 0) + 1
       notificationVersions.set(sessionID, currentVersion)
 

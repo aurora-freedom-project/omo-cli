@@ -2,6 +2,7 @@ import { join } from "path"
 import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "fs"
 import { getClaudeConfigDir } from "../../shared"
 import type { TodoFile, TodoItem, ClaudeCodeTodoItem } from "./types"
+import { Effect } from "effect"
 
 const TODO_DIR = join(getClaudeConfigDir(), "todos")
 
@@ -30,47 +31,55 @@ function toClaudeCodeFormat(item: OpenCodeTodo | TodoItem): ClaudeCodeTodoItem {
   }
 }
 
+/**
+ * Effect variant of loadTodoFile.
+ * Reads and parses the todo JSON file, returning null on any error.
+ */
+export const loadTodoFileEffect = (sessionId: string): Effect.Effect<TodoFile | null, never> =>
+  Effect.try({
+    try: () => {
+      const todoPath = getTodoPath(sessionId)
+      if (!existsSync(todoPath)) return null
+      const content = JSON.parse(readFileSync(todoPath, "utf-8"))
+      if (Array.isArray(content)) {
+        return {
+          session_id: sessionId,
+          items: content.map((item: ClaudeCodeTodoItem, idx: number) => ({
+            id: String(idx),
+            content: item.content,
+            status: item.status as TodoItem["status"],
+            created_at: new Date().toISOString(),
+          })),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      }
+      return content
+    },
+    catch: () => null as never
+  }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+
 export function loadTodoFile(sessionId: string): TodoFile | null {
-   const path = getTodoPath(sessionId)
-   if (!existsSync(path)) return null
-   try {
-     const content = JSON.parse(readFileSync(path, "utf-8"))
-     if (Array.isArray(content)) {
-       return {
-         session_id: sessionId,
-         items: content.map((item: ClaudeCodeTodoItem, idx: number) => ({
-           id: String(idx),
-           content: item.content,
-           status: item.status as TodoItem["status"],
-           created_at: new Date().toISOString(),
-         })),
-         created_at: new Date().toISOString(),
-         updated_at: new Date().toISOString(),
-       }
-     }
-     return content
-   } catch {
-     return null
-   }
+  return Effect.runSync(loadTodoFileEffect(sessionId))
 }
 
 export function saveTodoFile(sessionId: string, file: TodoFile): void {
-   ensureTodoDir()
-   const path = getTodoPath(sessionId)
-   const claudeCodeFormat: ClaudeCodeTodoItem[] = file.items.map(toClaudeCodeFormat)
-   writeFileSync(path, JSON.stringify(claudeCodeFormat, null, 2))
+  ensureTodoDir()
+  const path = getTodoPath(sessionId)
+  const claudeCodeFormat: ClaudeCodeTodoItem[] = file.items.map(toClaudeCodeFormat)
+  writeFileSync(path, JSON.stringify(claudeCodeFormat, null, 2))
 }
 
 export function saveOpenCodeTodos(sessionId: string, todos: OpenCodeTodo[]): void {
-   ensureTodoDir()
-   const path = getTodoPath(sessionId)
-   const claudeCodeFormat: ClaudeCodeTodoItem[] = todos.map(toClaudeCodeFormat)
-   writeFileSync(path, JSON.stringify(claudeCodeFormat, null, 2))
+  ensureTodoDir()
+  const path = getTodoPath(sessionId)
+  const claudeCodeFormat: ClaudeCodeTodoItem[] = todos.map(toClaudeCodeFormat)
+  writeFileSync(path, JSON.stringify(claudeCodeFormat, null, 2))
 }
 
 export function deleteTodoFile(sessionId: string): void {
-   const path = getTodoPath(sessionId)
-   if (existsSync(path)) {
-     unlinkSync(path)
-   }
+  const path = getTodoPath(sessionId)
+  if (existsSync(path)) {
+    unlinkSync(path)
+  }
 }

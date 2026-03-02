@@ -1,4 +1,5 @@
 import type { RuleMetadata } from "./types";
+import { Effect } from "effect";
 
 export interface RuleFrontmatterResult {
   metadata: RuleMetadata;
@@ -35,6 +36,13 @@ export function parseRuleFrontmatter(content: string): RuleFrontmatterResult {
     return { metadata: {}, body: content };
   }
 }
+
+/**
+ * Effect variant of parseRuleFrontmatter.
+ * YAML parse errors are captured as fallback values, not Effect failures.
+ */
+export const parseRuleFrontmatterEffect = (content: string): Effect.Effect<RuleFrontmatterResult, never> =>
+  Effect.sync(() => parseRuleFrontmatter(content));
 
 /**
  * Parse YAML content without external library

@@ -3,6 +3,7 @@ import { join } from "path"
 import type { ClaudeHookEvent } from "./types"
 import { log } from "../../shared/logger"
 import { getOpenCodeConfigDir } from "../../shared"
+import { Effect } from "effect"
 
 export interface DisabledHooksConfig {
   Stop?: string[]
@@ -22,10 +23,26 @@ function getProjectConfigPath(): string {
   return join(process.cwd(), ".opencode", "opencode-cc-plugin.json")
 }
 
+/**
+ * Effect variant: loads config from a JSON file path.
+ */
+export const loadConfigFromPathEffect = (path: string): Effect.Effect<PluginExtendedConfig | null, never> =>
+  Effect.gen(function* () {
+    if (!existsSync(path)) return null
+    return yield* Effect.tryPromise({
+      try: async () => {
+        const content = await Bun.file(path).text()
+        return JSON.parse(content) as PluginExtendedConfig
+      },
+      catch: (error) => {
+        log("Failed to load config", { path, error })
+        return null as never
+      }
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  })
+
 async function loadConfigFromPath(path: string): Promise<PluginExtendedConfig | null> {
-  if (!existsSync(path)) {
-    return null
-  }
+  if (!existsSync(path)) return null
 
   try {
     const content = await Bun.file(path).text()
@@ -76,19 +93,21 @@ export async function loadPluginExtendedConfig(): Promise<PluginExtendedConfig> 
 
 const regexCache = new Map<string, RegExp>()
 
-function getRegex(pattern: string): RegExp {
-  let regex = regexCache.get(pattern)
-  if (!regex) {
+/**
+ * Effect variant: compiles a RegExp pattern, falling back to escaped literal on invalid pattern.
+ */
+export const getRegexEffect = (pattern: string): Effect.Effect<RegExp, never> =>
+  Effect.sync(() => {
+    let regex = regexCache.get(pattern)
+    if (regex) return regex
     try {
       regex = new RegExp(pattern)
-      regexCache.set(pattern, regex)
     } catch {
       regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-      regexCache.set(pattern, regex)
     }
-  }
-  return regex
-}
+    regexCache.set(pattern, regex)
+    return regex
+  })
 
 export function isHookCommandDisabled(
   eventType: ClaudeHookEvent,
@@ -101,7 +120,7 @@ export function isHookCommandDisabled(
   if (!patterns || patterns.length === 0) return false
 
   return patterns.some((pattern) => {
-    const regex = getRegex(pattern)
+    const regex = Effect.runSync(getRegexEffect(pattern))
     return regex.test(command)
   })
 }
