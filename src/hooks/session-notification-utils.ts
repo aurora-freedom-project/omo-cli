@@ -1,24 +1,14 @@
 import { spawn } from "bun"
+import { createLazyResolver } from "../shared/lazy-init"
 
 type Platform = "darwin" | "linux" | "win32" | "unsupported"
 
-let notifySendPath: string | null = null
-let notifySendPromise: Promise<string | null> | null = null
-
-let osascriptPath: string | null = null
-let osascriptPromise: Promise<string | null> | null = null
-
-let powershellPath: string | null = null
-let powershellPromise: Promise<string | null> | null = null
-
-let afplayPath: string | null = null
-let afplayPromise: Promise<string | null> | null = null
-
-let paplayPath: string | null = null
-let paplayPromise: Promise<string | null> | null = null
-
-let aplayPath: string | null = null
-let aplayPromise: Promise<string | null> | null = null
+const _notifySend = createLazyResolver(() => findCommand("notify-send"))
+const _osascript = createLazyResolver(() => findCommand("osascript"))
+const _powershell = createLazyResolver(() => findCommand("powershell"))
+const _afplay = createLazyResolver(() => findCommand("afplay"))
+const _paplay = createLazyResolver(() => findCommand("paplay"))
+const _aplay = createLazyResolver(() => findCommand("aplay"))
 
 async function findCommand(commandName: string): Promise<string | null> {
   const isWindows = process.platform === "win32"
@@ -49,92 +39,38 @@ async function findCommand(commandName: string): Promise<string | null> {
 }
 
 export async function getNotifySendPath(): Promise<string | null> {
-  if (notifySendPath !== null) return notifySendPath
-  if (notifySendPromise) return notifySendPromise
-
-  notifySendPromise = (async () => {
-    const path = await findCommand("notify-send")
-    notifySendPath = path
-    return path
-  })()
-
-  return notifySendPromise
+  return _notifySend.get()
 }
 
 export async function getOsascriptPath(): Promise<string | null> {
-  if (osascriptPath !== null) return osascriptPath
-  if (osascriptPromise) return osascriptPromise
-
-  osascriptPromise = (async () => {
-    const path = await findCommand("osascript")
-    osascriptPath = path
-    return path
-  })()
-
-  return osascriptPromise
+  return _osascript.get()
 }
 
 export async function getPowershellPath(): Promise<string | null> {
-  if (powershellPath !== null) return powershellPath
-  if (powershellPromise) return powershellPromise
-
-  powershellPromise = (async () => {
-    const path = await findCommand("powershell")
-    powershellPath = path
-    return path
-  })()
-
-  return powershellPromise
+  return _powershell.get()
 }
 
 export async function getAfplayPath(): Promise<string | null> {
-  if (afplayPath !== null) return afplayPath
-  if (afplayPromise) return afplayPromise
-
-  afplayPromise = (async () => {
-    const path = await findCommand("afplay")
-    afplayPath = path
-    return path
-  })()
-
-  return afplayPromise
+  return _afplay.get()
 }
 
 export async function getPaplayPath(): Promise<string | null> {
-  if (paplayPath !== null) return paplayPath
-  if (paplayPromise) return paplayPromise
-
-  paplayPromise = (async () => {
-    const path = await findCommand("paplay")
-    paplayPath = path
-    return path
-  })()
-
-  return paplayPromise
+  return _paplay.get()
 }
 
 export async function getAplayPath(): Promise<string | null> {
-  if (aplayPath !== null) return aplayPath
-  if (aplayPromise) return aplayPromise
-
-  aplayPromise = (async () => {
-    const path = await findCommand("aplay")
-    aplayPath = path
-    return path
-  })()
-
-  return aplayPromise
+  return _aplay.get()
 }
 
 export function startBackgroundCheck(platform: Platform): void {
   if (platform === "darwin") {
-    getOsascriptPath().catch(() => {})
-    getAfplayPath().catch(() => {})
+    _osascript.startBackgroundInit()
+    _afplay.startBackgroundInit()
   } else if (platform === "linux") {
-    getNotifySendPath().catch(() => {})
-    getPaplayPath().catch(() => {})
-    getAplayPath().catch(() => {})
+    _notifySend.startBackgroundInit()
+    _paplay.startBackgroundInit()
+    _aplay.startBackgroundInit()
   } else if (platform === "win32") {
-    getPowershellPath().catch(() => {})
+    _powershell.startBackgroundInit()
   }
 }

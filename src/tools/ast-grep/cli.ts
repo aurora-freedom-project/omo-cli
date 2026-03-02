@@ -1,5 +1,6 @@
 import { spawn } from "bun"
 import { existsSync } from "fs"
+import { createLazyResolver } from "../../shared/lazy-init"
 import {
   getSgCliPath,
   setSgCliPath,
@@ -21,44 +22,32 @@ export interface RunOptions {
   updateAll?: boolean
 }
 
-let resolvedCliPath: string | null = null
-let initPromise: Promise<string | null> | null = null
+const _resolver = createLazyResolver(async () => {
+  const syncPath = findSgCliPathSync()
+  if (syncPath && existsSync(syncPath)) {
+    setSgCliPath(syncPath)
+    return syncPath
+  }
+
+  const downloadedPath = await ensureAstGrepBinary()
+  if (downloadedPath) {
+    setSgCliPath(downloadedPath)
+    return downloadedPath
+  }
+
+  return null
+})
 
 export async function getAstGrepPath(): Promise<string | null> {
-  if (resolvedCliPath !== null && existsSync(resolvedCliPath)) {
-    return resolvedCliPath
+  const cached = _resolver.getCached()
+  if (cached !== null && existsSync(cached)) {
+    return cached
   }
-
-  if (initPromise) {
-    return initPromise
-  }
-
-  initPromise = (async () => {
-    const syncPath = findSgCliPathSync()
-    if (syncPath && existsSync(syncPath)) {
-      resolvedCliPath = syncPath
-      setSgCliPath(syncPath)
-      return syncPath
-    }
-
-    const downloadedPath = await ensureAstGrepBinary()
-    if (downloadedPath) {
-      resolvedCliPath = downloadedPath
-      setSgCliPath(downloadedPath)
-      return downloadedPath
-    }
-
-    return null
-  })()
-
-  return initPromise
+  return _resolver.get()
 }
 
 export function startBackgroundInit(): void {
-  if (!initPromise) {
-    initPromise = getAstGrepPath()
-    initPromise.catch(() => {})
-  }
+  _resolver.startBackgroundInit()
 }
 
 export async function runSg(options: RunOptions): Promise<SgResult> {
@@ -136,7 +125,7 @@ export async function runSg(options: RunOptions): Promise<SgResult> {
     ) {
       const downloadedPath = await ensureAstGrepBinary()
       if (downloadedPath) {
-        resolvedCliPath = downloadedPath
+        _resolver.reset() // force re-eval via get
         setSgCliPath(downloadedPath)
         return runSg(options)
       } else {

@@ -1,13 +1,5 @@
 import { spawn } from "child_process"
-
-let tmuxPath: string | null = null
-let initPromise: Promise<string | null> | null = null
-
-// Exported for testing only
-export function __resetCache() {
-  tmuxPath = null
-  initPromise = null
-}
+import { createLazyResolver } from "../../shared/lazy-init"
 
 async function findTmuxPath(): Promise<string | null> {
   const isWindows = process.platform === "win32"
@@ -60,31 +52,21 @@ async function findTmuxPath(): Promise<string | null> {
   })
 }
 
+const _resolver = createLazyResolver(findTmuxPath)
+
 export async function getTmuxPath(): Promise<string | null> {
-  if (tmuxPath !== null) {
-    return tmuxPath
-  }
-
-  if (initPromise) {
-    return initPromise
-  }
-
-  initPromise = (async () => {
-    const path = await findTmuxPath()
-    tmuxPath = path
-    return path
-  })()
-
-  return initPromise
+  return _resolver.get()
 }
 
 export function getCachedTmuxPath(): string | null {
-  return tmuxPath
+  return _resolver.getCached()
 }
 
 export function startBackgroundCheck(): void {
-  if (!initPromise) {
-    initPromise = getTmuxPath()
-    initPromise.catch(() => { })
-  }
+  _resolver.startBackgroundInit()
+}
+
+// Exported for testing only
+export function __resetCache() {
+  _resolver.reset()
 }

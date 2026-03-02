@@ -86,16 +86,23 @@ export function findSgCliPathSync(): string | null {
   return null
 }
 
-let resolvedCliPath: string | null = null
+const _cliPath = (() => {
+  let path: string | null = null
+  return {
+    get: () => path,
+    set: (p: string) => { path = p }
+  }
+})()
 
 export function getSgCliPath(): string {
-  if (resolvedCliPath !== null) {
-    return resolvedCliPath
+  const cached = _cliPath.get()
+  if (cached !== null) {
+    return cached
   }
 
   const syncPath = findSgCliPathSync()
   if (syncPath) {
-    resolvedCliPath = syncPath
+    _cliPath.set(syncPath)
     return syncPath
   }
 
@@ -103,7 +110,7 @@ export function getSgCliPath(): string {
 }
 
 export function setSgCliPath(path: string): void {
-  resolvedCliPath = path
+  _cliPath.set(path)
 }
 
 // CLI supported languages (25 total)
