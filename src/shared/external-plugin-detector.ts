@@ -7,7 +7,8 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import * as os from "node:os"
 import { log } from "./logger"
-import { parseJsoncSafe } from "./jsonc-parser"
+import { parseJsoncSafe, readJsoncFileEffect } from "./jsonc-parser"
+import { Effect } from "effect"
 
 interface OpencodeConfig {
   plugin?: string[]
@@ -48,7 +49,27 @@ function getConfigPaths(directory: string): string[] {
   return paths
 }
 
-function loadOpencodePlugins(directory: string): string[] {
+/**
+ * Loads the "plugin" array from the first found OpenCode configuration file.
+ * Effect variant handles missing files and parse errors safely.
+ */
+export const loadOpencodePluginsEffect = (directory: string): Effect.Effect<string[], never> =>
+  Effect.gen(function* () {
+    for (const configPath of getConfigPaths(directory)) {
+      const configEffect = readJsoncFileEffect<OpencodeConfig>(configPath).pipe(
+        Effect.map(config => config?.plugin ?? []),
+        Effect.catchAll(() => Effect.succeed<string[] | null>(null))
+      )
+
+      const plugins = yield* configEffect
+      if (plugins !== null) {
+        return plugins
+      }
+    }
+    return []
+  })
+
+export function loadOpencodePlugins(directory: string): string[] {
   for (const configPath of getConfigPaths(directory)) {
     try {
       if (!fs.existsSync(configPath)) continue
@@ -81,7 +102,7 @@ function matchesNotificationPlugin(entry: string): string | null {
     if (normalized === `npm:${known}` || normalized.startsWith(`npm:${known}@`)) return known
     // file:// path ending exactly with package name
     if (normalized.startsWith("file://") && (
-      normalized.endsWith(`/${known}`) || 
+      normalized.endsWith(`/${known}`) ||
       normalized.endsWith(`\\${known}`)
     )) return known
   }
@@ -100,7 +121,7 @@ export interface ExternalNotifierResult {
  */
 export function detectExternalNotificationPlugin(directory: string): ExternalNotifierResult {
   const plugins = loadOpencodePlugins(directory)
-  
+
   for (const plugin of plugins) {
     const match = matchesNotificationPlugin(plugin)
     if (match) {

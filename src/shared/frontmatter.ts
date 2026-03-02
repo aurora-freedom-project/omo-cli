@@ -1,4 +1,5 @@
 import yaml from "js-yaml"
+import { Effect } from "effect"
 
 export interface FrontmatterResult<T = Record<string, unknown>> {
   data: T
@@ -29,3 +30,13 @@ export function parseFrontmatter<T = Record<string, unknown>>(
     return { data: {} as T, body, hadFrontmatter: true, parseError: true }
   }
 }
+
+/**
+ * Parses markdown with YAML frontmatter, returning an Effect.
+ * Errors during YAML parsing are captured in the `parseError` flag, not as an Effect failure,
+ * ensuring the content body is always recoverable.
+ */
+export const parseFrontmatterEffect = <T = Record<string, unknown>>(
+  content: string
+): Effect.Effect<FrontmatterResult<T>, never> =>
+  Effect.sync(() => parseFrontmatter<T>(content))

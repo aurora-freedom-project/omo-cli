@@ -1,9 +1,21 @@
+/**
+ * @module shared/model-availability
+ * 
+ * Provides utilities for querying, filtering, and matching AI models available 
+ * from the connected providers. Handles fuzzy matching of model names and 
+ * falling back to local file caches (`provider-models.json` or `models.json`) 
+ * when exact data isn't provided by the SDK.
+ */
+
 import { existsSync, readFileSync } from "fs"
 import { join } from "path"
 import { log } from "./logger"
 import { getOpenCodeCacheDir } from "./data-path"
 import { readProviderModelsCache, hasProviderModelsCache } from "./connected-providers-cache"
 import type { OpencodeClient } from "./sdk-types"
+import { parseJsoncSafe, readJsoncFileEffect } from "./jsonc-parser"
+import { Effect } from "effect"
+import { fromPromise, runEffect } from "./effect/result"
 
 /**
  * Fuzzy match a target model name against available models
@@ -32,6 +44,10 @@ function normalizeModelName(name: string): string {
 		.replace(/claude-(opus|sonnet|haiku)-4\.5/g, "claude-$1-4.5")
 }
 
+/**
+ * Fuzzy match a model name against a set of available models.
+ * Supports provider filtering and normalized comparison (e.g., claude-sonnet-4-5 → claude-sonnet-4.5).
+ */
 export function fuzzyMatchModel(
 	target: string,
 	available: Set<string>,
@@ -88,75 +104,96 @@ export function fuzzyMatchModel(
 	return result
 }
 
-export async function getConnectedProviders(client: OpencodeClient): Promise<string[]> {
-	if (!client?.provider?.list) {
-		log("[getConnectedProviders] client.provider.list not available")
-		return []
-	}
+/** 
+ * Effect variant of getConnectedProviders.
+ */
+export const getConnectedProvidersEffect = (client: OpencodeClient): Effect.Effect<string[], never> =>
+	Effect.gen(function* () {
+		if (!client?.provider?.list) {
+			log("[getConnectedProviders] client.provider.list not available")
+			return []
+		}
 
-	try {
-		const result = await client.provider.list()
+		const result = yield* fromPromise(() => client.provider.list(), "client.provider.list").pipe(
+			Effect.catchAll((err) => {
+				log("[getConnectedProviders] SDK error", { error: String(err) })
+				return Effect.succeed({ data: { connected: [] as string[] } })
+			})
+		)
+
 		const connected = result.data?.connected ?? []
 		log("[getConnectedProviders] connected providers", { count: connected.length, providers: connected })
 		return connected
-	} catch (err) {
-		log("[getConnectedProviders] SDK error", { error: String(err) })
-		return []
-	}
-}
-
-export async function fetchAvailableModels(
-	_client?: OpencodeClient,
-	options?: { connectedProviders?: string[] | null }
-): Promise<Set<string>> {
-	const connectedProvidersUnknown = options?.connectedProviders === null || options?.connectedProviders === undefined
-
-	log("[fetchAvailableModels] CALLED", {
-		connectedProvidersUnknown,
-		connectedProviders: options?.connectedProviders
 	})
 
-	if (connectedProvidersUnknown) {
-		log("[fetchAvailableModels] connected providers unknown, returning empty set for fallback resolution")
-		return new Set<string>()
-	}
+/** 
+ * Fetches the IDs of all connected providers from the OpenCode SDK client.
+ * 
+ * @param {OpencodeClient} client - The active OpenCode SDK client object.
+ * @returns {Promise<string[]>} A list of connected provider identifiers. Returns an empty array if none are connected or if an error occurs.
+ */
+export async function getConnectedProviders(client: OpencodeClient): Promise<string[]> {
+	return runEffect(getConnectedProvidersEffect(client))
+}
 
-	const connectedProviders = options!.connectedProviders!
-	const connectedSet = new Set(connectedProviders)
-	const modelSet = new Set<string>()
+/**
+ * Effect variant of fetchAvailableModels.
+ */
+export const fetchAvailableModelsEffect = (
+	_client?: OpencodeClient,
+	options?: { connectedProviders?: string[] | null }
+): Effect.Effect<Set<string>, never> =>
+	Effect.gen(function* () {
+		const connectedProvidersUnknown = options?.connectedProviders === null || options?.connectedProviders === undefined
 
-	const providerModelsCache = readProviderModelsCache()
-	if (providerModelsCache) {
-		log("[fetchAvailableModels] using provider-models cache (whitelist-filtered)")
-
-		for (const [providerId, modelIds] of Object.entries(providerModelsCache.models)) {
-			if (!connectedSet.has(providerId)) {
-				continue
-			}
-			for (const modelId of modelIds) {
-				modelSet.add(`${providerId}/${modelId}`)
-			}
-		}
-
-		log("[fetchAvailableModels] parsed from provider-models cache", {
-			count: modelSet.size,
-			connectedProviders: connectedProviders.slice(0, 5)
+		log("[fetchAvailableModels] CALLED", {
+			connectedProvidersUnknown,
+			connectedProviders: options?.connectedProviders
 		})
 
-		return modelSet
-	}
+		const modelSet = new Set<string>()
 
-	log("[fetchAvailableModels] provider-models cache not found, falling back to models.json")
-	const cacheFile = join(getOpenCodeCacheDir(), "models.json")
+		if (connectedProvidersUnknown) {
+			log("[fetchAvailableModels] connected providers unknown, returning empty set for fallback resolution")
+			return modelSet
+		}
 
-	if (!existsSync(cacheFile)) {
-		log("[fetchAvailableModels] models.json cache file not found, returning empty set")
-		return modelSet
-	}
+		const connectedProviders = options!.connectedProviders!
+		const connectedSet = new Set(connectedProviders)
 
-	try {
-		const content = readFileSync(cacheFile, "utf-8")
-		const data = JSON.parse(content) as Record<string, { id?: string; models?: Record<string, { id?: string }> }>
+		const providerModelsCache = readProviderModelsCache()
+		if (providerModelsCache) {
+			log("[fetchAvailableModels] using provider-models cache (whitelist-filtered)")
+
+			for (const [providerId, modelIds] of Object.entries(providerModelsCache.models)) {
+				if (!connectedSet.has(providerId)) {
+					continue
+				}
+				for (const modelId of modelIds) {
+					modelSet.add(`${providerId}/${modelId}`)
+				}
+			}
+
+			log("[fetchAvailableModels] parsed from provider-models cache", {
+				count: modelSet.size,
+				connectedProviders: connectedProviders.slice(0, 5)
+			})
+
+			return modelSet
+		}
+
+		log("[fetchAvailableModels] provider-models cache not found, falling back to models.json")
+		const cacheFile = join(getOpenCodeCacheDir(), "models.json")
+
+		const contentEffect = readJsoncFileEffect<Record<string, { id?: string; models?: Record<string, { id?: string }> }>>(cacheFile).pipe(
+			Effect.catchAll((err) => {
+				log("[fetchAvailableModels] error", { error: String(err) })
+				return Effect.succeed(null)
+			})
+		)
+
+		const data = yield* contentEffect
+		if (!data) return modelSet
 
 		const providerIds = Object.keys(data)
 		log("[fetchAvailableModels] providers found in models.json", { count: providerIds.length, providers: providerIds.slice(0, 10) })
@@ -181,14 +218,39 @@ export async function fetchAvailableModels(
 		})
 
 		return modelSet
-	} catch (err) {
-		log("[fetchAvailableModels] error", { error: String(err) })
-		return modelSet
-	}
+	})
+
+/**
+ * Builds a set of available model identifiers based on the user's connected providers.
+ * 
+ * It attempts to read from the cached `provider-models.json` first (which is a whitelist
+ * of models specific to the connected providers). If not found, it falls back to parsing
+ * the raw `models.json` file.
+ * 
+ * @param {OpencodeClient} [_client] - (Unused) The OpenCode SDK client object. Kept for backward compatibility.
+ * @param {Object} [options] - Filtering options.
+ * @param {string[] | null} [options.connectedProviders] - Array of specific providers to load models for.
+ * @returns {Promise<Set<string>>} A set of model identifiers in the format `"providerId/modelId"`.
+ */
+export async function fetchAvailableModels(
+	_client?: OpencodeClient,
+	options?: { connectedProviders?: string[] | null }
+): Promise<Set<string>> {
+	return runEffect(fetchAvailableModelsEffect(_client, options))
 }
 
+/** 
+ * Resets the internal model cache. 
+ * Currently a no-op, retained to preserve backward compatibility with older callers.
+ */
 export function __resetModelCache(): void { }
 
+/** 
+ * Checks if any valid model cache file exists on disk.
+ * Prioritizes `provider-models.json`, then falls back to checking `models.json`.
+ * 
+ * @returns {boolean} `true` if a cache file is found, `false` otherwise.
+ */
 export function isModelCacheAvailable(): boolean {
 	if (hasProviderModelsCache()) {
 		return true
