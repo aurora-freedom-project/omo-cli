@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { Effect } from "effect"
 import { MESSAGE_STORAGE, PART_STORAGE } from "./constants"
 import { log } from "../../shared/logger"
 import type { MessageMeta, OriginalMessageContext, TextPart, ToolPermission } from "./types"
@@ -11,41 +12,54 @@ export interface StoredMessage {
 }
 
 export function findNearestMessageWithFields(messageDir: string): StoredMessage | null {
-  try {
-    const files = readdirSync(messageDir)
-      .filter((f) => f.endsWith(".json"))
-      .sort()
-      .reverse()
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const files = readdirSync(messageDir)
+          .filter((f) => f.endsWith(".json"))
+          .sort()
+          .reverse()
 
-    // First pass: find message with ALL fields (ideal)
-    for (const file of files) {
-      try {
-        const content = readFileSync(join(messageDir, file), "utf-8")
-        const msg = JSON.parse(content) as StoredMessage
-        if (msg.agent && msg.model?.providerID && msg.model?.modelID) {
-          return msg
+        // First pass: find message with ALL fields (ideal)
+        for (const file of files) {
+          const msg1 = Effect.runSync(
+            Effect.try({
+              try: () => {
+                const content = readFileSync(join(messageDir, file), "utf-8")
+                const msg = JSON.parse(content) as StoredMessage
+                if (msg.agent && msg.model?.providerID && msg.model?.modelID) {
+                  return msg
+                }
+                return null
+              },
+              catch: () => "skip" as const,
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+          )
+          if (msg1) return msg1
         }
-      } catch {
-        continue
-      }
-    }
 
-    // Second pass: find message with ANY useful field (fallback)
-    // This ensures agent info isn't lost when model info is missing
-    for (const file of files) {
-      try {
-        const content = readFileSync(join(messageDir, file), "utf-8")
-        const msg = JSON.parse(content) as StoredMessage
-        if (msg.agent || (msg.model?.providerID && msg.model?.modelID)) {
-          return msg
+        // Second pass: find message with ANY useful field (fallback)
+        for (const file of files) {
+          const msg2 = Effect.runSync(
+            Effect.try({
+              try: () => {
+                const content = readFileSync(join(messageDir, file), "utf-8")
+                const msg = JSON.parse(content) as StoredMessage
+                if (msg.agent || (msg.model?.providerID && msg.model?.modelID)) {
+                  return msg
+                }
+                return null
+              },
+              catch: () => "skip" as const,
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+          )
+          if (msg2) return msg2
         }
-      } catch {
-        continue
-      }
-    }
-  } catch {
-    return null
-  }
+        return null
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
   return null
 }
 
@@ -56,25 +70,34 @@ export function findNearestMessageWithFields(messageDir: string): StoredMessage 
  * due to OpenCode's internal agent switching.
  */
 export function findFirstMessageWithAgent(messageDir: string): string | null {
-  try {
-    const files = readdirSync(messageDir)
-      .filter((f) => f.endsWith(".json"))
-      .sort() // Oldest first (no reverse)
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const files = readdirSync(messageDir)
+          .filter((f) => f.endsWith(".json"))
+          .sort() // Oldest first (no reverse)
 
-    for (const file of files) {
-      try {
-        const content = readFileSync(join(messageDir, file), "utf-8")
-        const msg = JSON.parse(content) as StoredMessage
-        if (msg.agent) {
-          return msg.agent
+        for (const file of files) {
+          const agentRef = Effect.runSync(
+            Effect.try({
+              try: () => {
+                const content = readFileSync(join(messageDir, file), "utf-8")
+                const msg = JSON.parse(content) as StoredMessage
+                if (msg.agent) {
+                  return msg.agent
+                }
+                return null
+              },
+              catch: () => "skip" as const,
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+          )
+          if (agentRef) return agentRef
         }
-      } catch {
-        continue
-      }
-    }
-  } catch {
-    return null
-  }
+        return null
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
   return null
 }
 
@@ -187,17 +210,20 @@ export function injectHookMessage(
     sessionID,
   }
 
-  try {
-    writeFileSync(join(messageDir, `${messageID}.json`), JSON.stringify(messageMeta, null, 2))
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        writeFileSync(join(messageDir, `${messageID}.json`), JSON.stringify(messageMeta, null, 2))
 
-    const partDir = join(PART_STORAGE, messageID)
-    if (!existsSync(partDir)) {
-      mkdirSync(partDir, { recursive: true })
-    }
-    writeFileSync(join(partDir, `${partID}.json`), JSON.stringify(textPart, null, 2))
+        const partDir = join(PART_STORAGE, messageID)
+        if (!existsSync(partDir)) {
+          mkdirSync(partDir, { recursive: true })
+        }
+        writeFileSync(join(partDir, `${partID}.json`), JSON.stringify(textPart, null, 2))
 
-    return true
-  } catch {
-    return false
-  }
+        return true
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }

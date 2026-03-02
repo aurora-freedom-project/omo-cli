@@ -1,5 +1,6 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import type { createOpencodeClient } from "@opencode-ai/sdk"
+import { Effect } from "effect"
 import type { ExperimentalConfig } from "../../config"
 import {
   findEmptyMessages,
@@ -73,19 +74,22 @@ function extractResumeConfig(userMessage: MessageData | undefined, sessionID: st
 }
 
 async function resumeSession(client: Client, config: ResumeConfig): Promise<boolean> {
-  try {
-    await client.session.prompt({
-      path: { id: config.sessionID },
-      body: {
-        parts: [{ type: "text", text: RECOVERY_RESUME_TEXT }],
-        agent: config.agent,
-        model: config.model,
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        await client.session.prompt({
+          path: { id: config.sessionID },
+          body: {
+            parts: [{ type: "text", text: RECOVERY_RESUME_TEXT }],
+            agent: config.agent,
+            model: config.model,
+          },
+        })
+        return true
       },
-    })
-    return true
-  } catch {
-    return false
-  }
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }
 
 function getErrorMessage(error: unknown): string {
@@ -109,11 +113,12 @@ function getErrorMessage(error: unknown): string {
     }
   }
 
-  try {
-    return JSON.stringify(error).toLowerCase()
-  } catch {
-    return ""
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => JSON.stringify(error).toLowerCase(),
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed("")))
+  )
 }
 
 function extractMessageIndex(error: unknown): number | null {
@@ -183,17 +188,20 @@ async function recoverToolResultMissing(
     content: "Operation cancelled by user (ESC pressed)",
   }))
 
-  try {
-    await client.session.prompt({
-      path: { id: sessionID },
-      // @ts-expect-error - SDK types may not include tool_result parts
-      body: { parts: toolResultParts },
-    })
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        await client.session.prompt({
+          path: { id: sessionID },
+          // @ts-expect-error - SDK types may not include tool_result parts
+          body: { parts: toolResultParts },
+        })
 
-    return true
-  } catch {
-    return false
-  }
+        return true
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }
 
 async function recoverThinkingBlockOrder(
