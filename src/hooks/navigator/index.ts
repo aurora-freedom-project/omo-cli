@@ -1,4 +1,5 @@
 import type { PluginInput } from "@opencode-ai/plugin"
+import { Effect } from "effect"
 import { execSync } from "node:child_process"
 import { existsSync, readdirSync } from "node:fs"
 import { join } from "node:path"
@@ -11,8 +12,10 @@ import { getMainSessionID, subagentSessions } from "../../features/claude-code-s
 import { findNearestMessageWithFields, MESSAGE_STORAGE } from "../../features/hook-message-injector"
 import { log } from "../../shared/logger"
 import { formatSystemDirective, SYSTEM_DIRECTIVE_PREFIX, SystemDirectiveTypes } from "../../shared/system-directive"
-import { isCallerOrchestrator, getMessageDir } from "../../shared/session-utils"
+import { isCallerOrchestrator } from "../session-helpers"
+import { getMessageDir } from "../../shared/session-utils"
 import type { BackgroundManager } from "../../features/background-agent"
+import { canInject, releaseInjectionLock } from "../loop-coordination"
 
 export const HOOK_NAME = "conductor"
 
@@ -270,58 +273,53 @@ interface GitFileStat {
 }
 
 function getGitDiffStats(directory: string): GitFileStat[] {
-  try {
-    const output = execSync("git diff --numstat HEAD", {
-      cwd: directory,
-      encoding: "utf-8",
-      timeout: 5000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim()
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const output = execSync("git diff --numstat HEAD", {
+          cwd: directory,
+          encoding: "utf-8",
+          timeout: 5000,
+          stdio: ["pipe", "pipe", "pipe"],
+        }).trim()
 
-    if (!output) return []
+        if (!output) return []
 
-    const statusOutput = execSync("git status --porcelain", {
-      cwd: directory,
-      encoding: "utf-8",
-      timeout: 5000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim()
+        const statusOutput = execSync("git status --porcelain", {
+          cwd: directory,
+          encoding: "utf-8",
+          timeout: 5000,
+          stdio: ["pipe", "pipe", "pipe"],
+        }).trim()
 
-    const statusMap = new Map<string, "modified" | "added" | "deleted">()
-    for (const line of statusOutput.split("\n")) {
-      if (!line) continue
-      const status = line.substring(0, 2).trim()
-      const filePath = line.substring(3)
-      if (status === "A" || status === "??") {
-        statusMap.set(filePath, "added")
-      } else if (status === "D") {
-        statusMap.set(filePath, "deleted")
-      } else {
-        statusMap.set(filePath, "modified")
-      }
-    }
+        const statusMap = new Map<string, "modified" | "added" | "deleted">()
+        for (const line of statusOutput.split("\n")) {
+          if (!line) continue
+          const status = line.substring(0, 2).trim()
+          const filePath = line.substring(3)
+          if (status === "A" || status === "??") {
+            statusMap.set(filePath, "added")
+          } else if (status === "D") {
+            statusMap.set(filePath, "deleted")
+          } else {
+            statusMap.set(filePath, "modified")
+          }
+        }
 
-    const stats: GitFileStat[] = []
-    for (const line of output.split("\n")) {
-      const parts = line.split("\t")
-      if (parts.length < 3) continue
-
-      const [addedStr, removedStr, path] = parts
-      const added = addedStr === "-" ? 0 : parseInt(addedStr, 10)
-      const removed = removedStr === "-" ? 0 : parseInt(removedStr, 10)
-
-      stats.push({
-        path,
-        added,
-        removed,
-        status: statusMap.get(path) ?? "modified",
-      })
-    }
-
-    return stats
-  } catch {
-    return []
-  }
+        const stats: GitFileStat[] = []
+        for (const line of output.split("\n")) {
+          const parts = line.split("\t")
+          if (parts.length < 3) continue
+          const [addedStr, removedStr, path] = parts
+          const added = addedStr === "-" ? 0 : parseInt(addedStr, 10)
+          const removed = removedStr === "-" ? 0 : parseInt(removedStr, 10)
+          stats.push({ path, added, removed, status: statusMap.get(path) ?? "modified" })
+        }
+        return stats
+      },
+      catch: () => [] as never
+    }).pipe(Effect.catchAll(() => Effect.succeed([] as GitFileStat[])))
+  )
 }
 
 function formatFileChanges(stats: GitFileStat[], notepadPath?: string): string {
@@ -449,9 +447,14 @@ export function createConductorHook(
       log(`[${HOOK_NAME}] Injecting boulder continuation`, { sessionID, planName, remaining })
 
       let model: { providerID: string; modelID: string } | undefined
-      try {
-        const messagesResp = await ctx.client.session.messages({ path: { id: sessionID } })
-        const messages = (messagesResp.data ?? []) as Array<{
+      const messagesResult = await Effect.runPromise(
+        Effect.tryPromise({
+          try: () => ctx.client.session.messages({ path: { id: sessionID } }),
+          catch: () => null as never
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+      )
+      if (messagesResult) {
+        const messages = (messagesResult.data ?? []) as Array<{
           info?: { model?: { providerID: string; modelID: string }; modelID?: string; providerID?: string }
         }>
         for (let i = messages.length - 1; i >= 0; i--) {
@@ -466,7 +469,7 @@ export function createConductorHook(
             break
           }
         }
-      } catch {
+      } else {
         const messageDir = getMessageDir(sessionID)
         const currentMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
         model = currentMessage?.model?.providerID && currentMessage?.model?.modelID
@@ -568,7 +571,16 @@ export function createConductorHook(
 
         state.lastContinuationInjectedAt = now
         const remaining = progress.total - progress.completed
-        injectContinuation(sessionID, boulderState.plan_name, remaining, progress.total)
+
+        // Central coordination: check before injecting
+        const guard = canInject(sessionID, "navigator")
+        if (!guard.allowed) {
+          log(`[${HOOK_NAME}] Blocked by coordination: ${guard.reason}`, { sessionID })
+          return
+        }
+
+        await injectContinuation(sessionID, boulderState.plan_name, remaining, progress.total)
+          .finally(() => releaseInjectionLock(sessionID, "navigator"))
         return
       }
 

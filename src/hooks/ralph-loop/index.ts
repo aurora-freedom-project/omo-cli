@@ -1,5 +1,6 @@
 import type { PluginInput } from "@opencode-ai/plugin"
-import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { Effect } from "effect"
+import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { log } from "../../shared/logger"
 import { SYSTEM_DIRECTIVE_PREFIX } from "../../shared/system-directive"
@@ -12,17 +13,8 @@ import {
 import type { RalphLoopState, RalphLoopOptions } from "./types"
 import { getTranscriptPath as getDefaultTranscriptPath } from "../claude-code-hooks/transcript"
 import { findNearestMessageWithFields, MESSAGE_STORAGE } from "../../features/hook-message-injector"
-
-function getMessageDir(sessionID: string): string | null {
-  if (!existsSync(MESSAGE_STORAGE)) return null
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) return directPath
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) return sessionPath
-  }
-  return null
-}
+import { markRalphLoopActive, clearRalphLoopActive, canInject, releaseInjectionLock, cleanupSession } from "../loop-coordination"
+import { getMessageDir } from "../../shared/session-utils"
 
 export * from "./types"
 export * from "./constants"
@@ -30,6 +22,8 @@ export { readState, writeState, clearState, incrementIteration } from "./storage
 
 interface SessionState {
   isRecovering?: boolean
+  consecutiveErrors: number
+  lastErrorTime?: number
 }
 
 interface OpenCodeSessionMessage {
@@ -75,15 +69,19 @@ export function createRalphLoopHook(
 ): RalphLoopHook {
   const sessions = new Map<string, SessionState>()
   const config = options?.config
+  const safetyConfig = options?.safetyConfig
   const stateDir = config?.state_dir
   const getTranscriptPath = options?.getTranscriptPath ?? getDefaultTranscriptPath
   const apiTimeout = options?.apiTimeout ?? DEFAULT_API_TIMEOUT
   const checkSessionExists = options?.checkSessionExists
+  const CIRCUIT_BREAKER_THRESHOLD = safetyConfig?.circuit_breaker_threshold ?? 3
+  const CIRCUIT_BREAKER_BACKOFF_BASE = safetyConfig?.circuit_breaker_backoff_base_ms ?? 5000
+  const CIRCUIT_BREAKER_BACKOFF_MAX = safetyConfig?.circuit_breaker_backoff_max_ms ?? 120000
 
   function getSessionState(sessionID: string): SessionState {
     let state = sessions.get(sessionID)
     if (!state) {
-      state = {}
+      state = { consecutiveErrors: 0 }
       sessions.set(sessionID, state)
     }
     return state
@@ -95,26 +93,29 @@ export function createRalphLoopHook(
   ): boolean {
     if (!transcriptPath) return false
 
-    try {
-      if (!existsSync(transcriptPath)) return false
+    return Effect.runSync(
+      Effect.try({
+        try: () => {
+          if (!existsSync(transcriptPath)) return false
+          const content = readFileSync(transcriptPath, "utf-8")
+          const pattern = new RegExp(`<promise>\\s*${escapeRegex(promise)}\\s*</promise>`, "is")
+          const lines = content.split("\n").filter(l => l.trim())
 
-      const content = readFileSync(transcriptPath, "utf-8")
-      const pattern = new RegExp(`<promise>\\s*${escapeRegex(promise)}\\s*</promise>`, "is")
-      const lines = content.split("\n").filter(l => l.trim())
-
-      for (const line of lines) {
-        try {
-          const entry = JSON.parse(line)
-          if (entry.type === "user") continue
-          if (pattern.test(line)) return true
-        } catch {
-          continue
-        }
-      }
-      return false
-    } catch {
-      return false
-    }
+          for (const line of lines) {
+            const parsed = Effect.runSync(
+              Effect.try({
+                try: () => JSON.parse(line),
+                catch: () => null as never
+              }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+            )
+            if (parsed?.type === "user") continue
+            if (parsed && pattern.test(line)) return true
+          }
+          return false
+        },
+        catch: () => false as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
   }
 
   function escapeRegex(str: string): string {
@@ -125,37 +126,42 @@ export function createRalphLoopHook(
     sessionID: string,
     promise: string
   ): Promise<boolean> {
-    try {
-      const response = await Promise.race([
-        ctx.client.session.messages({
-          path: { id: sessionID },
-          query: { directory: ctx.directory },
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("API timeout")), apiTimeout)
-        ),
-      ])
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const response = await Promise.race([
+            ctx.client.session.messages({
+              path: { id: sessionID },
+              query: { directory: ctx.directory },
+            }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("API timeout")), apiTimeout)
+            ),
+          ])
 
-      const messages = (response as { data?: unknown[] }).data ?? []
-      if (!Array.isArray(messages)) return false
+          const messages = (response as { data?: unknown[] }).data ?? []
+          if (!Array.isArray(messages)) return false
 
-      const assistantMessages = (messages as OpenCodeSessionMessage[]).filter(
-        (msg) => msg.info?.role === "assistant"
-      )
-      const lastAssistant = assistantMessages[assistantMessages.length - 1]
-      if (!lastAssistant?.parts) return false
+          const assistantMessages = (messages as OpenCodeSessionMessage[]).filter(
+            (msg) => msg.info?.role === "assistant"
+          )
+          const lastAssistant = assistantMessages[assistantMessages.length - 1]
+          if (!lastAssistant?.parts) return false
 
-      const pattern = new RegExp(`<promise>\\s*${escapeRegex(promise)}\\s*</promise>`, "is")
-      const responseText = lastAssistant.parts
-        .filter((p) => p.type === "text")
-        .map((p) => p.text ?? "")
-        .join("\n")
+          const pattern = new RegExp(`<promise>\\s*${escapeRegex(promise)}\\s*</promise>`, "is")
+          const responseText = lastAssistant.parts
+            .filter((p) => p.type === "text")
+            .map((p) => p.text ?? "")
+            .join("\n")
 
-      return pattern.test(responseText)
-    } catch (err) {
-      log(`[${HOOK_NAME}] Session messages check failed`, { sessionID, error: String(err) })
-      return false
-    }
+          return pattern.test(responseText)
+        },
+        catch: (err) => {
+          log(`[${HOOK_NAME}] Session messages check failed`, { sessionID, error: String(err) })
+          return false as never
+        }
+      }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
   }
 
   const startLoop = (
@@ -177,6 +183,7 @@ export function createRalphLoopHook(
 
     const success = writeState(ctx.directory, state, stateDir)
     if (success) {
+      markRalphLoopActive(sessionID)
       log(`[${HOOK_NAME}] Loop started`, {
         sessionID,
         maxIterations: state.max_iterations,
@@ -194,6 +201,7 @@ export function createRalphLoopHook(
 
     const success = clearState(ctx.directory, stateDir)
     if (success) {
+      clearRalphLoopActive(sessionID)
       log(`[${HOOK_NAME}] Loop cancelled`, { sessionID, iteration: state.iteration })
     }
     return success
@@ -227,21 +235,22 @@ export function createRalphLoopHook(
 
       if (state.session_id && state.session_id !== sessionID) {
         if (checkSessionExists) {
-          try {
-            const originalSessionExists = await checkSessionExists(state.session_id)
-            if (!originalSessionExists) {
-              clearState(ctx.directory, stateDir)
-              log(`[${HOOK_NAME}] Cleared orphaned state from deleted session`, {
-                orphanedSessionId: state.session_id,
-                currentSessionId: sessionID,
-              })
-              return
-            }
-          } catch (err) {
-            log(`[${HOOK_NAME}] Failed to check session existence`, {
-              sessionId: state.session_id,
-              error: String(err),
+          const sessionExists = await Effect.runPromise(
+            Effect.tryPromise({
+              try: () => checkSessionExists(state.session_id!),
+              catch: (err) => {
+                log(`[${HOOK_NAME}] Failed to check session existence`, { sessionId: state.session_id, error: String(err) })
+                return true as never
+              }
+            }).pipe(Effect.catchAll(() => Effect.succeed(true)))
+          )
+          if (!sessionExists) {
+            clearState(ctx.directory, stateDir)
+            log(`[${HOOK_NAME}] Cleared orphaned state from deleted session`, {
+              orphanedSessionId: state.session_id,
+              currentSessionId: sessionID,
             })
+            return
           }
         }
         return
@@ -262,6 +271,9 @@ export function createRalphLoopHook(
           detectedVia: completionDetectedViaTranscript ? "transcript_file" : "session_messages_api",
         })
         clearState(ctx.directory, stateDir)
+        clearRalphLoopActive(sessionID)
+        releaseInjectionLock(sessionID, "ralph-loop")
+        sessionState.consecutiveErrors = 0  // Reset circuit breaker on success
 
         const title = state.ultrawork
           ? "ULTRAWORK LOOP COMPLETE!"
@@ -279,9 +291,26 @@ export function createRalphLoopHook(
               duration: 5000,
             },
           })
-          .catch(() => {})
+          .catch(() => { })
 
         return
+      }
+
+      // Central coordination guard: block if compaction active or another hook injecting
+      const guard = canInject(sessionID, "ralph-loop")
+      if (!guard.allowed) {
+        log(`[${HOOK_NAME}] Blocked by coordination: ${guard.reason}`, { sessionID })
+        return
+      }
+
+      // Circuit breaker: exponential backoff after consecutive errors
+      if (sessionState.consecutiveErrors >= CIRCUIT_BREAKER_THRESHOLD) {
+        const backoffMs = Math.min(CIRCUIT_BREAKER_BACKOFF_BASE * Math.pow(3, sessionState.consecutiveErrors - CIRCUIT_BREAKER_THRESHOLD), CIRCUIT_BREAKER_BACKOFF_MAX)
+        const elapsed = Date.now() - (sessionState.lastErrorTime ?? 0)
+        if (elapsed < backoffMs) {
+          log(`[${HOOK_NAME}] Circuit breaker: waiting ${backoffMs}ms (${sessionState.consecutiveErrors} consecutive errors)`, { sessionID })
+          return
+        }
       }
 
       if (state.iteration >= state.max_iterations) {
@@ -291,6 +320,8 @@ export function createRalphLoopHook(
           max: state.max_iterations,
         })
         clearState(ctx.directory, stateDir)
+        clearRalphLoopActive(sessionID)
+        releaseInjectionLock(sessionID, "ralph-loop")
 
         await ctx.client.tui
           .showToast({
@@ -301,7 +332,7 @@ export function createRalphLoopHook(
               duration: 5000,
             },
           })
-          .catch(() => {})
+          .catch(() => { })
 
         return
       }
@@ -336,15 +367,20 @@ export function createRalphLoopHook(
             duration: 2000,
           },
         })
-        .catch(() => {})
+        .catch(() => { })
 
       try {
         let agent: string | undefined
         let model: { providerID: string; modelID: string } | undefined
 
-        try {
-          const messagesResp = await ctx.client.session.messages({ path: { id: sessionID } })
-          const messages = (messagesResp.data ?? []) as Array<{
+        const messagesResult = await Effect.runPromise(
+          Effect.tryPromise({
+            try: () => ctx.client.session.messages({ path: { id: sessionID } }),
+            catch: () => null as never
+          }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+        )
+        if (messagesResult) {
+          const messages = (messagesResult.data ?? []) as Array<{
             info?: { agent?: string; model?: { providerID: string; modelID: string }; modelID?: string; providerID?: string }
           }>
           for (let i = messages.length - 1; i >= 0; i--) {
@@ -355,7 +391,7 @@ export function createRalphLoopHook(
               break
             }
           }
-        } catch {
+        } else {
           const messageDir = getMessageDir(sessionID)
           const currentMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
           agent = currentMessage?.agent
@@ -378,6 +414,8 @@ export function createRalphLoopHook(
           sessionID,
           error: String(err),
         })
+      } finally {
+        releaseInjectionLock(sessionID, "ralph-loop")
       }
     }
 
@@ -412,6 +450,9 @@ export function createRalphLoopHook(
       if (sessionID) {
         const sessionState = getSessionState(sessionID)
         sessionState.isRecovering = true
+        sessionState.consecutiveErrors++
+        sessionState.lastErrorTime = Date.now()
+        log(`[${HOOK_NAME}] Error tracked`, { sessionID, consecutiveErrors: sessionState.consecutiveErrors })
         setTimeout(() => {
           sessionState.isRecovering = false
         }, 5000)

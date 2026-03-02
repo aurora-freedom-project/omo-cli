@@ -5,6 +5,7 @@ import { randomUUID } from "crypto"
 import type { TranscriptEntry } from "./types"
 import { transformToolName } from "../../shared/tool-name"
 import { getClaudeConfigDir } from "../../shared"
+import { Effect } from "effect"
 
 const TRANSCRIPT_DIR = join(getClaudeConfigDir(), "transcripts")
 
@@ -140,101 +141,63 @@ export async function buildTranscriptFromSession(
   currentToolName: string,
   currentToolInput: Record<string, unknown>
 ): Promise<string | null> {
-  try {
-    const response = await client.session.messages({
-      path: { id: sessionId },
-      query: { directory },
-    })
+  const buildCurrentEntry = (toolName: string, toolInput: Record<string, unknown>): DisabledTranscriptEntry => ({
+    type: "assistant",
+    message: {
+      role: "assistant",
+      content: [{ type: "tool_use", name: transformToolName(toolName), input: toolInput }],
+    },
+  })
 
-    // Handle various response formats
-    const messages = (response as { "200"?: unknown[]; data?: unknown[] })["200"]
-      ?? (response as { data?: unknown[] }).data
-      ?? (Array.isArray(response) ? response : [])
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const response = await client.session.messages({
+          path: { id: sessionId },
+          query: { directory },
+        })
 
-    const entries: string[] = []
+        const messages = (response as { "200"?: unknown[]; data?: unknown[] })["200"]
+          ?? (response as { data?: unknown[] }).data
+          ?? (Array.isArray(response) ? response : [])
 
-    if (Array.isArray(messages)) {
-      for (const msg of messages as OpenCodeMessage[]) {
-        if (msg.info?.role !== "assistant") continue
+        const entries: string[] = []
 
-        for (const part of msg.parts || []) {
-          if (part.type !== "tool") continue
-          if (part.state?.status !== "completed") continue
-          if (!part.state?.input) continue
-
-          const rawToolName = part.tool as string
-          const toolName = transformToolName(rawToolName)
-
-          const entry: DisabledTranscriptEntry = {
-            type: "assistant",
-            message: {
-              role: "assistant",
-              content: [
-                {
-                  type: "tool_use",
-                  name: toolName,
-                  input: part.state.input,
-                },
-              ],
-            },
+        if (Array.isArray(messages)) {
+          for (const msg of messages as OpenCodeMessage[]) {
+            if (msg.info?.role !== "assistant") continue
+            for (const part of msg.parts || []) {
+              if (part.type !== "tool" || part.state?.status !== "completed" || !part.state?.input) continue
+              const entry: DisabledTranscriptEntry = {
+                type: "assistant",
+                message: { role: "assistant", content: [{ type: "tool_use", name: transformToolName(part.tool as string), input: part.state.input }] },
+              }
+              entries.push(JSON.stringify(entry))
+            }
           }
-          entries.push(JSON.stringify(entry))
         }
-      }
-    }
 
-    // Always add current tool call as the last entry
-    const currentEntry: DisabledTranscriptEntry = {
-      type: "assistant",
-      message: {
-        role: "assistant",
-        content: [
-          {
-            type: "tool_use",
-            name: transformToolName(currentToolName),
-            input: currentToolInput,
-          },
-        ],
+        entries.push(JSON.stringify(buildCurrentEntry(currentToolName, currentToolInput)))
+
+        const tempPath = join(tmpdir(), `opencode-transcript-${sessionId}-${randomUUID()}.jsonl`)
+        writeFileSync(tempPath, entries.join("\n") + "\n")
+        return tempPath
       },
-    }
-    entries.push(JSON.stringify(currentEntry))
-
-    // Write to temp file
-    const tempPath = join(
-      tmpdir(),
-      `opencode-transcript-${sessionId}-${randomUUID()}.jsonl`
-    )
-    writeFileSync(tempPath, entries.join("\n") + "\n")
-
-    return tempPath
-  } catch {
-    // CRITICAL FIX: Even on API failure, create file with current tool entry only
-    // (matching original disabled behavior - never return null with incompatible format)
-    try {
-      const currentEntry: DisabledTranscriptEntry = {
-        type: "assistant",
-        message: {
-          role: "assistant",
-          content: [
-            {
-              type: "tool_use",
-              name: transformToolName(currentToolName),
-              input: currentToolInput,
-            },
-          ],
-        },
-      }
-      const tempPath = join(
-        tmpdir(),
-        `opencode-transcript-${sessionId}-${randomUUID()}.jsonl`
+      catch: () => null as never
+    }).pipe(
+      Effect.catchAll(() =>
+        // Fallback: write file with only the current tool entry
+        Effect.try({
+          try: () => {
+            const tempPath = join(tmpdir(), `opencode-transcript-${sessionId}-${randomUUID()}.jsonl`)
+            writeFileSync(tempPath, JSON.stringify(buildCurrentEntry(currentToolName, currentToolInput)) + "\n")
+            return tempPath
+          },
+          catch: () => null as never
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
       )
-      writeFileSync(tempPath, JSON.stringify(currentEntry) + "\n")
-      return tempPath
-    } catch {
-      // If even this fails, return null (truly catastrophic failure)
-      return null
-    }
-  }
+    )
+  )
 }
 
 /**
@@ -244,9 +207,10 @@ export async function buildTranscriptFromSession(
  */
 export function deleteTempTranscript(path: string | null): void {
   if (!path) return
-  try {
-    unlinkSync(path)
-  } catch {
-    // Ignore deletion errors
-  }
+  Effect.runSync(
+    Effect.try({
+      try: () => unlinkSync(path),
+      catch: () => undefined as never
+    }).pipe(Effect.catchAll(() => Effect.void))
+  )
 }

@@ -1,7 +1,9 @@
 import type { PluginInput } from "@opencode-ai/plugin"
-import { existsSync, readdirSync } from "node:fs"
+import { Effect } from "effect"
+import { existsSync } from "node:fs"
 import { join } from "node:path"
 import type { BackgroundManager } from "../features/background-agent"
+import type { SafetyConfig } from "../config/schema"
 import { getMainSessionID, subagentSessions } from "../features/claude-code-session-state"
 import {
   findNearestMessageWithFields,
@@ -10,6 +12,8 @@ import {
 } from "../features/hook-message-injector"
 import { log } from "../shared/logger"
 import { formatSystemDirective, SystemDirectiveTypes } from "../shared/system-directive"
+import { canInject, releaseInjectionLock } from "./loop-coordination"
+import { getMessageDir } from "../shared/session-utils"
 
 const HOOK_NAME = "todo-continuation-enforcer"
 
@@ -18,6 +22,7 @@ const DEFAULT_SKIP_AGENTS = ["planner", "compaction"]
 export interface TodoContinuationEnforcerOptions {
   backgroundManager?: BackgroundManager
   skipAgents?: string[]
+  safetyConfig?: SafetyConfig
 }
 
 export interface TodoContinuationEnforcer {
@@ -39,6 +44,7 @@ interface SessionState {
   isRecovering?: boolean
   countdownStartedAt?: number
   abortDetectedAt?: number
+  continuationCount: number
 }
 
 const CONTINUATION_PROMPT = `${formatSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
@@ -52,20 +58,7 @@ Incomplete tasks remain in your todo list. Continue working on the next pending 
 const COUNTDOWN_SECONDS = 2
 const TOAST_DURATION_MS = 900
 const COUNTDOWN_GRACE_PERIOD_MS = 500
-
-function getMessageDir(sessionID: string): string | null {
-  if (!existsSync(MESSAGE_STORAGE)) return null
-
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) return directPath
-
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) return sessionPath
-  }
-
-  return null
-}
+const DEFAULT_MAX_CONTINUATIONS = 50
 
 function getIncompleteCount(todos: Todo[]): number {
   return todos.filter(t => t.status !== "completed" && t.status !== "cancelled").length
@@ -95,13 +88,14 @@ export function createTodoContinuationEnforcer(
   ctx: PluginInput,
   options: TodoContinuationEnforcerOptions = {}
 ): TodoContinuationEnforcer {
-  const { backgroundManager, skipAgents = DEFAULT_SKIP_AGENTS } = options
+  const { backgroundManager, skipAgents = DEFAULT_SKIP_AGENTS, safetyConfig } = options
+  const MAX_CONTINUATIONS = safetyConfig?.max_continuations ?? DEFAULT_MAX_CONTINUATIONS
   const sessions = new Map<string, SessionState>()
 
   function getState(sessionID: string): SessionState {
     let state = sessions.get(sessionID)
     if (!state) {
-      state = {}
+      state = { continuationCount: 0 }
       sessions.set(sessionID, state)
     }
     return state
@@ -182,13 +176,17 @@ export function createTodoContinuationEnforcer(
     }
 
     let todos: Todo[] = []
-    try {
-      const response = await ctx.client.session.todo({ path: { id: sessionID } })
-      todos = (response.data ?? response) as Todo[]
-    } catch (err) {
-      log(`[${HOOK_NAME}] Failed to fetch todos`, { sessionID, error: String(err) })
+    const todosResult = await Effect.runPromise(
+      Effect.tryPromise({
+        try: () => ctx.client.session.todo({ path: { id: sessionID } }),
+        catch: () => null as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+    )
+    if (!todosResult) {
+      log(`[${HOOK_NAME}] Failed to fetch todos`, { sessionID })
       return
     }
+    todos = (todosResult.data ?? todosResult) as Todo[]
 
     const freshIncompleteCount = getIncompleteCount(todos)
     if (freshIncompleteCount === 0) {
@@ -229,24 +227,35 @@ export function createTodoContinuationEnforcer(
       return
     }
 
-    const prompt = `${CONTINUATION_PROMPT}\n\n[Status: ${todos.length - freshIncompleteCount}/${todos.length} completed, ${freshIncompleteCount} remaining]`
+    const sessionState = getState(sessionID)
+    sessionState.continuationCount++
+
+    const prompt = `${CONTINUATION_PROMPT}\n\n[Status: ${todos.length - freshIncompleteCount}/${todos.length} completed, ${freshIncompleteCount} remaining | Continuation ${sessionState.continuationCount}/${MAX_CONTINUATIONS}]`
 
     try {
-      log(`[${HOOK_NAME}] Injecting continuation`, { sessionID, agent: agentName, model, incompleteCount: freshIncompleteCount })
+      log(`[${HOOK_NAME}] Injecting continuation`, { sessionID, agent: agentName, model, incompleteCount: freshIncompleteCount, continuation: sessionState.continuationCount })
 
-      await ctx.client.session.prompt({
-        path: { id: sessionID },
-        body: {
-          agent: agentName,
-          ...(model !== undefined ? { model } : {}),
-          parts: [{ type: "text", text: prompt }],
-        },
-        query: { directory: ctx.directory },
-      })
+      await Effect.runPromise(
+        Effect.tryPromise({
+          try: () => ctx.client.session.prompt({
+            path: { id: sessionID },
+            body: {
+              agent: agentName,
+              ...(model !== undefined ? { model } : {}),
+              parts: [{ type: "text", text: prompt }],
+            },
+            query: { directory: ctx.directory },
+          }),
+          catch: (err) => {
+            log(`[${HOOK_NAME}] Injection failed`, { sessionID, error: String(err) })
+            return undefined as never
+          }
+        }).pipe(Effect.catchAll(() => Effect.void))
+      )
 
       log(`[${HOOK_NAME}] Injection successful`, { sessionID })
-    } catch (err) {
-      log(`[${HOOK_NAME}] Injection failed`, { sessionID, error: String(err) })
+    } finally {
+      releaseInjectionLock(sessionID, "todo-continuation")
     }
   }
 
@@ -319,6 +328,13 @@ export function createTodoContinuationEnforcer(
         return
       }
 
+      // Central coordination: defer to compaction, ralph-loop, or other active injector
+      const guard = canInject(sessionID, "todo-continuation")
+      if (!guard.allowed) {
+        log(`[${HOOK_NAME}] Blocked by coordination: ${guard.reason}`, { sessionID })
+        return
+      }
+
       // Check 1: Event-based abort detection (primary, most reliable)
       if (state.abortDetectedAt) {
         const timeSinceAbort = Date.now() - state.abortDetectedAt
@@ -341,29 +357,34 @@ export function createTodoContinuationEnforcer(
       }
 
       // Check 2: API-based abort detection (fallback, for cases where event was missed)
-      try {
-        const messagesResp = await ctx.client.session.messages({
-          path: { id: sessionID },
-          query: { directory: ctx.directory },
-        })
-        const messages = (messagesResp as { data?: Array<{ info?: MessageInfo }> }).data ?? []
-
+      const messagesResult = await Effect.runPromise(
+        Effect.tryPromise({
+          try: () => ctx.client.session.messages({ path: { id: sessionID }, query: { directory: ctx.directory } }),
+          catch: () => null as never
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+      )
+      if (messagesResult) {
+        const messages = (messagesResult as { data?: Array<{ info?: MessageInfo }> }).data ?? []
         if (isLastAssistantMessageAborted(messages)) {
           log(`[${HOOK_NAME}] Skipped: last assistant message was aborted (API fallback)`, { sessionID })
           return
         }
-      } catch (err) {
-        log(`[${HOOK_NAME}] Messages fetch failed, continuing`, { sessionID, error: String(err) })
+      } else {
+        log(`[${HOOK_NAME}] Messages fetch failed, continuing`, { sessionID })
       }
 
       let todos: Todo[] = []
-      try {
-        const response = await ctx.client.session.todo({ path: { id: sessionID } })
-        todos = (response.data ?? response) as Todo[]
-      } catch (err) {
-        log(`[${HOOK_NAME}] Todo fetch failed`, { sessionID, error: String(err) })
+      const todosResult = await Effect.runPromise(
+        Effect.tryPromise({
+          try: () => ctx.client.session.todo({ path: { id: sessionID } }),
+          catch: () => null as never
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+      )
+      if (!todosResult) {
+        log(`[${HOOK_NAME}] Todo fetch failed`, { sessionID })
         return
       }
+      todos = (todosResult.data ?? todosResult) as Todo[]
 
       if (!todos || todos.length === 0) {
         log(`[${HOOK_NAME}] No todos`, { sessionID })
@@ -376,13 +397,31 @@ export function createTodoContinuationEnforcer(
         return
       }
 
+      // Guard: max continuations per session
+      const sessionState = getState(sessionID)
+      if (sessionState.continuationCount >= MAX_CONTINUATIONS) {
+        log(`[${HOOK_NAME}] MAX_CONTINUATIONS reached`, { sessionID, count: sessionState.continuationCount })
+        await ctx.client.tui.showToast({
+          body: {
+            title: "Todo Continuation Stopped",
+            message: `Max continuations (${MAX_CONTINUATIONS}) reached. ${incompleteCount} tasks still incomplete.`,
+            variant: "warning" as const,
+            duration: 5000,
+          },
+        }).catch(() => { })
+        return
+      }
+
       let resolvedInfo: ResolvedMessageInfo | undefined
       let hasCompactionMessage = false
-      try {
-        const messagesResp = await ctx.client.session.messages({
-          path: { id: sessionID },
-        })
-        const messages = (messagesResp.data ?? []) as Array<{
+      const agentCheckResult = await Effect.runPromise(
+        Effect.tryPromise({
+          try: () => ctx.client.session.messages({ path: { id: sessionID } }),
+          catch: () => null as never
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+      )
+      if (agentCheckResult) {
+        const messages = (agentCheckResult.data ?? []) as Array<{
           info?: {
             agent?: string
             model?: { providerID: string; modelID: string }
@@ -406,8 +445,8 @@ export function createTodoContinuationEnforcer(
             break
           }
         }
-      } catch (err) {
-        log(`[${HOOK_NAME}] Failed to fetch messages for agent check`, { sessionID, error: String(err) })
+      } else {
+        log(`[${HOOK_NAME}] Failed to fetch messages for agent check`, { sessionID })
       }
 
       log(`[${HOOK_NAME}] Agent check`, { sessionID, agentName: resolvedInfo?.agent, skipAgents, hasCompactionMessage })

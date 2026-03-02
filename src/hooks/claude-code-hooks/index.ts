@@ -1,4 +1,5 @@
 import type { PluginInput } from "@opencode-ai/plugin"
+import { Effect } from "effect"
 import { loadClaudeHooksConfig } from "./config"
 import { loadPluginExtendedConfig } from "./config-loader"
 import {
@@ -23,11 +24,13 @@ import {
   executePreCompactHooks,
   type PreCompactContext,
 } from "./pre-compact"
-import { cacheToolInput, getToolInput } from "./tool-input-cache"
+import { cacheToolInput, getToolInput, cleanupToolInputCacheForSession } from "./tool-input-cache"
 import { recordToolUse, recordToolResult, getTranscriptPath, recordUserMessage } from "./transcript"
 import type { PluginConfig } from "./types"
 import { log, isHookDisabled } from "../../shared"
 import type { ContextCollector } from "../../features/context-injector"
+import { canInject, releaseInjectionLock } from "../loop-coordination"
+import { cleanupStopHookState } from "./stop"
 
 const sessionFirstMessageProcessed = new Set<string>()
 const sessionErrorState = new Map<string, { hasError: boolean; errorMessage?: string }>()
@@ -77,7 +80,7 @@ export function createClaudeCodeHooksHook(
       },
       output: {
         message: Record<string, unknown>
-        parts: Array<{ type: string; text?: string; [key: string]: unknown }>
+        parts: Array<{ type: string; text?: string;[key: string]: unknown }>
       }
     ): Promise<void> => {
       const interruptState = sessionInterruptState.get(input.sessionID)
@@ -106,12 +109,15 @@ export function createClaudeCodeHooksHook(
       }
 
       let parentSessionId: string | undefined
-      try {
-        const sessionInfo = await ctx.client.session.get({
-          path: { id: input.sessionID },
-        })
-        parentSessionId = sessionInfo.data?.parentID
-      } catch {}
+      const sessionResult = Effect.runSync(
+        Effect.try({
+          try: () => ctx.client.session.get({ path: { id: input.sessionID } }),
+          catch: () => null as never
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+      )
+      if (sessionResult) {
+        parentSessionId = (await sessionResult)?.data?.parentID
+      }
 
       const isFirstMessage = !sessionFirstMessageProcessed.has(input.sessionID)
       sessionFirstMessageProcessed.add(input.sessionID)
@@ -223,7 +229,7 @@ export function createClaudeCodeHooksHook(
                 duration: 4000,
               },
             })
-            .catch(() => {})
+            .catch(() => { })
           throw new Error(result.reason ?? "Hook blocked the operation")
         }
 
@@ -290,7 +296,7 @@ export function createClaudeCodeHooksHook(
                 duration: 4000,
               },
             })
-            .catch(() => {})
+            .catch(() => { })
         }
 
         if (result.warnings && result.warnings.length > 0) {
@@ -311,7 +317,7 @@ export function createClaudeCodeHooksHook(
                 duration: 2000,
               },
             })
-            .catch(() => {})
+            .catch(() => { })
         }
       }
     },
@@ -338,6 +344,8 @@ export function createClaudeCodeHooksHook(
           sessionErrorState.delete(sessionInfo.id)
           sessionInterruptState.delete(sessionInfo.id)
           sessionFirstMessageProcessed.delete(sessionInfo.id)
+          cleanupStopHookState(sessionInfo.id)
+          cleanupToolInputCacheForSession(sessionInfo.id)
         }
         return
       }
@@ -357,12 +365,15 @@ export function createClaudeCodeHooksHook(
         const interruptedBefore = interruptStateBefore?.interrupted === true
 
         let parentSessionId: string | undefined
-        try {
-          const sessionInfo = await ctx.client.session.get({
-            path: { id: sessionID },
-          })
-          parentSessionId = sessionInfo.data?.parentID
-        } catch {}
+        const sessionResult = await Effect.runPromise(
+          Effect.tryPromise({
+            try: () => ctx.client.session.get({ path: { id: sessionID } }),
+            catch: () => null as never
+          }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+        )
+        if (sessionResult) {
+          parentSessionId = sessionResult?.data?.parentID
+        }
 
         if (!isHookDisabled(config, "Stop")) {
           const stopCtx: StopContext = {
@@ -385,14 +396,21 @@ export function createClaudeCodeHooksHook(
             const endedWithError = endedWithErrorBefore || endedWithErrorAfter
             log("Stop hook block ignored", { sessionID, block: stopResult.block, interrupted, endedWithError })
           } else if (stopResult.block && stopResult.injectPrompt) {
-            log("Stop hook returned block with inject_prompt", { sessionID })
-            ctx.client.session
-              .prompt({
-                path: { id: sessionID },
-                body: { parts: [{ type: "text", text: stopResult.injectPrompt }] },
-                query: { directory: ctx.directory },
-              })
-              .catch((err: unknown) => log("Failed to inject prompt from Stop hook", err))
+            // Coordination guard: only inject if no compaction/other hook active
+            const guard = canInject(sessionID, "stop-hook")
+            if (!guard.allowed) {
+              log("Stop hook inject blocked by coordination", { sessionID, reason: guard.reason })
+            } else {
+              log("Stop hook returned block with inject_prompt", { sessionID })
+              ctx.client.session
+                .prompt({
+                  path: { id: sessionID },
+                  body: { parts: [{ type: "text", text: stopResult.injectPrompt }] },
+                  query: { directory: ctx.directory },
+                })
+                .catch((err: unknown) => log("Failed to inject prompt from Stop hook", err))
+                .finally(() => releaseInjectionLock(sessionID, "stop-hook"))
+            }
           } else if (stopResult.block) {
             log("Stop hook returned block", { sessionID, reason: stopResult.reason })
           }
