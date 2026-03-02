@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs"
 import { join } from "path"
+import { Effect } from "effect"
 import { log } from "./logger"
 import { getOmoOpenCodeCacheDir } from "./data-path"
 
@@ -40,15 +41,20 @@ export function readConnectedProvidersCache(): string[] | null {
 		return null
 	}
 
-	try {
-		const content = readFileSync(cacheFile, "utf-8")
-		const data = JSON.parse(content) as ConnectedProvidersCache
-		log("[connected-providers-cache] Read cache", { count: data.connected.length, updatedAt: data.updatedAt })
-		return data.connected
-	} catch (err) {
-		log("[connected-providers-cache] Error reading cache", { error: String(err) })
-		return null
-	}
+	return Effect.runSync(
+		Effect.try({
+			try: () => {
+				const content = readFileSync(cacheFile, "utf-8")
+				const data = JSON.parse(content) as ConnectedProvidersCache
+				log("[connected-providers-cache] Read cache", { count: data.connected.length, updatedAt: data.updatedAt })
+				return data.connected
+			},
+			catch: (err) => err as never,
+		}).pipe(Effect.catchAll((err) => {
+			log("[connected-providers-cache] Error reading cache", { error: String(err) })
+			return Effect.succeed(null)
+		}))
+	)
 }
 
 /**
@@ -71,12 +77,18 @@ function writeConnectedProvidersCache(connected: string[]): void {
 		updatedAt: new Date().toISOString(),
 	}
 
-	try {
-		writeFileSync(cacheFile, JSON.stringify(data, null, 2))
-		log("[connected-providers-cache] Cache written", { count: connected.length })
-	} catch (err) {
-		log("[connected-providers-cache] Error writing cache", { error: String(err) })
-	}
+	Effect.runSync(
+		Effect.try({
+			try: () => {
+				writeFileSync(cacheFile, JSON.stringify(data, null, 2))
+				log("[connected-providers-cache] Cache written", { count: connected.length })
+			},
+			catch: (err) => err as never,
+		}).pipe(Effect.catchAll((err) => {
+			log("[connected-providers-cache] Error writing cache", { error: String(err) })
+			return Effect.void
+		}))
+	)
 }
 
 /**
@@ -91,18 +103,23 @@ export function readProviderModelsCache(): ProviderModelsCache | null {
 		return null
 	}
 
-	try {
-		const content = readFileSync(cacheFile, "utf-8")
-		const data = JSON.parse(content) as ProviderModelsCache
-		log("[connected-providers-cache] Read provider-models cache", { 
-			providerCount: Object.keys(data.models).length, 
-			updatedAt: data.updatedAt 
-		})
-		return data
-	} catch (err) {
-		log("[connected-providers-cache] Error reading provider-models cache", { error: String(err) })
-		return null
-	}
+	return Effect.runSync(
+		Effect.try({
+			try: () => {
+				const content = readFileSync(cacheFile, "utf-8")
+				const data = JSON.parse(content) as ProviderModelsCache
+				log("[connected-providers-cache] Read provider-models cache", {
+					providerCount: Object.keys(data.models).length,
+					updatedAt: data.updatedAt
+				})
+				return data
+			},
+			catch: (err) => err as never,
+		}).pipe(Effect.catchAll((err) => {
+			log("[connected-providers-cache] Error reading provider-models cache", { error: String(err) })
+			return Effect.succeed(null)
+		}))
+	)
 }
 
 /**
@@ -125,14 +142,20 @@ export function writeProviderModelsCache(data: { models: Record<string, string[]
 		updatedAt: new Date().toISOString(),
 	}
 
-	try {
-		writeFileSync(cacheFile, JSON.stringify(cacheData, null, 2))
-		log("[connected-providers-cache] Provider-models cache written", { 
-			providerCount: Object.keys(data.models).length 
-		})
-	} catch (err) {
-		log("[connected-providers-cache] Error writing provider-models cache", { error: String(err) })
-	}
+	Effect.runSync(
+		Effect.try({
+			try: () => {
+				writeFileSync(cacheFile, JSON.stringify(cacheData, null, 2))
+				log("[connected-providers-cache] Provider-models cache written", {
+					providerCount: Object.keys(data.models).length
+				})
+			},
+			catch: (err) => err as never,
+		}).pipe(Effect.catchAll((err) => {
+			log("[connected-providers-cache] Error writing provider-models cache", { error: String(err) })
+			return Effect.void
+		}))
+	)
 }
 
 /**
@@ -161,30 +184,36 @@ export async function updateConnectedProvidersCache(client: {
 
 		// Also update provider-models cache if model.list is available
 		if (client.model?.list) {
-			try {
-				const modelsResult = await client.model.list()
-				const models = modelsResult.data ?? []
+			await Effect.runPromise(
+				Effect.tryPromise({
+					try: async () => {
+						const modelsResult = await client.model!.list!()
+						const models = modelsResult.data ?? []
 
-				const modelsByProvider: Record<string, string[]> = {}
-				for (const model of models) {
-					if (!modelsByProvider[model.provider]) {
-						modelsByProvider[model.provider] = []
-					}
-					modelsByProvider[model.provider].push(model.id)
-				}
+						const modelsByProvider: Record<string, string[]> = {}
+						for (const model of models) {
+							if (!modelsByProvider[model.provider]) {
+								modelsByProvider[model.provider] = []
+							}
+							modelsByProvider[model.provider].push(model.id)
+						}
 
-				writeProviderModelsCache({
-					models: modelsByProvider,
-					connected,
-				})
+						writeProviderModelsCache({
+							models: modelsByProvider,
+							connected,
+						})
 
-				log("[connected-providers-cache] Provider-models cache updated", {
-					providerCount: Object.keys(modelsByProvider).length,
-					totalModels: models.length,
-				})
-			} catch (modelErr) {
-				log("[connected-providers-cache] Error fetching models", { error: String(modelErr) })
-			}
+						log("[connected-providers-cache] Provider-models cache updated", {
+							providerCount: Object.keys(modelsByProvider).length,
+							totalModels: models.length,
+						})
+					},
+					catch: (modelErr) => modelErr as never,
+				}).pipe(Effect.catchAll((modelErr) => {
+					log("[connected-providers-cache] Error fetching models", { error: String(modelErr) })
+					return Effect.void
+				}))
+			)
 		}
 	} catch (err) {
 		log("[connected-providers-cache] Error updating cache", { error: String(err) })
