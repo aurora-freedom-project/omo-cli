@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
+import { Effect } from "effect"
 import { parseFrontmatter } from "../../shared/frontmatter"
 import type { RalphLoopState } from "./types"
 import { DEFAULT_STATE_FILE, DEFAULT_COMPLETION_PROMISE, DEFAULT_MAX_ITERATIONS } from "./constants"
@@ -17,42 +18,45 @@ export function readState(directory: string, customPath?: string): RalphLoopStat
     return null
   }
 
-  try {
-    const content = readFileSync(filePath, "utf-8")
-    const { data, body } = parseFrontmatter<Record<string, unknown>>(content)
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const content = readFileSync(filePath, "utf-8")
+        const { data, body } = parseFrontmatter<Record<string, unknown>>(content)
 
-    const active = data.active
-    const iteration = data.iteration
-    
-    if (active === undefined || iteration === undefined) {
-      return null
-    }
+        const active = data.active
+        const iteration = data.iteration
 
-    const isActive = active === true || active === "true"
-    const iterationNum = typeof iteration === "number" ? iteration : Number(iteration)
-    
-    if (isNaN(iterationNum)) {
-      return null
-    }
+        if (active === undefined || iteration === undefined) {
+          return null
+        }
 
-    const stripQuotes = (val: unknown): string => {
-      const str = String(val ?? "")
-      return str.replace(/^["']|["']$/g, "")
-    }
+        const isActive = active === true || active === "true"
+        const iterationNum = typeof iteration === "number" ? iteration : Number(iteration)
 
-    return {
-      active: isActive,
-      iteration: iterationNum,
-      max_iterations: Number(data.max_iterations) || DEFAULT_MAX_ITERATIONS,
-      completion_promise: stripQuotes(data.completion_promise) || DEFAULT_COMPLETION_PROMISE,
-      started_at: stripQuotes(data.started_at) || new Date().toISOString(),
-      prompt: body.trim(),
-      session_id: data.session_id ? stripQuotes(data.session_id) : undefined,
-      ultrawork: data.ultrawork === true || data.ultrawork === "true" ? true : undefined,
-    }
-  } catch {
-    return null
-  }
+        if (isNaN(iterationNum)) {
+          return null
+        }
+
+        const stripQuotes = (val: unknown): string => {
+          const str = String(val ?? "")
+          return str.replace(/^["']|["']$/g, "")
+        }
+
+        return {
+          active: isActive,
+          iteration: iterationNum,
+          max_iterations: Number(data.max_iterations) || DEFAULT_MAX_ITERATIONS,
+          completion_promise: stripQuotes(data.completion_promise) || DEFAULT_COMPLETION_PROMISE,
+          started_at: stripQuotes(data.started_at) || new Date().toISOString(),
+          prompt: body.trim(),
+          session_id: data.session_id ? stripQuotes(data.session_id) : undefined,
+          ultrawork: data.ultrawork === true || data.ultrawork === "true" ? true : undefined,
+        } satisfies RalphLoopState
+      },
+      catch: () => null as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
 }
 
 export function writeState(
@@ -62,15 +66,17 @@ export function writeState(
 ): boolean {
   const filePath = getStateFilePath(directory, customPath)
 
-  try {
-    const dir = dirname(filePath)
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true })
-    }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const dir = dirname(filePath)
+        if (!existsSync(dir)) {
+          mkdirSync(dir, { recursive: true })
+        }
 
-    const sessionIdLine = state.session_id ? `session_id: "${state.session_id}"\n` : ""
-    const ultraworkLine = state.ultrawork !== undefined ? `ultrawork: ${state.ultrawork}\n` : ""
-    const content = `---
+        const sessionIdLine = state.session_id ? `session_id: "${state.session_id}"\n` : ""
+        const ultraworkLine = state.ultrawork !== undefined ? `ultrawork: ${state.ultrawork}\n` : ""
+        const content = `---
 active: ${state.active}
 iteration: ${state.iteration}
 max_iterations: ${state.max_iterations}
@@ -80,24 +86,28 @@ ${sessionIdLine}${ultraworkLine}---
 ${state.prompt}
 `
 
-    writeFileSync(filePath, content, "utf-8")
-    return true
-  } catch {
-    return false
-  }
+        writeFileSync(filePath, content, "utf-8")
+        return true
+      },
+      catch: () => false as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }
 
 export function clearState(directory: string, customPath?: string): boolean {
   const filePath = getStateFilePath(directory, customPath)
 
-  try {
-    if (existsSync(filePath)) {
-      unlinkSync(filePath)
-    }
-    return true
-  } catch {
-    return false
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        if (existsSync(filePath)) {
+          unlinkSync(filePath)
+        }
+        return true
+      },
+      catch: () => false as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }
 
 export function incrementIteration(

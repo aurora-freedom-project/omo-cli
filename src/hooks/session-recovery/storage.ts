@@ -1,14 +1,17 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { Effect } from "effect"
 import { MESSAGE_STORAGE, PART_STORAGE, THINKING_TYPES, META_TYPES } from "./constants"
 import type { StoredMessageMeta, StoredPart, StoredTextPart } from "./types"
 
+/** Generate a unique part ID with hex timestamp and random suffix. */
 export function generatePartId(): string {
   const timestamp = Date.now().toString(16)
   const random = Math.random().toString(36).substring(2, 10)
   return `prt_${timestamp}${random}`
 }
 
+/** Resolve the message storage directory for a session, checking nested layouts. */
 export function getMessageDir(sessionID: string): string {
   if (!existsSync(MESSAGE_STORAGE)) return ""
 
@@ -27,6 +30,7 @@ export function getMessageDir(sessionID: string): string {
   return ""
 }
 
+/** Read all stored message metadata for a session, sorted by creation time. */
 export function readMessages(sessionID: string): StoredMessageMeta[] {
   const messageDir = getMessageDir(sessionID)
   if (!messageDir || !existsSync(messageDir)) return []
@@ -34,12 +38,16 @@ export function readMessages(sessionID: string): StoredMessageMeta[] {
   const messages: StoredMessageMeta[] = []
   for (const file of readdirSync(messageDir)) {
     if (!file.endsWith(".json")) continue
-    try {
-      const content = readFileSync(join(messageDir, file), "utf-8")
-      messages.push(JSON.parse(content))
-    } catch {
-      continue
-    }
+    const parsed = Effect.runSync(
+      Effect.try({
+        try: () => {
+          const content = readFileSync(join(messageDir, file), "utf-8")
+          return JSON.parse(content) as StoredMessageMeta
+        },
+        catch: () => null as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+    )
+    if (parsed) messages.push(parsed)
   }
 
   return messages.sort((a, b) => {
@@ -50,6 +58,7 @@ export function readMessages(sessionID: string): StoredMessageMeta[] {
   })
 }
 
+/** Read all stored parts for a given message ID. */
 export function readParts(messageID: string): StoredPart[] {
   const partDir = join(PART_STORAGE, messageID)
   if (!existsSync(partDir)) return []
@@ -57,17 +66,22 @@ export function readParts(messageID: string): StoredPart[] {
   const parts: StoredPart[] = []
   for (const file of readdirSync(partDir)) {
     if (!file.endsWith(".json")) continue
-    try {
-      const content = readFileSync(join(partDir, file), "utf-8")
-      parts.push(JSON.parse(content))
-    } catch {
-      continue
-    }
+    const parsed = Effect.runSync(
+      Effect.try({
+        try: () => {
+          const content = readFileSync(join(partDir, file), "utf-8")
+          return JSON.parse(content) as StoredPart
+        },
+        catch: () => null as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+    )
+    if (parsed) parts.push(parsed)
   }
 
   return parts
 }
 
+/** Check if a message part contains meaningful content (excludes thinking/meta types). */
 export function hasContent(part: StoredPart): boolean {
   if (THINKING_TYPES.has(part.type)) return false
   if (META_TYPES.has(part.type)) return false
@@ -88,11 +102,13 @@ export function hasContent(part: StoredPart): boolean {
   return false
 }
 
+/** Check if any part of a message contains meaningful content. */
 export function messageHasContent(messageID: string): boolean {
   const parts = readParts(messageID)
   return parts.some(hasContent)
 }
 
+/** Inject a synthetic text part into a message's parts directory. */
 export function injectTextPart(sessionID: string, messageID: string, text: string): boolean {
   const partDir = join(PART_STORAGE, messageID)
 
@@ -110,14 +126,18 @@ export function injectTextPart(sessionID: string, messageID: string, text: strin
     synthetic: true,
   }
 
-  try {
-    writeFileSync(join(partDir, `${partId}.json`), JSON.stringify(part, null, 2))
-    return true
-  } catch {
-    return false
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        writeFileSync(join(partDir, `${partId}.json`), JSON.stringify(part, null, 2))
+        return true
+      },
+      catch: () => false as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }
 
+/** Find all message IDs in a session that have no meaningful content. */
 export function findEmptyMessages(sessionID: string): string[] {
   const messages = readMessages(sessionID)
   const emptyIds: string[] = []
@@ -131,6 +151,7 @@ export function findEmptyMessages(sessionID: string): string[] {
   return emptyIds
 }
 
+/** Find an empty message near the target index (tries ±5 to account for system messages). */
 export function findEmptyMessageByIndex(sessionID: string, targetIndex: number): string | null {
   const messages = readMessages(sessionID)
 
@@ -159,11 +180,13 @@ export function findEmptyMessageByIndex(sessionID: string, targetIndex: number):
   return null
 }
 
+/** Find the first empty message in a session, or `null` if all have content. */
 export function findFirstEmptyMessage(sessionID: string): string | null {
   const emptyIds = findEmptyMessages(sessionID)
   return emptyIds.length > 0 ? emptyIds[0] : null
 }
 
+/** Find all assistant messages that contain thinking/reasoning blocks. */
 export function findMessagesWithThinkingBlocks(sessionID: string): string[] {
   const messages = readMessages(sessionID)
   const result: string[] = []
@@ -181,6 +204,7 @@ export function findMessagesWithThinkingBlocks(sessionID: string): string[] {
   return result
 }
 
+/** Find assistant messages that only have thinking blocks and no text content. */
 export function findMessagesWithThinkingOnly(sessionID: string): string[] {
   const messages = readMessages(sessionID)
   const result: string[] = []
@@ -203,6 +227,7 @@ export function findMessagesWithThinkingOnly(sessionID: string): string[] {
   return result
 }
 
+/** Find assistant messages where thinking is not the first part (orphan thinking). */
 export function findMessagesWithOrphanThinking(sessionID: string): string[] {
   const messages = readMessages(sessionID)
   const result: string[] = []
@@ -267,6 +292,7 @@ function findLastThinkingContent(sessionID: string, beforeMessageID: string): st
   return ""
 }
 
+/** Prepend a synthetic thinking part to a message (uses content from prior turns). */
 export function prependThinkingPart(sessionID: string, messageID: string): boolean {
   const partDir = join(PART_STORAGE, messageID)
 
@@ -287,14 +313,18 @@ export function prependThinkingPart(sessionID: string, messageID: string): boole
     synthetic: true,
   }
 
-  try {
-    writeFileSync(join(partDir, `${partId}.json`), JSON.stringify(part, null, 2))
-    return true
-  } catch {
-    return false
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        writeFileSync(join(partDir, `${partId}.json`), JSON.stringify(part, null, 2))
+        return true
+      },
+      catch: () => false as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }
 
+/** Remove all thinking/reasoning parts from a message. Returns true if any were removed. */
 export function stripThinkingParts(messageID: string): boolean {
   const partDir = join(PART_STORAGE, messageID)
   if (!existsSync(partDir)) return false
@@ -302,22 +332,28 @@ export function stripThinkingParts(messageID: string): boolean {
   let anyRemoved = false
   for (const file of readdirSync(partDir)) {
     if (!file.endsWith(".json")) continue
-    try {
-      const filePath = join(partDir, file)
-      const content = readFileSync(filePath, "utf-8")
-      const part = JSON.parse(content) as StoredPart
-      if (THINKING_TYPES.has(part.type)) {
-        unlinkSync(filePath)
-        anyRemoved = true
-      }
-    } catch {
-      continue
-    }
+    const result = Effect.runSync(
+      Effect.try({
+        try: () => {
+          const filePath = join(partDir, file)
+          const content = readFileSync(filePath, "utf-8")
+          const part = JSON.parse(content) as StoredPart
+          if (THINKING_TYPES.has(part.type)) {
+            unlinkSync(filePath)
+            return true
+          }
+          return false
+        },
+        catch: () => false as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
+    if (result) anyRemoved = true
   }
 
   return anyRemoved
 }
 
+/** Replace empty text parts in a message with the given replacement text. */
 export function replaceEmptyTextParts(messageID: string, replacementText: string): boolean {
   const partDir = join(PART_STORAGE, messageID)
   if (!existsSync(partDir)) return false
@@ -325,28 +361,34 @@ export function replaceEmptyTextParts(messageID: string, replacementText: string
   let anyReplaced = false
   for (const file of readdirSync(partDir)) {
     if (!file.endsWith(".json")) continue
-    try {
-      const filePath = join(partDir, file)
-      const content = readFileSync(filePath, "utf-8")
-      const part = JSON.parse(content) as StoredPart
+    const result = Effect.runSync(
+      Effect.try({
+        try: () => {
+          const filePath = join(partDir, file)
+          const content = readFileSync(filePath, "utf-8")
+          const part = JSON.parse(content) as StoredPart
 
-      if (part.type === "text") {
-        const textPart = part as StoredTextPart
-        if (!textPart.text?.trim()) {
-          textPart.text = replacementText
-          textPart.synthetic = true
-          writeFileSync(filePath, JSON.stringify(textPart, null, 2))
-          anyReplaced = true
-        }
-      }
-    } catch {
-      continue
-    }
+          if (part.type === "text") {
+            const textPart = part as StoredTextPart
+            if (!textPart.text?.trim()) {
+              textPart.text = replacementText
+              textPart.synthetic = true
+              writeFileSync(filePath, JSON.stringify(textPart, null, 2))
+              return true
+            }
+          }
+          return false
+        },
+        catch: () => false as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
+    if (result) anyReplaced = true
   }
 
   return anyReplaced
 }
 
+/** Find all messages in a session that contain empty (whitespace-only) text parts. */
 export function findMessagesWithEmptyTextParts(sessionID: string): string[] {
   const messages = readMessages(sessionID)
   const result: string[] = []
@@ -367,6 +409,7 @@ export function findMessagesWithEmptyTextParts(sessionID: string): string[] {
   return result
 }
 
+/** Find an assistant message at the given index that needs a thinking block prepended. */
 export function findMessageByIndexNeedingThinking(sessionID: string, targetIndex: number): string | null {
   const messages = readMessages(sessionID)
 
