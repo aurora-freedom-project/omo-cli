@@ -1,16 +1,18 @@
 import { createRequire } from "module"
 import { dirname, join } from "path"
 import { existsSync, statSync } from "fs"
+import { Effect } from "effect"
 import { getCachedBinaryPath } from "./downloader"
 
 type Platform = "darwin" | "linux" | "win32" | "unsupported"
 
 function isValidBinary(filePath: string): boolean {
-  try {
-    return statSync(filePath).size > 10000
-  } catch {
-    return false
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => statSync(filePath).size > 10000,
+      catch: () => false as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+  )
 }
 
 function getPlatformPackageName(): string | null {
@@ -38,34 +40,38 @@ export function findSgCliPathSync(): string | null {
     return cachedPath
   }
 
-  try {
-    const require = createRequire(import.meta.url)
-    const cliPkgPath = require.resolve("@ast-grep/cli/package.json")
-    const cliDir = dirname(cliPkgPath)
-    const sgPath = join(cliDir, binaryName)
-
-    if (existsSync(sgPath) && isValidBinary(sgPath)) {
-      return sgPath
-    }
-  } catch {
-    // @ast-grep/cli not installed
-  }
+  const cliResult = Effect.runSync(
+    Effect.try({
+      try: () => {
+        const require = createRequire(import.meta.url)
+        const cliPkgPath = require.resolve("@ast-grep/cli/package.json")
+        const cliDir = dirname(cliPkgPath)
+        const sgPath = join(cliDir, binaryName)
+        if (existsSync(sgPath) && isValidBinary(sgPath)) return sgPath
+        return null
+      },
+      catch: () => null as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
+  if (cliResult) return cliResult
 
   const platformPkg = getPlatformPackageName()
   if (platformPkg) {
-    try {
-      const require = createRequire(import.meta.url)
-      const pkgPath = require.resolve(`${platformPkg}/package.json`)
-      const pkgDir = dirname(pkgPath)
-      const astGrepName = process.platform === "win32" ? "ast-grep.exe" : "ast-grep"
-      const binaryPath = join(pkgDir, astGrepName)
-
-      if (existsSync(binaryPath) && isValidBinary(binaryPath)) {
-        return binaryPath
-      }
-    } catch {
-      // Platform-specific package not installed
-    }
+    const platformResult = Effect.runSync(
+      Effect.try({
+        try: () => {
+          const require = createRequire(import.meta.url)
+          const pkgPath = require.resolve(`${platformPkg}/package.json`)
+          const pkgDir = dirname(pkgPath)
+          const astGrepName = process.platform === "win32" ? "ast-grep.exe" : "ast-grep"
+          const binaryPath = join(pkgDir, astGrepName)
+          if (existsSync(binaryPath) && isValidBinary(binaryPath)) return binaryPath
+          return null
+        },
+        catch: () => null as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+    )
+    if (platformResult) return platformResult
   }
 
   if (process.platform === "darwin") {
@@ -196,30 +202,38 @@ export function checkEnvironment(): EnvironmentCheckResult {
   if (existsSync(cliPath)) {
     result.cli.available = true
   } else if (cliPath === "sg") {
-    try {
-      const { spawnSync } = require("child_process")
-      const whichResult = spawnSync(process.platform === "win32" ? "where" : "which", ["sg"], {
-        encoding: "utf-8",
-        timeout: 5000,
-      })
-      result.cli.available = whichResult.status === 0 && !!whichResult.stdout?.trim()
-      if (!result.cli.available) {
-        result.cli.error = "sg binary not found in PATH"
-      }
-    } catch {
-      result.cli.error = "Failed to check sg availability"
+    const cliAvailable = Effect.runSync(
+      Effect.try({
+        try: () => {
+          const { spawnSync } = require("child_process")
+          const whichResult = spawnSync(process.platform === "win32" ? "where" : "which", ["sg"], {
+            encoding: "utf-8",
+            timeout: 5000,
+          })
+          return whichResult.status === 0 && !!whichResult.stdout?.trim()
+        },
+        catch: () => false as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
+    result.cli.available = cliAvailable
+    if (!cliAvailable) {
+      result.cli.error = "sg binary not found in PATH"
     }
   } else {
     result.cli.error = `Binary not found: ${cliPath}`
   }
 
-  // Check NAPI availability
-  try {
-    require("@ast-grep/napi")
+  const napiResult = Effect.runSync(
+    Effect.try({
+      try: () => { require("@ast-grep/napi"); return true },
+      catch: (e) => ({ available: false, error: `@ast-grep/napi not installed: ${e instanceof Error ? e.message : String(e)}` }) as never
+    }).pipe(Effect.catchAll((info) => Effect.succeed(info)))
+  )
+  if (napiResult === true) {
     result.napi.available = true
-  } catch (e) {
+  } else if (typeof napiResult === "object") {
     result.napi.available = false
-    result.napi.error = `@ast-grep/napi not installed: ${e instanceof Error ? e.message : String(e)}`
+    result.napi.error = (napiResult as { error: string }).error
   }
 
   return result

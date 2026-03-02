@@ -1,6 +1,7 @@
 import { tool, type ToolDefinition } from "@opencode-ai/plugin"
 import { existsSync, readdirSync, readFileSync } from "fs"
 import { join, basename, dirname } from "path"
+import { Effect } from "effect"
 import { parseFrontmatter, resolveCommandsInText, resolveFileReferencesInText, sanitizeModelField, getOpenCodeConfigDir } from "../../shared"
 import type { CommandFrontmatter } from "../../features/claude-code-command-loader/types"
 import { isMarkdownFile } from "../../shared/file-utils"
@@ -23,29 +24,29 @@ function discoverCommandsFromDir(commandsDir: string, scope: CommandScope): Comm
     const commandPath = join(commandsDir, entry.name)
     const commandName = basename(entry.name, ".md")
 
-    try {
-      const content = readFileSync(commandPath, "utf-8")
-      const { data, body } = parseFrontmatter<CommandFrontmatter>(content)
+    const result = Effect.runSync(
+      Effect.try({
+        try: () => {
+          const content = readFileSync(commandPath, "utf-8")
+          const { data, body } = parseFrontmatter<CommandFrontmatter>(content)
 
-      const isOpencodeSource = scope === "opencode" || scope === "opencode-project"
-      const metadata: CommandMetadata = {
-        name: commandName,
-        description: data.description || "",
-        argumentHint: data["argument-hint"],
-        model: sanitizeModelField(data.model, isOpencodeSource ? "opencode" : "claude-code"),
-        agent: data.agent,
-        subtask: Boolean(data.subtask),
-      }
+          const isOpencodeSource = scope === "opencode" || scope === "opencode-project"
+          const metadata: CommandMetadata = {
+            name: commandName,
+            description: data.description || "",
+            argumentHint: data["argument-hint"],
+            model: sanitizeModelField(data.model, isOpencodeSource ? "opencode" : "claude-code"),
+            agent: data.agent,
+            subtask: Boolean(data.subtask),
+          }
 
-      commands.push({
-        name: commandName,
-        path: commandPath,
-        metadata,
-        content: body,
-        scope,
-      })
-    } catch {
-      continue
+          return { name: commandName, path: commandPath, metadata, content: body, scope } as CommandInfo
+        },
+        catch: () => null as never
+      }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+    )
+    if (result) {
+      commands.push(result)
     }
   }
 

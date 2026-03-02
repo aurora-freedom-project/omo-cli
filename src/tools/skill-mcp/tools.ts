@@ -1,4 +1,5 @@
 import { tool, type ToolDefinition } from "@opencode-ai/plugin"
+import { Effect } from "effect"
 import { SKILL_MCP_DESCRIPTION } from "./constants"
 import type { SkillMcpArgs } from "./types"
 import type { SkillMcpManager, SkillMcpClientInfo, SkillMcpServerContext } from "../../features/skill-mcp-manager"
@@ -21,10 +22,10 @@ function validateOperationParams(args: SkillMcpArgs): OperationType {
   if (operations.length === 0) {
     throw new Error(
       `Missing operation. Exactly one of tool_name, resource_name, or prompt_name must be specified.\n\n` +
-        `Examples:\n` +
-        `  skill_mcp(mcp_name="sqlite", tool_name="query", arguments='{"sql": "SELECT * FROM users"}')\n` +
-        `  skill_mcp(mcp_name="memory", resource_name="memory://notes")\n` +
-        `  skill_mcp(mcp_name="helper", prompt_name="summarize", arguments='{"text": "..."}')`,
+      `Examples:\n` +
+      `  skill_mcp(mcp_name="sqlite", tool_name="query", arguments='{"sql": "SELECT * FROM users"}')\n` +
+      `  skill_mcp(mcp_name="memory", resource_name="memory://notes")\n` +
+      `  skill_mcp(mcp_name="helper", prompt_name="summarize", arguments='{"text": "..."}')`,
     )
   }
 
@@ -39,8 +40,8 @@ function validateOperationParams(args: SkillMcpArgs): OperationType {
 
     throw new Error(
       `Multiple operations specified. Exactly one of tool_name, resource_name, or prompt_name must be provided.\n\n` +
-        `Received: ${provided}\n\n` +
-        `Use separate calls for each operation.`,
+      `Received: ${provided}\n\n` +
+      `Use separate calls for each operation.`,
     )
   }
 
@@ -89,22 +90,25 @@ function parseArguments(argsJson: string | Record<string, unknown> | undefined):
     const errorMessage = error instanceof Error ? error.message : String(error)
     throw new Error(
       `Invalid arguments JSON: ${errorMessage}\n\n` +
-        `Expected a valid JSON object, e.g.: '{"key": "value"}'\n` +
-        `Received: ${argsJson}`,
+      `Expected a valid JSON object, e.g.: '{"key": "value"}'\n` +
+      `Received: ${argsJson}`,
     )
   }
 }
 
 export function applyGrepFilter(output: string, pattern: string | undefined): string {
   if (!pattern) return output
-  try {
-    const regex = new RegExp(pattern, "i")
-    const lines = output.split("\n")
-    const filtered = lines.filter((line) => regex.test(line))
-    return filtered.length > 0 ? filtered.join("\n") : `[grep] No lines matched pattern: ${pattern}`
-  } catch {
-    return output
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const regex = new RegExp(pattern, "i")
+        const lines = output.split("\n")
+        const filtered = lines.filter((line) => regex.test(line))
+        return filtered.length > 0 ? filtered.join("\n") : `[grep] No lines matched pattern: ${pattern}`
+      },
+      catch: () => output as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(output)))
+  )
 }
 
 export function createSkillMcpTool(options: SkillMcpToolOptions): ToolDefinition {
@@ -134,10 +138,10 @@ export function createSkillMcpTool(options: SkillMcpToolOptions): ToolDefinition
       if (!found) {
         throw new Error(
           `MCP server "${args.mcp_name}" not found.\n\n` +
-            `Available MCP servers in loaded skills:\n` +
-            formatAvailableMcps(skills) +
-            `\n\n` +
-            `Hint: Load the skill first using the 'skill' tool, then call skill_mcp.`,
+          `Available MCP servers in loaded skills:\n` +
+          formatAvailableMcps(skills) +
+          `\n\n` +
+          `Hint: Load the skill first using the 'skill' tool, then call skill_mcp.`,
         )
       }
 

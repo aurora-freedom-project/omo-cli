@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
+import { Effect } from "effect"
 import { MESSAGE_STORAGE, PART_STORAGE, SESSION_STORAGE, TODO_DIR, TRANSCRIPT_DIR } from "./constants"
 import type { SessionMessage, SessionInfo, TodoItem, SessionMetadata } from "./types"
 
@@ -13,36 +14,39 @@ export async function getMainSessions(options: GetMainSessionsOptions): Promise<
 
   const sessions: SessionMetadata[] = []
 
-  try {
-    const projectDirs = await readdir(SESSION_STORAGE, { withFileTypes: true })
-    for (const projectDir of projectDirs) {
-      if (!projectDir.isDirectory()) continue
+  return await Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const projectDirs = await readdir(SESSION_STORAGE, { withFileTypes: true })
+        for (const projectDir of projectDirs) {
+          if (!projectDir.isDirectory()) continue
 
-      const projectPath = join(SESSION_STORAGE, projectDir.name)
-      const sessionFiles = await readdir(projectPath)
+          const projectPath = join(SESSION_STORAGE, projectDir.name)
+          const sessionFiles = await readdir(projectPath)
 
-      for (const file of sessionFiles) {
-        if (!file.endsWith(".json")) continue
+          for (const file of sessionFiles) {
+            if (!file.endsWith(".json")) continue
 
-        try {
-          const content = await readFile(join(projectPath, file), "utf-8")
-          const meta = JSON.parse(content) as SessionMetadata
-
-          if (meta.parentID) continue
-
-          if (options.directory && meta.directory !== options.directory) continue
-
-          sessions.push(meta)
-        } catch {
-          continue
+            const meta = await Effect.runPromise(
+              Effect.tryPromise({
+                try: async () => {
+                  const content = await readFile(join(projectPath, file), "utf-8")
+                  return JSON.parse(content) as SessionMetadata
+                },
+                catch: () => null as never
+              }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+            )
+            if (!meta) continue
+            if (meta.parentID) continue
+            if (options.directory && meta.directory !== options.directory) continue
+            sessions.push(meta)
+          }
         }
-      }
-    }
-  } catch {
-    return []
-  }
-
-  return sessions.sort((a, b) => b.time.updated - a.time.updated)
+        return sessions.sort((a, b) => b.time.updated - a.time.updated)
+      },
+      catch: () => [] as SessionMetadata[] as never
+    }).pipe(Effect.catchAll(() => Effect.succeed([] as SessionMetadata[])))
+  )
 }
 
 export async function getAllSessions(): Promise<string[]> {
@@ -51,22 +55,25 @@ export async function getAllSessions(): Promise<string[]> {
   const sessions: string[] = []
 
   async function scanDirectory(dir: string): Promise<void> {
-    try {
-      const entries = await readdir(dir, { withFileTypes: true })
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const sessionPath = join(dir, entry.name)
-          const files = await readdir(sessionPath)
-          if (files.some((f) => f.endsWith(".json"))) {
-            sessions.push(entry.name)
-          } else {
-            await scanDirectory(sessionPath)
+    await Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const entries = await readdir(dir, { withFileTypes: true })
+          for (const entry of entries) {
+            if (entry.isDirectory()) {
+              const sessionPath = join(dir, entry.name)
+              const files = await readdir(sessionPath)
+              if (files.some((f) => f.endsWith(".json"))) {
+                sessions.push(entry.name)
+              } else {
+                await scanDirectory(sessionPath)
+              }
+            }
           }
-        }
-      }
-    } catch {
-      return
-    }
+        },
+        catch: () => undefined as never
+      }).pipe(Effect.catchAll(() => Effect.void))
+    )
   }
 
   await scanDirectory(MESSAGE_STORAGE)
@@ -81,16 +88,20 @@ export function getMessageDir(sessionID: string): string {
     return directPath
   }
 
-  try {
-    for (const dir of readdirSync(MESSAGE_STORAGE)) {
-      const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-      if (existsSync(sessionPath)) {
-        return sessionPath
-      }
-    }
-  } catch {
-    return ""
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        for (const dir of readdirSync(MESSAGE_STORAGE)) {
+          const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
+          if (existsSync(sessionPath)) {
+            return sessionPath
+          }
+        }
+        return ""
+      },
+      catch: () => "" as never
+    }).pipe(Effect.catchAll(() => Effect.succeed("")))
+  )
 
   return ""
 }
@@ -104,90 +115,107 @@ export async function readSessionMessages(sessionID: string): Promise<SessionMes
   if (!messageDir || !existsSync(messageDir)) return []
 
   const messages: SessionMessage[] = []
-  try {
-    const files = await readdir(messageDir)
-    for (const file of files) {
-      if (!file.endsWith(".json")) continue
-      try {
-        const content = await readFile(join(messageDir, file), "utf-8")
-        const meta = JSON.parse(content)
-
-        const parts = await readParts(meta.id)
-
-        messages.push({
-          id: meta.id,
-          role: meta.role,
-          agent: meta.agent,
-          time: meta.time,
-          parts,
+  return await Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const files = await readdir(messageDir)
+        for (const file of files) {
+          if (!file.endsWith(".json")) continue
+          const msg = await Effect.runPromise(
+            Effect.tryPromise({
+              try: async () => {
+                const content = await readFile(join(messageDir, file), "utf-8")
+                const meta = JSON.parse(content)
+                const parts = await readParts(meta.id)
+                return {
+                  id: meta.id,
+                  role: meta.role,
+                  agent: meta.agent,
+                  time: meta.time,
+                  parts,
+                } as SessionMessage
+              },
+              catch: () => null as never
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+          )
+          if (msg) messages.push(msg)
+        }
+        return messages.sort((a, b) => {
+          const aTime = a.time?.created ?? 0
+          const bTime = b.time?.created ?? 0
+          if (aTime !== bTime) return aTime - bTime
+          return a.id.localeCompare(b.id)
         })
-      } catch {
-        continue
-      }
-    }
-  } catch {
-    return []
-  }
-
-  return messages.sort((a, b) => {
-    const aTime = a.time?.created ?? 0
-    const bTime = b.time?.created ?? 0
-    if (aTime !== bTime) return aTime - bTime
-    return a.id.localeCompare(b.id)
-  })
+      },
+      catch: () => [] as SessionMessage[] as never
+    }).pipe(Effect.catchAll(() => Effect.succeed([] as SessionMessage[])))
+  )
 }
 
-async function readParts(messageID: string): Promise<Array<{ id: string; type: string; [key: string]: unknown }>> {
+async function readParts(messageID: string): Promise<Array<{ id: string; type: string;[key: string]: unknown }>> {
   const partDir = join(PART_STORAGE, messageID)
   if (!existsSync(partDir)) return []
 
-  const parts: Array<{ id: string; type: string; [key: string]: unknown }> = []
-  try {
-    const files = await readdir(partDir)
-    for (const file of files) {
-      if (!file.endsWith(".json")) continue
-      try {
-        const content = await readFile(join(partDir, file), "utf-8")
-        parts.push(JSON.parse(content))
-      } catch {
-        continue
-      }
-    }
-  } catch {
-    return []
-  }
-
-  return parts.sort((a, b) => a.id.localeCompare(b.id))
+  const parts: Array<{ id: string; type: string;[key: string]: unknown }> = []
+  return await Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const files = await readdir(partDir)
+        for (const file of files) {
+          if (!file.endsWith(".json")) continue
+          const part = await Effect.runPromise(
+            Effect.tryPromise({
+              try: async () => {
+                const content = await readFile(join(partDir, file), "utf-8")
+                return JSON.parse(content) as { id: string; type: string;[key: string]: unknown }
+              },
+              catch: () => null as never
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+          )
+          if (part) parts.push(part)
+        }
+        return parts.sort((a, b) => a.id.localeCompare(b.id))
+      },
+      catch: () => [] as Array<{ id: string; type: string;[key: string]: unknown }> as never
+    }).pipe(Effect.catchAll(() => Effect.succeed([] as Array<{ id: string; type: string;[key: string]: unknown }>)))
+  )
 }
 
 export async function readSessionTodos(sessionID: string): Promise<TodoItem[]> {
   if (!existsSync(TODO_DIR)) return []
 
-  try {
-    const allFiles = await readdir(TODO_DIR)
-    const todoFiles = allFiles.filter((f) => f.includes(sessionID) && f.endsWith(".json"))
+  return await Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const allFiles = await readdir(TODO_DIR)
+        const todoFiles = allFiles.filter((f) => f.includes(sessionID) && f.endsWith(".json"))
 
-    for (const file of todoFiles) {
-      try {
-        const content = await readFile(join(TODO_DIR, file), "utf-8")
-        const data = JSON.parse(content)
-        if (Array.isArray(data)) {
-          return data.map((item) => ({
-            id: item.id || "",
-            content: item.content || "",
-            status: item.status || "pending",
-            priority: item.priority,
-          }))
+        for (const file of todoFiles) {
+          const items = await Effect.runPromise(
+            Effect.tryPromise({
+              try: async () => {
+                const content = await readFile(join(TODO_DIR, file), "utf-8")
+                const data = JSON.parse(content)
+                if (Array.isArray(data)) {
+                  return data.map((item) => ({
+                    id: item.id || "",
+                    content: item.content || "",
+                    status: item.status || "pending",
+                    priority: item.priority,
+                  })) as TodoItem[]
+                }
+                return null
+              },
+              catch: () => null as never
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+          )
+          if (items) return items
         }
-      } catch {
-        continue
-      }
-    }
-  } catch {
-    return []
-  }
-
-  return []
+        return [] as TodoItem[]
+      },
+      catch: () => [] as TodoItem[] as never
+    }).pipe(Effect.catchAll(() => Effect.succeed([] as TodoItem[])))
+  )
 }
 
 export async function readSessionTranscript(sessionID: string): Promise<number> {
@@ -196,12 +224,15 @@ export async function readSessionTranscript(sessionID: string): Promise<number> 
   const transcriptFile = join(TRANSCRIPT_DIR, `${sessionID}.jsonl`)
   if (!existsSync(transcriptFile)) return 0
 
-  try {
-    const content = await readFile(transcriptFile, "utf-8")
-    return content.trim().split("\n").filter(Boolean).length
-  } catch {
-    return 0
-  }
+  return await Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const content = await readFile(transcriptFile, "utf-8")
+        return content.trim().split("\n").filter(Boolean).length
+      },
+      catch: () => 0 as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(0)))
+  )
 }
 
 export async function getSessionInfo(sessionID: string): Promise<SessionInfo | null> {

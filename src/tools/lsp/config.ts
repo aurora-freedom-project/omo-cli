@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "fs"
 import { join } from "path"
+import { Effect } from "effect"
 import { BUILTIN_SERVERS, EXT_TO_LANG, LSP_INSTALL_HINTS } from "./constants"
 import type { ResolvedServer, ServerLookupResult } from "./types"
 import { getOpenCodeConfigDir, getDataDir } from "../../shared"
@@ -25,11 +26,12 @@ interface ServerWithSource extends ResolvedServer {
 
 function loadJsonFile<T>(path: string): T | null {
   if (!existsSync(path)) return null
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as T
-  } catch {
-    return null
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => JSON.parse(readFileSync(path, "utf-8")) as T,
+      catch: () => null as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
 }
 
 function getConfigPaths(): { project: string; user: string; opencode: string } {
@@ -171,15 +173,15 @@ export function isServerInstalled(command: string[]): boolean {
   }
 
   const isWindows = process.platform === "win32"
-  
+
   let exts = [""]
   if (isWindows) {
     const pathExt = process.env.PATHEXT || ""
     if (pathExt) {
-       const systemExts = pathExt.split(";").filter(Boolean)
-       exts = [...new Set([...exts, ...systemExts, ".exe", ".cmd", ".bat", ".ps1"])]
+      const systemExts = pathExt.split(";").filter(Boolean)
+      exts = [...new Set([...exts, ...systemExts, ".exe", ".cmd", ".bat", ".ps1"])]
     } else {
-       exts = ["", ".exe", ".cmd", ".bat", ".ps1"]
+      exts = ["", ".exe", ".cmd", ".bat", ".ps1"]
     }
   }
 
@@ -187,7 +189,7 @@ export function isServerInstalled(command: string[]): boolean {
   if (isWindows && !pathEnv) {
     pathEnv = process.env.Path || ""
   }
-  
+
   const pathSeparator = isWindows ? ";" : ":"
   const paths = pathEnv.split(pathSeparator)
 

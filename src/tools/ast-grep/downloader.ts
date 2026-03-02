@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, chmodSync, unlinkSync } from "fs"
 import { join } from "path"
-import { homedir } from "os"
 import { createRequire } from "module"
+import { Effect } from "effect"
 import { extractZip } from "../../shared"
+import { getOmoCliBinDir } from "../../shared/data-path"
 
 const REPO = "ast-grep/ast-grep"
 
@@ -11,13 +12,16 @@ const REPO = "ast-grep/ast-grep"
 const DEFAULT_VERSION = "0.40.0"
 
 function getAstGrepVersion(): string {
-  try {
-    const require = createRequire(import.meta.url)
-    const pkg = require("@ast-grep/cli/package.json")
-    return pkg.version
-  } catch {
-    return DEFAULT_VERSION
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const require = createRequire(import.meta.url)
+        const pkg = require("@ast-grep/cli/package.json")
+        return pkg.version as string
+      },
+      catch: () => DEFAULT_VERSION as never
+    }).pipe(Effect.catchAll(() => Effect.succeed(DEFAULT_VERSION)))
+  )
 }
 
 interface PlatformInfo {
@@ -35,17 +39,8 @@ const PLATFORM_MAP: Record<string, PlatformInfo> = {
   "win32-ia32": { arch: "i686", os: "pc-windows-msvc" },
 }
 
-export function getCacheDir(): string {
-  if (process.platform === "win32") {
-    const localAppData = process.env.LOCALAPPDATA || process.env.APPDATA
-    const base = localAppData || join(homedir(), "AppData", "Local")
-    return join(base, "omo-cli", "bin")
-  }
-
-  const xdgCache = process.env.XDG_CACHE_HOME
-  const base = xdgCache || join(homedir(), ".cache")
-  return join(base, "omo-cli", "bin")
-}
+/** @deprecated Use `getOmoCliBinDir` from `shared/data-path.ts` directly */
+export const getCacheDir = getOmoCliBinDir
 
 export function getBinaryName(): string {
   return process.platform === "win32" ? "sg.exe" : "sg"
