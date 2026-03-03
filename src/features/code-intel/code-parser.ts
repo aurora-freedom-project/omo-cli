@@ -1,5 +1,6 @@
 import { spawnSync } from "child_process"
 import { createHash } from "crypto"
+import { Effect } from "effect"
 import { readFileSync } from "fs"
 import { basename, extname } from "path"
 import { getSgCliPath, LANG_EXTENSIONS } from "../../tools/ast-grep/constants"
@@ -67,24 +68,29 @@ function runSgPattern(
     lang: string,
     filePath: string
 ): SgJsonMatch[] {
-    try {
-        const result = spawnSync(
-            sgPath,
-            ["run", "-p", pattern, "--lang", lang, "--json=compact", filePath],
-            {
-                encoding: "utf-8",
-                timeout: 30000,
-                maxBuffer: 5 * 1024 * 1024,
-            }
-        )
+    return Effect.runSync(
+        Effect.try({
+            try: () => {
+                const result = spawnSync(
+                    sgPath,
+                    ["run", "-p", pattern, "--lang", lang, "--json=compact", filePath],
+                    {
+                        encoding: "utf-8",
+                        timeout: 30000,
+                        maxBuffer: 5 * 1024 * 1024,
+                    }
+                )
 
-        if (!result.stdout?.trim()) return []
+                if (!result.stdout?.trim()) return []
 
-        return JSON.parse(result.stdout) as SgJsonMatch[]
-    } catch (err) {
-        log("[code-parser] sg pattern failed", { pattern, lang, filePath, err })
-        return []
-    }
+                return JSON.parse(result.stdout) as SgJsonMatch[]
+            },
+            catch: (err) => err,
+        }).pipe(Effect.catchAll((err) => {
+            log("[code-parser] sg pattern failed", { pattern, lang, filePath, err })
+            return Effect.succeed([] as SgJsonMatch[])
+        }))
+    )
 }
 
 // ---------------------------------------------------------------------------

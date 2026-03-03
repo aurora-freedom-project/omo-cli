@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { log } from "../../shared/logger"
 import { ensureSurrealDBRunning } from "../../cli/memory/docker-manager"
 import { isConnected, initSchema, getIndexedFiles, configureSurreal } from "../../cli/memory/surreal-client"
@@ -49,13 +50,19 @@ async function autoInitBackground(projectDir: string, config: MemoryConfig): Pro
 
     // Step 1: Ensure SurrealDB is running
     log("[code-intel-auto] Checking SurrealDB availability...")
-    try {
-        await ensureSurrealDBRunning(config)
-    } catch (err) {
-        // Docker not installed or container failed — log and bail silently
-        log("[code-intel-auto] SurrealDB not available, code-intel disabled", { err: String(err) })
-        return
-    }
+    const surrealCheck = await Effect.runPromise(
+        Effect.tryPromise({
+            try: async () => {
+                await ensureSurrealDBRunning(config)
+                return true
+            },
+            catch: (err) => err,
+        }).pipe(Effect.catchAll((err) => {
+            log("[code-intel-auto] SurrealDB not available, code-intel disabled", { err: String(err) })
+            return Effect.succeed(false)
+        }))
+    )
+    if (!surrealCheck) return
 
     // Step 2: Configure connection (same pattern as memory-tools)
     const port = config.port ?? 18000
@@ -85,7 +92,7 @@ async function autoInitBackground(projectDir: string, config: MemoryConfig): Pro
     }
     await initSchema()
 
-    // Step 3: Check if index needed (fast git-based check)
+    // Step 3b: Check if index needed (fast git-based check)
     const needsIndex = await checkIfIndexNeeded(projectDir, project)
     if (!needsIndex) {
         log("[code-intel-auto] Index up-to-date, skipping")

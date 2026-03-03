@@ -1,10 +1,12 @@
 import { spawn } from "bun"
+import { Effect } from "effect"
 import { existsSync, mkdirSync, chmodSync, unlinkSync, appendFileSync } from "fs"
 import { join } from "path"
-import { homedir, tmpdir } from "os"
+import { tmpdir } from "os"
 import { createRequire } from "module"
 import { extractZip } from "../../shared"
 import { log } from "../../shared/logger"
+import { getOmoCliBinDir } from "../../shared/data-path"
 
 const DEBUG = process.env.COMMENT_CHECKER_DEBUG === "1"
 const DEBUG_FILE = join(tmpdir(), "comment-checker-debug.log")
@@ -37,17 +39,8 @@ const PLATFORM_MAP: Record<string, PlatformInfo> = {
  * On Windows: Uses %LOCALAPPDATA% or %APPDATA% (Windows conventions)
  * On Unix: Follows XDG Base Directory Specification
  */
-export function getCacheDir(): string {
-  if (process.platform === "win32") {
-    const localAppData = process.env.LOCALAPPDATA || process.env.APPDATA
-    const base = localAppData || join(homedir(), "AppData", "Local")
-    return join(base, "omo-cli", "bin")
-  }
-
-  const xdgCache = process.env.XDG_CACHE_HOME
-  const base = xdgCache || join(homedir(), ".cache")
-  return join(base, "omo-cli", "bin")
-}
+/** @deprecated Use `getOmoCliBinDir` from `shared/data-path.ts` directly */
+export const getCacheDir = getOmoCliBinDir
 
 /**
  * Get the binary name based on platform.
@@ -68,14 +61,16 @@ export function getCachedBinaryPath(): string | null {
  * Get the version from the installed @code-yeongyu/comment-checker package.
  */
 function getPackageVersion(): string {
-  try {
-    const require = createRequire(import.meta.url)
-    const pkg = require("@code-yeongyu/comment-checker/package.json")
-    return pkg.version
-  } catch {
-    // Fallback to hardcoded version if package not found
-    return "0.4.1"
-  }
+  const require = createRequire(import.meta.url)
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const pkg = require("@code-yeongyu/comment-checker/package.json")
+        return pkg.version as string
+      },
+      catch: () => "0.4.1" as never,
+    }).pipe(Effect.catchAll(() => Effect.succeed("0.4.1")))
+  )
 }
 
 /**

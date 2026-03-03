@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { Effect } from "effect";
 import { OmoCliConfigSchema, type OmoCliConfig } from "./config";
 import {
   log,
@@ -15,36 +16,42 @@ export function loadConfigFromPath(
   configPath: string,
   ctx: unknown
 ): OmoCliConfig | null {
-  try {
-    if (fs.existsSync(configPath)) {
-      const content = fs.readFileSync(configPath, "utf-8");
-      const rawConfig = parseJsonc<Record<string, unknown>>(content);
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        if (fs.existsSync(configPath)) {
+          const content = fs.readFileSync(configPath, "utf-8");
+          const rawConfig = parseJsonc<Record<string, unknown>>(content);
 
-      migrateConfigFile(configPath, rawConfig);
+          migrateConfigFile(configPath, rawConfig);
 
-      const result = OmoCliConfigSchema.safeParse(rawConfig);
+          const result = OmoCliConfigSchema.safeParse(rawConfig);
 
-      if (!result.success) {
-        const errorMsg = result.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join(", ");
-        log(`Config validation error in ${configPath}:`, result.error.issues);
-        addConfigLoadError({
-          path: configPath,
-          error: `Validation error: ${errorMsg}`,
-        });
+          if (!result.success) {
+            const errorMsg = result.error.issues
+              .map((i) => `${i.path.join(".")}: ${i.message}`)
+              .join(", ");
+            log(`Config validation error in ${configPath}:`, result.error.issues);
+            addConfigLoadError({
+              path: configPath,
+              error: `Validation error: ${errorMsg}`,
+            });
+            return null;
+          }
+
+          log(`Config loaded from ${configPath}`, { agents: result.data.agents });
+          return result.data;
+        }
         return null;
-      }
-
-      log(`Config loaded from ${configPath}`, { agents: result.data.agents });
-      return result.data;
-    }
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    log(`Error loading config from ${configPath}:`, err);
-    addConfigLoadError({ path: configPath, error: errorMsg });
-  }
-  return null;
+      },
+      catch: (err) => err,
+    }).pipe(Effect.catchAll((err) => {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      log(`Error loading config from ${configPath}:`, err);
+      addConfigLoadError({ path: configPath, error: errorMsg });
+      return Effect.succeed(null);
+    }))
+  );
 }
 
 export function mergeConfigs(
