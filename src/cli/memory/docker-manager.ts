@@ -3,6 +3,7 @@ import { execSync, spawnSync } from "child_process"
 import { join } from "path"
 import { homedir } from "os"
 import { existsSync } from "fs"
+import { Effect } from "effect"
 import type { MemoryConfig } from "../../config/schema"
 
 export type SurrealDBStatus = "running" | "stopped" | "not_installed"
@@ -35,57 +36,66 @@ function findComposeFile(): string | null {
 }
 
 function isDockerInstalled(): boolean {
-    try {
-        spawnSync("docker", ["--version"], { stdio: "ignore" })
-        return true
-    } catch {
-        return false
-    }
+    return Effect.runSync(
+        Effect.try({
+            try: () => { spawnSync("docker", ["--version"], { stdio: "ignore" }); return true },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
 }
 
 function isDockerComposeInstalled(): boolean {
-    try {
-        spawnSync("docker", ["compose", "version"], { stdio: "ignore" })
-        return true
-    } catch {
-        return false
-    }
+    return Effect.runSync(
+        Effect.try({
+            try: () => { spawnSync("docker", ["compose", "version"], { stdio: "ignore" }); return true },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
 }
 
 function isContainerRunning(containerName = CONTAINER_NAME): boolean {
-    try {
-        const result = spawnSync(
-            "docker",
-            ["inspect", "--format", "{{.State.Running}}", containerName],
-            { encoding: "utf8" }
-        )
-        return result.stdout?.trim() === "true"
-    } catch {
-        return false
-    }
+    return Effect.runSync(
+        Effect.try({
+            try: () => {
+                const result = spawnSync(
+                    "docker",
+                    ["inspect", "--format", "{{.State.Running}}", containerName],
+                    { encoding: "utf8" }
+                )
+                return result.stdout?.trim() === "true"
+            },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
 }
 
 function doesContainerExist(containerName = CONTAINER_NAME): boolean {
-    try {
-        const result = spawnSync(
-            "docker",
-            ["inspect", "--format", "{{.Id}}", containerName],
-            { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
-        )
-        return result.status === 0 && (result.stdout?.trim().length ?? 0) > 0
-    } catch {
-        return false
-    }
+    return Effect.runSync(
+        Effect.try({
+            try: () => {
+                const result = spawnSync(
+                    "docker",
+                    ["inspect", "--format", "{{.Id}}", containerName],
+                    { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+                )
+                return result.status === 0 && (result.stdout?.trim().length ?? 0) > 0
+            },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
 }
 
 export async function isSurrealDBHealthy(port = DEFAULT_MANAGED_PORT): Promise<boolean> {
-    try {
-        const healthUrl = `http://127.0.0.1:${port}/health`
-        const res = await fetch(healthUrl, { signal: AbortSignal.timeout(3000) })
-        return res.ok
-    } catch {
-        return false
-    }
+    return Effect.runPromise(
+        Effect.tryPromise({
+            try: async () => {
+                const healthUrl = `http://127.0.0.1:${port}/health`
+                const res = await fetch(healthUrl, { signal: AbortSignal.timeout(3000) })
+                return res.ok
+            },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
 }
 
 export async function getSurrealDBStatus(config?: MemoryConfig): Promise<SurrealDBStatus> {
@@ -113,35 +123,36 @@ export async function detectExistingSurrealDB(): Promise<DiscoveredSurrealDB[]> 
 
     // 1. Check Docker containers with surrealdb image
     if (isDockerInstalled()) {
-        try {
-            const result = spawnSync(
-                "docker",
-                ["ps", "--filter", "ancestor=surrealdb/surrealdb", "--format", "{{.ID}}\t{{.Names}}\t{{.Ports}}"],
-                { encoding: "utf8" }
-            )
-            const lines = (result.stdout ?? "").trim().split("\n").filter(Boolean)
-            for (const line of lines) {
-                const [containerId, containerName, ports] = line.split("\t")
-                if (!containerId || !containerName) continue
-
-                // Skip our own managed container
-                if (containerName === CONTAINER_NAME) continue
-
-                // Parse port from Docker ports string like "0.0.0.0:8000->8000/tcp"
-                const portMatch = ports?.match(/0\.0\.0\.0:(\d+)->/)
-                const port = portMatch ? parseInt(portMatch[1], 10) : 8000
-
-                discovered.push({
-                    source: "docker-container",
-                    url: `http://127.0.0.1:${port}`,
-                    port,
-                    containerName,
-                    containerId,
-                })
-            }
-        } catch {
-            log("[docker-manager] Failed to scan Docker containers for SurrealDB")
-        }
+        Effect.runSync(
+            Effect.try({
+                try: () => {
+                    const result = spawnSync(
+                        "docker",
+                        ["ps", "--filter", "ancestor=surrealdb/surrealdb", "--format", "{{.ID}}\t{{.Names}}\t{{.Ports}}"],
+                        { encoding: "utf8" }
+                    )
+                    const lines = (result.stdout ?? "").trim().split("\n").filter(Boolean)
+                    for (const line of lines) {
+                        const [containerId, containerName, ports] = line.split("\t")
+                        if (!containerId || !containerName) continue
+                        if (containerName === CONTAINER_NAME) continue
+                        const portMatch = ports?.match(/0\.0\.0\.0:(\d+)->/)
+                        const port = portMatch ? parseInt(portMatch[1], 10) : 8000
+                        discovered.push({
+                            source: "docker-container",
+                            url: `http://127.0.0.1:${port}`,
+                            port,
+                            containerName,
+                            containerId,
+                        })
+                    }
+                },
+                catch: () => "fail" as const,
+            }).pipe(Effect.catchAll(() => {
+                log("[docker-manager] Failed to scan Docker containers for SurrealDB")
+                return Effect.void
+            }))
+        )
     }
 
     // 2. Probe common ports via /health
@@ -150,20 +161,23 @@ export async function detectExistingSurrealDB(): Promise<DiscoveredSurrealDB[]> 
 
     for (const port of probePorts) {
         if (alreadyFoundPorts.has(port)) continue
-        try {
-            const res = await fetch(`http://127.0.0.1:${port}/health`, {
-                signal: AbortSignal.timeout(2000),
-            })
-            if (res.ok) {
-                discovered.push({
-                    source: "network-service",
-                    url: `http://127.0.0.1:${port}`,
-                    port,
-                })
-            }
-        } catch {
-            // Port not responding — skip
-        }
+        await Effect.runPromise(
+            Effect.tryPromise({
+                try: async () => {
+                    const res = await fetch(`http://127.0.0.1:${port}/health`, {
+                        signal: AbortSignal.timeout(2000),
+                    })
+                    if (res.ok) {
+                        discovered.push({
+                            source: "network-service",
+                            url: `http://127.0.0.1:${port}`,
+                            port,
+                        })
+                    }
+                },
+                catch: () => "fail" as const,
+            }).pipe(Effect.catchAll(() => Effect.void))
+        )
     }
 
     log("[docker-manager] SurrealDB detection results", { count: discovered.length, discovered })
@@ -292,14 +306,20 @@ export async function resetSurrealDB(): Promise<void> {
     await stopSurrealDB()
 
     // Remove persisted data
-    try {
-        execSync(`rm -rf ${homedir()}/.config/opencode/omo-memory`, {
-            stdio: "ignore",
-        })
-        log("[docker-manager] omo-memory data cleared")
-    } catch {
-        log("[docker-manager] Could not clear omo-memory data")
-    }
+    Effect.runSync(
+        Effect.try({
+            try: () => {
+                execSync(`rm -rf ${homedir()}/.config/opencode/omo-memory`, {
+                    stdio: "ignore",
+                })
+                log("[docker-manager] omo-memory data cleared")
+            },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => {
+            log("[docker-manager] Could not clear omo-memory data")
+            return Effect.void
+        }))
+    )
 
     await ensureSurrealDBRunning()
 }

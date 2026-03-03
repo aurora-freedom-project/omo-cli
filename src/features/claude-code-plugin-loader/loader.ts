@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "fs"
 import { homedir } from "os"
 import { join, basename } from "path"
+import { Effect } from "effect"
 import type { AgentConfig } from "@opencode-ai/sdk"
 import { parseFrontmatter } from "../../shared/frontmatter"
 import { sanitizeModelField } from "../../shared/model-sanitizer"
@@ -67,13 +68,18 @@ function loadInstalledPlugins(): InstalledPluginsDatabase | null {
     return null
   }
 
-  try {
-    const content = readFileSync(dbPath, "utf-8")
-    return JSON.parse(content) as InstalledPluginsDatabase
-  } catch (error) {
-    log("Failed to load installed plugins database", error)
-    return null
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const content = readFileSync(dbPath, "utf-8")
+        return JSON.parse(content) as InstalledPluginsDatabase
+      },
+      catch: (error) => error,
+    }).pipe(Effect.catchAll((error) => {
+      log("Failed to load installed plugins database", error)
+      return Effect.succeed(null)
+    }))
+  )
 }
 
 function getClaudeSettingsPath(): string {
@@ -89,13 +95,18 @@ function loadClaudeSettings(): ClaudeSettings | null {
     return null
   }
 
-  try {
-    const content = readFileSync(settingsPath, "utf-8")
-    return JSON.parse(content) as ClaudeSettings
-  } catch (error) {
-    log("Failed to load Claude settings", error)
-    return null
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const content = readFileSync(settingsPath, "utf-8")
+        return JSON.parse(content) as ClaudeSettings
+      },
+      catch: (error) => error,
+    }).pipe(Effect.catchAll((error) => {
+      log("Failed to load Claude settings", error)
+      return Effect.succeed(null)
+    }))
+  )
 }
 
 function loadPluginManifest(installPath: string): PluginManifest | null {
@@ -104,13 +115,18 @@ function loadPluginManifest(installPath: string): PluginManifest | null {
     return null
   }
 
-  try {
-    const content = readFileSync(manifestPath, "utf-8")
-    return JSON.parse(content) as PluginManifest
-  } catch (error) {
-    log(`Failed to load plugin manifest from ${manifestPath}`, error)
-    return null
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const content = readFileSync(manifestPath, "utf-8")
+        return JSON.parse(content) as PluginManifest
+      },
+      catch: (error) => error,
+    }).pipe(Effect.catchAll((error) => {
+      log(`Failed to load plugin manifest from ${manifestPath}`, error)
+      return Effect.succeed(null)
+    }))
+  )
 }
 
 function derivePluginNameFromKey(pluginKey: string): string {
@@ -232,11 +248,13 @@ export function loadPluginCommands(
       const commandName = basename(entry.name, ".md")
       const namespacedName = `${plugin.name}:${commandName}`
 
-      try {
-        const content = readFileSync(commandPath, "utf-8")
-        const { data, body } = parseFrontmatter<CommandFrontmatter>(content)
+      Effect.runSync(
+        Effect.try({
+          try: () => {
+            const content = readFileSync(commandPath, "utf-8")
+            const { data, body } = parseFrontmatter<CommandFrontmatter>(content)
 
-        const wrappedTemplate = `<command-instruction>
+            const wrappedTemplate = `<command-instruction>
 ${body.trim()}
 </command-instruction>
 
@@ -244,24 +262,28 @@ ${body.trim()}
 $ARGUMENTS
 </user-request>`
 
-        const formattedDescription = `(plugin: ${plugin.name}) ${data.description || ""}`
+            const formattedDescription = `(plugin: ${plugin.name}) ${data.description || ""}`
 
-        const definition = {
-          name: namespacedName,
-          description: formattedDescription,
-          template: wrappedTemplate,
-          agent: data.agent,
-          model: sanitizeModelField(data.model, "claude-code"),
-          subtask: data.subtask,
-          argumentHint: data["argument-hint"],
-        }
-        const { name: _name, argumentHint: _argumentHint, ...openCodeCompatible } = definition
-        commands[namespacedName] = openCodeCompatible as CommandDefinition
+            const definition = {
+              name: namespacedName,
+              description: formattedDescription,
+              template: wrappedTemplate,
+              agent: data.agent,
+              model: sanitizeModelField(data.model, "claude-code"),
+              subtask: data.subtask,
+              argumentHint: data["argument-hint"],
+            }
+            const { name: _name, argumentHint: _argumentHint, ...openCodeCompatible } = definition
+            commands[namespacedName] = openCodeCompatible as CommandDefinition
 
-        log(`Loaded plugin command: ${namespacedName}`, { path: commandPath })
-      } catch (error) {
-        log(`Failed to load plugin command: ${commandPath}`, error)
-      }
+            log(`Loaded plugin command: ${namespacedName}`, { path: commandPath })
+          },
+          catch: (error) => error,
+        }).pipe(Effect.catchAll((error) => {
+          log(`Failed to load plugin command: ${commandPath}`, error)
+          return Effect.void
+        }))
+      )
     }
   }
 
@@ -288,16 +310,18 @@ export function loadPluginSkillsAsCommands(
       const skillMdPath = join(resolvedPath, "SKILL.md")
       if (!existsSync(skillMdPath)) continue
 
-      try {
-        const content = readFileSync(skillMdPath, "utf-8")
-        const { data, body } = parseFrontmatter<SkillMetadata>(content)
+      Effect.runSync(
+        Effect.try({
+          try: () => {
+            const content = readFileSync(skillMdPath, "utf-8")
+            const { data, body } = parseFrontmatter<SkillMetadata>(content)
 
-        const skillName = data.name || entry.name
-        const namespacedName = `${plugin.name}:${skillName}`
-        const originalDescription = data.description || ""
-        const formattedDescription = `(plugin: ${plugin.name} - Skill) ${originalDescription}`
+            const skillName = data.name || entry.name
+            const namespacedName = `${plugin.name}:${skillName}`
+            const originalDescription = data.description || ""
+            const formattedDescription = `(plugin: ${plugin.name} - Skill) ${originalDescription}`
 
-        const wrappedTemplate = `<skill-instruction>
+            const wrappedTemplate = `<skill-instruction>
 Base directory for this skill: ${resolvedPath}/
 File references (@path) in this skill are relative to this directory.
 
@@ -308,19 +332,23 @@ ${body.trim()}
 $ARGUMENTS
 </user-request>`
 
-        const definition = {
-          name: namespacedName,
-          description: formattedDescription,
-          template: wrappedTemplate,
-          model: sanitizeModelField(data.model),
-        }
-        const { name: _name, ...openCodeCompatible } = definition
-        skills[namespacedName] = openCodeCompatible as CommandDefinition
+            const definition = {
+              name: namespacedName,
+              description: formattedDescription,
+              template: wrappedTemplate,
+              model: sanitizeModelField(data.model),
+            }
+            const { name: _name, ...openCodeCompatible } = definition
+            skills[namespacedName] = openCodeCompatible as CommandDefinition
 
-        log(`Loaded plugin skill: ${namespacedName}`, { path: resolvedPath })
-      } catch (error) {
-        log(`Failed to load plugin skill: ${skillPath}`, error)
-      }
+            log(`Loaded plugin skill: ${namespacedName}`, { path: resolvedPath })
+          },
+          catch: (error) => error,
+        }).pipe(Effect.catchAll((error) => {
+          log(`Failed to load plugin skill: ${skillPath}`, error)
+          return Effect.void
+        }))
+      )
     }
   }
 
@@ -357,30 +385,36 @@ export function loadPluginAgents(
       const agentName = basename(entry.name, ".md")
       const namespacedName = `${plugin.name}:${agentName}`
 
-      try {
-        const content = readFileSync(agentPath, "utf-8")
-        const { data, body } = parseFrontmatter<AgentFrontmatter>(content)
+      Effect.runSync(
+        Effect.try({
+          try: () => {
+            const content = readFileSync(agentPath, "utf-8")
+            const { data, body } = parseFrontmatter<AgentFrontmatter>(content)
 
-        const name = data.name || agentName
-        const originalDescription = data.description || ""
-        const formattedDescription = `(plugin: ${plugin.name}) ${originalDescription}`
+            const name = data.name || agentName
+            const originalDescription = data.description || ""
+            const formattedDescription = `(plugin: ${plugin.name}) ${originalDescription}`
 
-        const config: AgentConfig = {
-          description: formattedDescription,
-          mode: "subagent",
-          prompt: body.trim(),
-        }
+            const config: AgentConfig = {
+              description: formattedDescription,
+              mode: "subagent",
+              prompt: body.trim(),
+            }
 
-        const toolsConfig = parseToolsConfig(data.tools)
-        if (toolsConfig) {
-          config.tools = toolsConfig
-        }
+            const toolsConfig = parseToolsConfig(data.tools)
+            if (toolsConfig) {
+              config.tools = toolsConfig
+            }
 
-        agents[namespacedName] = config
-        log(`Loaded plugin agent: ${namespacedName}`, { path: agentPath })
-      } catch (error) {
-        log(`Failed to load plugin agent: ${agentPath}`, error)
-      }
+            agents[namespacedName] = config
+            log(`Loaded plugin agent: ${namespacedName}`, { path: agentPath })
+          },
+          catch: (error) => error,
+        }).pipe(Effect.catchAll((error) => {
+          log(`Failed to load plugin agent: ${agentPath}`, error)
+          return Effect.void
+        }))
+      )
     }
   }
 
@@ -395,33 +429,45 @@ export async function loadPluginMcpServers(
   for (const plugin of plugins) {
     if (!plugin.mcpPath || !existsSync(plugin.mcpPath)) continue
 
-    try {
-      const content = await Bun.file(plugin.mcpPath).text()
-      let config = JSON.parse(content) as ClaudeCodeMcpConfig
+    await Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const content = await Bun.file(plugin.mcpPath!).text()
+          let config = JSON.parse(content) as ClaudeCodeMcpConfig
 
-      config = resolvePluginPaths(config, plugin.installPath)
-      config = expandEnvVarsInObject(config)
+          config = resolvePluginPaths(config, plugin.installPath)
+          config = expandEnvVarsInObject(config)
 
-      if (!config.mcpServers) continue
+          if (!config.mcpServers) return
 
-      for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
-        if (serverConfig.disabled) {
-          log(`Skipping disabled MCP server "${name}" from plugin ${plugin.name}`)
-          continue
-        }
+          for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
+            if (serverConfig.disabled) {
+              log(`Skipping disabled MCP server "${name}" from plugin ${plugin.name}`)
+              continue
+            }
 
-        try {
-          const transformed = transformMcpServer(name, serverConfig)
-          const namespacedName = `${plugin.name}:${name}`
-          servers[namespacedName] = transformed
-          log(`Loaded plugin MCP server: ${namespacedName}`, { path: plugin.mcpPath })
-        } catch (error) {
-          log(`Failed to transform plugin MCP server "${name}"`, error)
-        }
-      }
-    } catch (error) {
-      log(`Failed to load plugin MCP config: ${plugin.mcpPath}`, error)
-    }
+            Effect.runSync(
+              Effect.try({
+                try: () => {
+                  const transformed = transformMcpServer(name, serverConfig)
+                  const namespacedName = `${plugin.name}:${name}`
+                  servers[namespacedName] = transformed
+                  log(`Loaded plugin MCP server: ${namespacedName}`, { path: plugin.mcpPath })
+                },
+                catch: (error) => error,
+              }).pipe(Effect.catchAll((error) => {
+                log(`Failed to transform plugin MCP server "${name}"`, error)
+                return Effect.void
+              }))
+            )
+          }
+        },
+        catch: (error) => error,
+      }).pipe(Effect.catchAll((error) => {
+        log(`Failed to load plugin MCP config: ${plugin.mcpPath}`, error)
+        return Effect.void
+      }))
+    )
   }
 
   return servers
@@ -435,17 +481,23 @@ export function loadPluginHooksConfigs(
   for (const plugin of plugins) {
     if (!plugin.hooksPath || !existsSync(plugin.hooksPath)) continue
 
-    try {
-      const content = readFileSync(plugin.hooksPath, "utf-8")
-      let config = JSON.parse(content) as HooksConfig
+    Effect.runSync(
+      Effect.try({
+        try: () => {
+          const content = readFileSync(plugin.hooksPath!, "utf-8")
+          let config = JSON.parse(content) as HooksConfig
 
-      config = resolvePluginPaths(config, plugin.installPath)
+          config = resolvePluginPaths(config, plugin.installPath)
 
-      configs.push(config)
-      log(`Loaded plugin hooks config from ${plugin.name}`, { path: plugin.hooksPath })
-    } catch (error) {
-      log(`Failed to load plugin hooks config: ${plugin.hooksPath}`, error)
-    }
+          configs.push(config)
+          log(`Loaded plugin hooks config from ${plugin.name}`, { path: plugin.hooksPath })
+        },
+        catch: (error) => error,
+      }).pipe(Effect.catchAll((error) => {
+        log(`Failed to load plugin hooks config: ${plugin.hooksPath}`, error)
+        return Effect.void
+      }))
+    )
   }
 
   return configs
