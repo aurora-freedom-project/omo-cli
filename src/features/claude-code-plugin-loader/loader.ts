@@ -28,6 +28,7 @@ import type {
 
 const CLAUDE_PLUGIN_ROOT_VAR = "${CLAUDE_PLUGIN_ROOT}"
 
+/** Gets the base directory for Claude Code plugins. */
 function getPluginsBaseDir(): string {
   // Allow override for testing
   if (process.env.CLAUDE_PLUGINS_HOME) {
@@ -36,6 +37,7 @@ function getPluginsBaseDir(): string {
   return join(homedir(), ".claude", "plugins")
 }
 
+/** Gets the path to the installed plugins database JSON file. */
 function getInstalledPluginsPath(): string {
   return join(getPluginsBaseDir(), "installed_plugins.json")
 }
@@ -160,6 +162,11 @@ function extractPluginEntries(
   return Object.entries(db.plugins).map(([key, installations]) => [key, installations[0]])
 }
 
+/**
+ * Discovers all installed plugins and loads their manifests.
+ * @param options - Optional loader configuration
+ * @returns Load result with plugins array and any errors
+ */
 export function discoverInstalledPlugins(options?: PluginLoaderOptions): PluginLoadResult {
   const db = loadInstalledPlugins()
   const settings = loadClaudeSettings()
@@ -231,6 +238,11 @@ export function discoverInstalledPlugins(options?: PluginLoaderOptions): PluginL
   return { plugins, errors }
 }
 
+/**
+ * Loads command definitions from plugin directories.
+ * @param plugins - Array of loaded plugins to scan
+ * @returns Record of command name to command definition
+ */
 export function loadPluginCommands(
   plugins: LoadedPlugin[]
 ): Record<string, CommandDefinition> {
@@ -290,6 +302,11 @@ $ARGUMENTS
   return commands
 }
 
+/**
+ * Loads skill definitions from plugins as command definitions.
+ * @param plugins - Array of loaded plugins to scan
+ * @returns Record of skill name to command definition
+ */
 export function loadPluginSkillsAsCommands(
   plugins: LoadedPlugin[]
 ): Record<string, CommandDefinition> {
@@ -503,6 +520,7 @@ export function loadPluginHooksConfigs(
   return configs
 }
 
+/** Result containing all loaded plugin components. */
 export interface PluginComponentsResult {
   commands: Record<string, CommandDefinition>
   skills: Record<string, CommandDefinition>
@@ -513,6 +531,11 @@ export interface PluginComponentsResult {
   errors: PluginLoadError[]
 }
 
+/**
+ * Loads all plugin components: commands, skills, agents, MCP servers, and hooks.
+ * @param options - Optional loader configuration
+ * @returns All plugin components consolidated
+ */
 export async function loadAllPluginComponents(options?: PluginLoaderOptions): Promise<PluginComponentsResult> {
   const { plugins, errors } = discoverInstalledPlugins(options)
 

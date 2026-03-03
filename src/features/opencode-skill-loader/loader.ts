@@ -70,7 +70,16 @@ function parseAllowedTools(allowedTools: string | string[] | undefined): string[
   return allowedTools.split(/\s+/).filter(Boolean)
 }
 
-async function loadSkillFromPath(
+/**
+ * Loads a single skill from a file path.
+ * Parses frontmatter, resolves dependencies, and creates lazy content loaders.
+ * @param skillPath - Original path to the skill file
+ * @param resolvedPath - Resolved absolute path
+ * @param defaultName - Fallback name if not specified in frontmatter
+ * @param scope - Skill scope (user, project, global, etc.)
+ * @returns Loaded skill object, or null if loading fails
+ */
+export async function loadSkillFromPath(
   skillPath: string,
   resolvedPath: string,
   defaultName: string,
@@ -136,7 +145,14 @@ $ARGUMENTS
   )
 }
 
-async function loadSkillsFromDir(skillsDir: string, scope: SkillScope): Promise<LoadedSkill[]> {
+/**
+ * Loads all skills from a directory.
+ * Discovers and parses all markdown files as skill definitions.
+ * @param skillsDir - Directory to scan for skill files
+ * @param scope - Scope to assign to discovered skills
+ * @returns Array of loaded skill objects
+ */
+export async function loadSkillsFromDir(skillsDir: string, scope: SkillScope): Promise<LoadedSkill[]> {
   const entries = await fs.readdir(skillsDir, { withFileTypes: true }).catch(() => [])
   const skills: LoadedSkill[] = []
 
@@ -188,7 +204,8 @@ async function loadSkillsFromDir(skillsDir: string, scope: SkillScope): Promise<
   return skills
 }
 
-function skillsToRecord(skills: LoadedSkill[]): Record<string, CommandDefinition> {
+/** Converts an array of loaded skills into a Record keyed by skill name. */
+export function skillsToRecord(skills: LoadedSkill[]): Record<string, CommandDefinition> {
   const result: Record<string, CommandDefinition> = {}
   for (const skill of skills) {
     const { name: _name, argumentHint: _argumentHint, ...openCodeCompatible } = skill.definition
@@ -197,21 +214,25 @@ function skillsToRecord(skills: LoadedSkill[]): Record<string, CommandDefinition
   return result
 }
 
+/** Loads global opencode skills as command definitions. */
 export async function loadOpencodeGlobalSkills(): Promise<Record<string, CommandDefinition>> {
   const skills = await loadGlobalSkillsWithUnified()
   return skillsToRecord(skills)
 }
 
+/** Loads project-level opencode skills as command definitions. */
 export async function loadOpencodeProjectSkills(): Promise<Record<string, CommandDefinition>> {
   const opencodeProjectDir = join(process.cwd(), ".opencode", "skills")
   const skills = await loadSkillsFromDir(opencodeProjectDir, "opencode-project")
   return skillsToRecord(skills)
 }
 
+/** Options for discovering skills across scopes. */
 export interface DiscoverSkillsOptions {
   // Empty options interface for future expansion, removing legacy includeClaudeCodePaths
 }
 
+/** Discovers all skills from global and project directories. */
 export async function discoverAllSkills(): Promise<LoadedSkill[]> {
   const [opencodeProjectSkills, opencodeGlobalSkills] = await Promise.all([
     discoverOpencodeProjectSkills(),
@@ -221,15 +242,23 @@ export async function discoverAllSkills(): Promise<LoadedSkill[]> {
   return [...opencodeGlobalSkills, ...opencodeProjectSkills]
 }
 
+/** Discovers skills with optional filtering options. */
 export async function discoverSkills(_options: DiscoverSkillsOptions = {}): Promise<LoadedSkill[]> {
   return discoverAllSkills()
 }
 
+/**
+ * Finds a single skill by name.
+ * @param name - Skill name to search for
+ * @param options - Discovery options
+ * @returns The matching skill, or undefined
+ */
 export async function getSkillByName(name: string, options: DiscoverSkillsOptions = {}): Promise<LoadedSkill | undefined> {
   const skills = await discoverSkills(options)
   return skills.find(s => s.name === name)
 }
 
+/** Discovers skills from the global opencode skills directory. */
 export async function discoverOpencodeGlobalSkills(): Promise<LoadedSkill[]> {
   return loadGlobalSkillsWithUnified()
 }
@@ -269,6 +298,7 @@ async function loadGlobalSkillsWithUnified(): Promise<LoadedSkill[]> {
   return merged
 }
 
+/** Discovers skills from the project-level .opencode/skills directory. */
 export async function discoverOpencodeProjectSkills(): Promise<LoadedSkill[]> {
   const opencodeProjectDir = join(process.cwd(), ".opencode", "skills")
   return loadSkillsFromDir(opencodeProjectDir, "opencode-project")
