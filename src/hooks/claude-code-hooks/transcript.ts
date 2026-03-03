@@ -9,6 +9,7 @@ import { Effect } from "effect"
 
 const TRANSCRIPT_DIR = join(getClaudeConfigDir(), "transcripts")
 
+/** Gets the file path for a session's transcript JSONL file. */
 export function getTranscriptPath(sessionId: string): string {
   return join(TRANSCRIPT_DIR, `${sessionId}.jsonl`)
 }
@@ -19,6 +20,7 @@ function ensureTranscriptDir(): void {
   }
 }
 
+/** Appends a transcript entry to a session's transcript file. */
 export function appendTranscriptEntry(
   sessionId: string,
   entry: TranscriptEntry
@@ -29,6 +31,7 @@ export function appendTranscriptEntry(
   appendFileSync(path, line)
 }
 
+/** Records a tool invocation in the session transcript. */
 export function recordToolUse(
   sessionId: string,
   toolName: string,
@@ -42,6 +45,7 @@ export function recordToolUse(
   })
 }
 
+/** Records a tool result in the session transcript. */
 export function recordToolResult(
   sessionId: string,
   toolName: string,
@@ -57,6 +61,7 @@ export function recordToolResult(
   })
 }
 
+/** Records a user message in the session transcript. */
 export function recordUserMessage(
   sessionId: string,
   content: string
@@ -68,6 +73,7 @@ export function recordUserMessage(
   })
 }
 
+/** Records an assistant message in the session transcript. */
 export function recordAssistantMessage(
   sessionId: string,
   content: string

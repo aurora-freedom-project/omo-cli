@@ -12,18 +12,22 @@ import { Effect } from "effect"
 // Module-level state to track stop_hook_active per session
 const stopHookActiveState = new Map<string, boolean>()
 
+/** Sets the stop hook active state for a session. */
 export function setStopHookActive(sessionId: string, active: boolean): void {
   stopHookActiveState.set(sessionId, active)
 }
 
+/** Gets whether the stop hook is active for a session. */
 export function getStopHookActive(sessionId: string): boolean {
   return stopHookActiveState.get(sessionId) ?? false
 }
 
+/** Cleans up stop hook state for a session. */
 export function cleanupStopHookState(sessionId: string): void {
   stopHookActiveState.delete(sessionId)
 }
 
+/** Context passed to stop hook execution. */
 export interface StopContext {
   sessionId: string
   parentSessionId?: string
@@ -33,6 +37,7 @@ export interface StopContext {
   stopHookActive?: boolean
 }
 
+/** Result of stop hook execution. */
 export interface StopResult {
   block: boolean
   reason?: string
@@ -41,6 +46,7 @@ export interface StopResult {
   injectPrompt?: string
 }
 
+/** Executes all matching stop hooks and returns the result. */
 export async function executeStopHooks(
   ctx: StopContext,
   config: ClaudeHooksConfig | null,

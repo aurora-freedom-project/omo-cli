@@ -6,6 +6,7 @@ import { Effect } from "effect"
 
 const TODO_DIR = join(getClaudeConfigDir(), "todos")
 
+/** Gets the file path for a session's todo JSON file. */
 export function getTodoPath(sessionId: string): string {
   return join(TODO_DIR, `${sessionId}-agent-${sessionId}.json`)
 }
@@ -16,6 +17,7 @@ function ensureTodoDir(): void {
   }
 }
 
+/** Todo item as received from the OpenCode API. */
 export interface OpenCodeTodo {
   content: string
   status: string
@@ -59,10 +61,12 @@ export const loadTodoFileEffect = (sessionId: string): Effect.Effect<TodoFile | 
     catch: () => null as never
   }).pipe(Effect.catchAll(() => Effect.succeed(null)))
 
+/** Loads a todo file by session ID (synchronous). */
 export function loadTodoFile(sessionId: string): TodoFile | null {
   return Effect.runSync(loadTodoFileEffect(sessionId))
 }
 
+/** Saves a todo file in Claude Code compatible format. */
 export function saveTodoFile(sessionId: string, file: TodoFile): void {
   ensureTodoDir()
   const path = getTodoPath(sessionId)
@@ -70,6 +74,7 @@ export function saveTodoFile(sessionId: string, file: TodoFile): void {
   writeFileSync(path, JSON.stringify(claudeCodeFormat, null, 2))
 }
 
+/** Saves OpenCode todos to disk in Claude Code compatible format. */
 export function saveOpenCodeTodos(sessionId: string, todos: OpenCodeTodo[]): void {
   ensureTodoDir()
   const path = getTodoPath(sessionId)
@@ -77,6 +82,7 @@ export function saveOpenCodeTodos(sessionId: string, todos: OpenCodeTodo[]): voi
   writeFileSync(path, JSON.stringify(claudeCodeFormat, null, 2))
 }
 
+/** Deletes a session's todo file from disk. */
 export function deleteTodoFile(sessionId: string): void {
   const path = getTodoPath(sessionId)
   if (existsSync(path)) {

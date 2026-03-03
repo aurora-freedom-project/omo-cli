@@ -12,20 +12,24 @@ import type { AutoUpdateCheckerOptions } from "./types"
 
 const SISYPHUS_SPINNER = ["·", "•", "●", "○", "◌", "◦", " "]
 
+/** Checks if a version string is a pre-release (contains hyphen). */
 export function isPrereleaseVersion(version: string): boolean {
   return version.includes("-")
 }
 
+/** Checks if a version string is a dist tag (no dots). */
 export function isDistTag(version: string): boolean {
   const startsWithDigit = /^\d/.test(version)
   return !startsWithDigit
 }
 
+/** Checks if a pinned version is a pre-release or dist tag. */
 export function isPrereleaseOrDistTag(pinnedVersion: string | null): boolean {
   if (!pinnedVersion) return false
   return isPrereleaseVersion(pinnedVersion) || isDistTag(pinnedVersion)
 }
 
+/** Extracts the npm channel from a version string. */
 export function extractChannel(version: string | null): string {
   if (!version) return "latest"
 
@@ -46,6 +50,7 @@ export function extractChannel(version: string | null): string {
   return "latest"
 }
 
+/** Creates the auto-update checker hook for session start events. */
 export function createAutoUpdateCheckerHook(ctx: PluginInput, options: AutoUpdateCheckerOptions = {}) {
   const { showStartupToast = true, isSisyphusEnabled = false, autoUpdate = true } = options
 
@@ -101,6 +106,7 @@ export function createAutoUpdateCheckerHook(ctx: PluginInput, options: AutoUpdat
   }
 }
 
+/** Runs the background update check and optionally auto-updates. */
 async function runBackgroundUpdateCheck(
   ctx: PluginInput,
   autoUpdate: boolean,
