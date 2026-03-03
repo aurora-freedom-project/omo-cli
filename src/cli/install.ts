@@ -6,11 +6,8 @@ import { ensureUnifiedSkillsDirectory } from "./skills-setup"
 import type { InstallArgs, ProfileSummary, DetectedConfig } from "./types"
 import {
   addPluginToOpenCodeConfig,
-  writeOmoConfig,
   isOpenCodeInstalled,
   getOpenCodeVersion,
-  addAuthPlugins,
-  addProviderConfig,
   detectCurrentConfig,
 } from "./config-manager"
 
@@ -235,25 +232,8 @@ async function runNonTuiInstall(args: InstallArgs): Promise<number> {
   }
   printSuccess(`Plugin ${isUpdate ? "verified" : "added"} ${SYMBOLS.arrow} ${color.dim(pluginResult.configPath)}`)
 
-  if (config.providers.has("google")) {
-    printStep(step++, totalSteps, "Adding auth plugins...")
-    const authResult = await addAuthPlugins(config)
-    if (!authResult.success) {
-      printError(`Failed: ${authResult.error}`)
-      return 1
-    }
-    printSuccess(`Auth plugins configured ${SYMBOLS.arrow} ${color.dim(authResult.configPath)}`)
-
-    printStep(step++, totalSteps, "Adding provider configurations...")
-    const providerResult = addProviderConfig(config)
-    if (!providerResult.success) {
-      printError(`Failed: ${providerResult.error}`)
-      return 1
-    }
-    printSuccess(`Providers configured ${SYMBOLS.arrow} ${color.dim(providerResult.configPath)}`)
-  } else {
-    step += 2
-  }
+  // Auth plugins and provider config are now handled by profile application
+  step += 2
 
   // Automatic skill import for Mike's Full Setup
   if (args.profile === "mike" || args.profile === "mike-local") {
@@ -419,25 +399,7 @@ export async function install(args: InstallArgs): Promise<number> {
   }
   s.stop(`Plugin added to ${color.cyan(pluginResult.configPath)}`)
 
-  if (config.providers.has("google")) {
-    s.start("Adding auth plugins (fetching latest versions)")
-    const authResult = await addAuthPlugins(config)
-    if (!authResult.success) {
-      s.stop(`Failed to add auth plugins: ${authResult.error}`)
-      p.outro(color.red("Installation failed."))
-      return 1
-    }
-    s.stop(`Auth plugins added to ${color.cyan(authResult.configPath)}`)
-
-    s.start("Writing omo-cli configuration")
-    const omoResult = writeOmoConfig(config)
-    if (!omoResult.success) {
-      s.stop(`Failed to write config: ${omoResult.error}`)
-      p.outro(color.red("Installation failed."))
-      return 1
-    }
-    s.stop(`Omo-cli config written to ${color.cyan(omoResult.configPath)}`)
-  }
+  // Auth plugins and omo-cli config are now handled by profile application
 
   // Memory setup step  
   if (config.enableMemory) {

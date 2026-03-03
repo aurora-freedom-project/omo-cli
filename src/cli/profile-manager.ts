@@ -251,7 +251,7 @@ import type { ProfileSummary } from "./types"
  * @returns {ProfileSummary} A summary object containing the `enableMemory` flag.
  */
 export function deriveInstallConfigFromProfile(name: string): ProfileSummary {
-    const defaultResult: ProfileSummary = { enableMemory: false }
+    const defaultResult: ProfileSummary = { enableMemory: false, providers: new Set(), hasClaudeOpus: false }
 
     const profilesDir = getProfilesDir()
     const configPath = join(profilesDir, name, "omo-cli.json")
@@ -265,7 +265,25 @@ export function deriveInstallConfigFromProfile(name: string): ProfileSummary {
             try: () => {
                 const content = readFileSync(configPath, "utf-8")
                 const config = parseJsonc<OmoConfig>(content)
-                return { enableMemory: config?.memory?.enabled === true }
+
+                // Extract providers from categories config
+                const providers = new Set<string>()
+                if (config?.categories) {
+                    for (const cat of Object.values(config.categories)) {
+                        if (cat && typeof cat === "object" && "provider" in (cat as Record<string, unknown>)) {
+                            providers.add(String((cat as Record<string, unknown>).provider))
+                        }
+                    }
+                }
+
+                // Check for Claude Opus in any category
+                const hasClaudeOpus = providers.has("anthropic")
+
+                return {
+                    enableMemory: config?.memory?.enabled === true,
+                    providers,
+                    hasClaudeOpus,
+                }
             },
             catch: () => "fail" as const,
         }).pipe(Effect.catchAll(() => Effect.succeed(defaultResult)))

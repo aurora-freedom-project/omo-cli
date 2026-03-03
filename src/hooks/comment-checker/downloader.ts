@@ -6,7 +6,7 @@ import { tmpdir } from "os"
 import { createRequire } from "module"
 import { extractZip } from "../../shared"
 import { log } from "../../shared/logger"
-import { getOmoCliBinDir } from "../../shared/data-path"
+import { getOmoOpenCodeCacheDir } from "../../shared/data-path"
 
 const DEBUG = process.env.COMMENT_CHECKER_DEBUG === "1"
 const DEBUG_FILE = join(tmpdir(), "comment-checker-debug.log")
@@ -39,8 +39,8 @@ const PLATFORM_MAP: Record<string, PlatformInfo> = {
  * On Windows: Uses %LOCALAPPDATA% or %APPDATA% (Windows conventions)
  * On Unix: Follows XDG Base Directory Specification
  */
-/** @deprecated Use `getOmoCliBinDir` from `shared/data-path.ts` directly */
-export const getCacheDir = getOmoCliBinDir
+/** @deprecated Use `getOmoOpenCodeCacheDir` from `shared/data-path.ts` directly */
+export const getCacheDir = getOmoOpenCodeCacheDir
 
 /**
  * Get the binary name based on platform.

@@ -3,7 +3,7 @@ import { join } from "path"
 import { createRequire } from "module"
 import { Effect } from "effect"
 import { extractZip } from "../../shared"
-import { getOmoCliBinDir } from "../../shared/data-path"
+import { getOmoOpenCodeCacheDir } from "../../shared/data-path"
 
 const REPO = "ast-grep/ast-grep"
 
@@ -39,8 +39,8 @@ const PLATFORM_MAP: Record<string, PlatformInfo> = {
   "win32-ia32": { arch: "i686", os: "pc-windows-msvc" },
 }
 
-/** @deprecated Use `getOmoCliBinDir` from `shared/data-path.ts` directly */
-export const getCacheDir = getOmoCliBinDir
+/** @deprecated Use `getOmoOpenCodeCacheDir` from `shared/data-path.ts` directly */
+export const getCacheDir = getOmoOpenCodeCacheDir
 
 export function getBinaryName(): string {
   return process.platform === "win32" ? "sg.exe" : "sg"
