@@ -1,16 +1,22 @@
 import { formatSystemDirective, SystemDirectiveTypes } from "../../shared/system-directive"
 import { getAgentDisplayName } from "../../shared/agent-display-names"
 
+/** Hook name for the coder-md-only enforcement hook. */
 export const HOOK_NAME = "coder-md-only"
 
+/** Agent names classified as planners (read-only mode). */
 export const PLANNER_AGENTS = ["planner"]
 
+/** File extensions planners are allowed to create/edit. */
 export const ALLOWED_EXTENSIONS = [".md"]
 
+/** Path prefix planners are allowed to write to. */
 export const ALLOWED_PATH_PREFIX = ".orchestrator"
 
+/** Tool names blocked when running as a planner agent. */
 export const BLOCKED_TOOLS = ["Write", "Edit", "write", "edit"]
 
+/** Warning message injected when a planner consults another agent. */
 export const PLANNING_CONSULT_WARNING = `
 
 ---
@@ -32,6 +38,7 @@ Return your findings and recommendations. The actual implementation will be hand
 
 `
 
+/** Workflow reminder appended to planner prompts to enforce the structured planning process. */
 export const PLANNER_WORKFLOW_REMINDER = `
 
 ---

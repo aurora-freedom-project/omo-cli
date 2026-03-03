@@ -38,30 +38,37 @@ async function findCommand(commandName: string): Promise<string | null> {
   )
 }
 
+/** Gets the path to notify-send binary (Linux desktop notifications). */
 export async function getNotifySendPath(): Promise<string | null> {
   return _notifySend.get()
 }
 
+/** Gets the path to osascript binary (macOS AppleScript). */
 export async function getOsascriptPath(): Promise<string | null> {
   return _osascript.get()
 }
 
+/** Gets the path to PowerShell binary (Windows notifications). */
 export async function getPowershellPath(): Promise<string | null> {
   return _powershell.get()
 }
 
+/** Gets the path to afplay binary (macOS audio playback). */
 export async function getAfplayPath(): Promise<string | null> {
   return _afplay.get()
 }
 
+/** Gets the path to paplay binary (PulseAudio playback). */
 export async function getPaplayPath(): Promise<string | null> {
   return _paplay.get()
 }
 
+/** Gets the path to aplay binary (ALSA audio playback). */
 export async function getAplayPath(): Promise<string | null> {
   return _aplay.get()
 }
 
+/** Starts background resolution of notification binaries for the given platform. */
 export function startBackgroundCheck(platform: Platform): void {
   if (platform === "darwin") {
     _osascript.startBackgroundInit()
