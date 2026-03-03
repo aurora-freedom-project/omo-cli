@@ -1,5 +1,6 @@
 import type { LSPServerConfig } from "./types"
 
+/** Maps LSP SymbolKind numeric values to human-readable names. */
 export const SYMBOL_KIND_MAP: Record<number, string> = {
   1: "File",
   2: "Module",
@@ -29,6 +30,7 @@ export const SYMBOL_KIND_MAP: Record<number, string> = {
   26: "TypeParameter",
 }
 
+/** Maps LSP diagnostic severity numbers to labels. */
 export const SEVERITY_MAP: Record<number, string> = {
   1: "error",
   2: "warning",
@@ -36,10 +38,14 @@ export const SEVERITY_MAP: Record<number, string> = {
   4: "hint",
 }
 
+/** Maximum number of references to return from LSP queries. */
 export const DEFAULT_MAX_REFERENCES = 200
+/** Maximum number of symbols to return from LSP queries. */
 export const DEFAULT_MAX_SYMBOLS = 200
+/** Maximum number of diagnostics to return from LSP queries. */
 export const DEFAULT_MAX_DIAGNOSTICS = 200
 
+/** Maps LSP server IDs to installation instructions. */
 export const LSP_INSTALL_HINTS: Record<string, string> = {
   typescript: "npm install -g typescript-language-server typescript",
   deno: "Install Deno from https://deno.land",
@@ -85,6 +91,7 @@ export const LSP_INSTALL_HINTS: Record<string, string> = {
 
 // Synced with OpenCode's server.ts
 // https://github.com/sst/opencode/blob/dev/packages/opencode/src/lsp/server.ts
+/** Built-in LSP server configurations, synced with OpenCode's server.ts. */
 export const BUILTIN_SERVERS: Record<string, Omit<LSPServerConfig, "id">> = {
   typescript: {
     command: ["typescript-language-server", "--stdio"],
@@ -255,6 +262,7 @@ export const BUILTIN_SERVERS: Record<string, Omit<LSPServerConfig, "id">> = {
 
 // Synced with OpenCode's language.ts
 // https://github.com/sst/opencode/blob/dev/packages/opencode/src/lsp/language.ts
+/** Maps file extensions to LSP language identifiers, synced with OpenCode's language.ts. */
 export const EXT_TO_LANG: Record<string, string> = {
   ".abap": "abap",
   ".bat": "bat",

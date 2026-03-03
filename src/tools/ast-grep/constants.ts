@@ -32,6 +32,11 @@ function getPlatformPackageName(): string | null {
   return platformMap[`${platform}-${arch}`] ?? null
 }
 
+/**
+ * Resolves the ast-grep (sg) CLI binary path synchronously.
+ * Checks cached binary, npm packages, platform packages, and Homebrew paths.
+ * @returns Absolute path to the sg binary, or null if not found
+ */
 export function findSgCliPathSync(): string | null {
   const binaryName = process.platform === "win32" ? "sg.exe" : "sg"
 
@@ -94,6 +99,11 @@ const _cliPath = (() => {
   }
 })()
 
+/**
+ * Gets the ast-grep CLI path, using cached value if available.
+ * Falls back to "sg" if no binary is found.
+ * @returns Path to the sg binary
+ */
 export function getSgCliPath(): string {
   const cached = _cliPath.get()
   if (cached !== null) {
@@ -109,11 +119,12 @@ export function getSgCliPath(): string {
   return "sg"
 }
 
+/** Sets the ast-grep CLI path manually (for testing or custom installs). */
 export function setSgCliPath(path: string): void {
   _cliPath.set(path)
 }
 
-// CLI supported languages (25 total)
+/** All 25 languages supported by the ast-grep CLI. */
 export const CLI_LANGUAGES = [
   "bash",
   "c",
@@ -142,14 +153,17 @@ export const CLI_LANGUAGES = [
   "yaml",
 ] as const
 
-// NAPI supported languages (5 total - native bindings)
+/** Languages supported by ast-grep native bindings (NAPI). */
 export const NAPI_LANGUAGES = ["html", "javascript", "tsx", "css", "typescript"] as const
 
-// Language to file extensions mapping
+/** Default timeout for ast-grep CLI operations (5 minutes). */
 export const DEFAULT_TIMEOUT_MS = 300_000
+/** Maximum output size from ast-grep CLI (1 MB). */
 export const DEFAULT_MAX_OUTPUT_BYTES = 1 * 1024 * 1024
+/** Maximum number of matches to return from ast-grep searches. */
 export const DEFAULT_MAX_MATCHES = 500
 
+/** Maps language names to their file extensions for ast-grep. */
 export const LANG_EXTENSIONS: Record<string, string[]> = {
   bash: [".bash", ".sh", ".zsh", ".bats"],
   c: [".c", ".h"],
@@ -178,6 +192,7 @@ export const LANG_EXTENSIONS: Record<string, string[]> = {
   yaml: [".yml", ".yaml"],
 }
 
+/** Result of checking ast-grep CLI and NAPI availability. */
 export interface EnvironmentCheckResult {
   cli: {
     available: boolean

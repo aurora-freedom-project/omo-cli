@@ -1,6 +1,11 @@
 import type { SessionInfo, SessionMessage, SearchResult } from "./types"
 import { getSessionInfo, readSessionMessages } from "./storage"
 
+/**
+ * Formats a list of session IDs into a table with metadata.
+ * @param sessionIDs - Array of session IDs to format
+ * @returns Formatted markdown table string
+ */
 export async function formatSessionList(sessionIDs: string[]): Promise<string> {
   if (sessionIDs.length === 0) {
     return "No sessions found."
@@ -41,6 +46,13 @@ export async function formatSessionList(sessionIDs: string[]): Promise<string> {
   return [formatRow(headers), separator, ...rows.map(formatRow)].join("\n")
 }
 
+/**
+ * Formats session messages into a readable text output.
+ * @param messages - Array of session messages to format
+ * @param includeTodos - Whether to append todo list
+ * @param todos - Optional todo items to include
+ * @returns Formatted text showing message timeline
+ */
 export function formatSessionMessages(
   messages: SessionMessage[],
   includeTodos?: boolean,
@@ -83,6 +95,11 @@ export function formatSessionMessages(
   return lines.join("\n")
 }
 
+/**
+ * Formats session metadata into a human-readable summary.
+ * @param info - Session info object with stats
+ * @returns Multi-line string with session details
+ */
 export function formatSessionInfo(info: SessionInfo): string {
   const lines = [
     `Session ID: ${info.id}`,
@@ -105,6 +122,11 @@ export function formatSessionInfo(info: SessionInfo): string {
   return lines.join("\n")
 }
 
+/**
+ * Formats search results into a readable list with excerpts.
+ * @param results - Array of search results
+ * @returns Formatted string with match counts and excerpts
+ */
 export function formatSearchResults(results: SearchResult[]): string {
   if (results.length === 0) {
     return "No matches found."
@@ -122,6 +144,13 @@ export function formatSearchResults(results: SearchResult[]): string {
   return lines.join("\n")
 }
 
+/**
+ * Filters session IDs by date range.
+ * @param sessionIDs - Array of session IDs to filter
+ * @param fromDate - Optional start date (ISO 8601)
+ * @param toDate - Optional end date (ISO 8601)
+ * @returns Filtered array of session IDs
+ */
 export async function filterSessionsByDate(
   sessionIDs: string[],
   fromDate?: string,
@@ -146,6 +175,14 @@ export async function filterSessionsByDate(
   return results
 }
 
+/**
+ * Searches for text content within a session's messages.
+ * @param sessionID - Session ID to search in
+ * @param query - Text to search for
+ * @param caseSensitive - Whether to match case (default: false)
+ * @param maxResults - Maximum number of results to return
+ * @returns Array of search results with excerpts
+ */
 export async function searchInSession(
   sessionID: string,
   query: string,

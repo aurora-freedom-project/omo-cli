@@ -18,6 +18,12 @@ import type {
   ServerLookupResult,
 } from "./types"
 
+/**
+ * Finds the workspace root directory by walking up from the given file path.
+ * Looks for common project root indicators (.git, package.json, etc.).
+ * @param filePath - Absolute path to a file within the workspace
+ * @returns The workspace root directory path
+ */
 export function findWorkspaceRoot(filePath: string): string {
   let dir = resolve(filePath)
 
@@ -41,10 +47,20 @@ export function findWorkspaceRoot(filePath: string): string {
   return require("path").dirname(resolve(filePath))
 }
 
+/**
+ * Converts a file:// URI to a filesystem path.
+ * @param uri - A file:// URI string
+ * @returns The corresponding filesystem path
+ */
 export function uriToPath(uri: string): string {
   return fileURLToPath(uri)
 }
 
+/**
+ * Formats an error message for a failed LSP server lookup.
+ * @param result - The server lookup result (not "found" status)
+ * @returns A human-readable error message
+ */
 export function formatServerLookupError(result: Exclude<ServerLookupResult, { status: "found" }>): string {
   if (result.status === "not_installed") {
     const { server, installHint } = result
@@ -79,6 +95,13 @@ export function formatServerLookupError(result: Exclude<ServerLookupResult, { st
   ].join("\n")
 }
 
+/**
+ * Executes a function with a connected LSP client for the given file.
+ * Handles client initialization, workspace root resolution, and cleanup.
+ * @param filePath - Path to the file to operate on
+ * @param fn - Async function that receives the LSP client
+ * @returns The result of the function
+ */
 export async function withLspClient<T>(filePath: string, fn: (client: LSPClient) => Promise<T>): Promise<T> {
   const absPath = resolve(filePath)
   const ext = extname(absPath)
@@ -100,7 +123,7 @@ export async function withLspClient<T>(filePath: string, fn: (client: LSPClient)
       if (isInitializing) {
         throw new Error(
           `LSP server is still initializing. Please retry in a few seconds. ` +
-            `Original error: ${e.message}`
+          `Original error: ${e.message}`
         )
       }
     }
@@ -110,6 +133,11 @@ export async function withLspClient<T>(filePath: string, fn: (client: LSPClient)
   }
 }
 
+/**
+ * Formats a Location or LocationLink into a human-readable string.
+ * @param loc - LSP Location or LocationLink object
+ * @returns Formatted string with file path and line range
+ */
 export function formatLocation(loc: Location | LocationLink): string {
   if ("targetUri" in loc) {
     const uri = uriToPath(loc.targetUri)
@@ -124,15 +152,23 @@ export function formatLocation(loc: Location | LocationLink): string {
   return `${uri}:${line}:${char}`
 }
 
+/** Maps an LSP SymbolKind number to its human-readable name. */
 export function formatSymbolKind(kind: number): string {
   return SYMBOL_KIND_MAP[kind] || `Unknown(${kind})`
 }
 
+/** Maps an LSP diagnostic severity number to its label (error/warning/info/hint). */
 export function formatSeverity(severity: number | undefined): string {
   if (!severity) return "unknown"
   return SEVERITY_MAP[severity] || `unknown(${severity})`
 }
 
+/**
+ * Formats a DocumentSymbol into a tree-like string with indentation.
+ * @param symbol - The document symbol to format
+ * @param indent - Current indentation level (default: 0)
+ * @returns Formatted string showing symbol name, kind, and range
+ */
 export function formatDocumentSymbol(symbol: DocumentSymbol, indent = 0): string {
   const prefix = "  ".repeat(indent)
   const kind = formatSymbolKind(symbol.kind)
@@ -148,6 +184,7 @@ export function formatDocumentSymbol(symbol: DocumentSymbol, indent = 0): string
   return result
 }
 
+/** Formats a SymbolInformation into a string showing name, kind, and location. */
 export function formatSymbolInfo(symbol: SymbolInfo): string {
   const kind = formatSymbolKind(symbol.kind)
   const loc = formatLocation(symbol.location)
@@ -155,6 +192,7 @@ export function formatSymbolInfo(symbol: SymbolInfo): string {
   return `${symbol.name} (${kind})${container} - ${loc}`
 }
 
+/** Formats an LSP Diagnostic into a human-readable string with severity and source. */
 export function formatDiagnostic(diag: Diagnostic): string {
   const severity = formatSeverity(diag.severity)
   const line = diag.range.start.line + 1
@@ -164,6 +202,12 @@ export function formatDiagnostic(diag: Diagnostic): string {
   return `${severity}${source}${code} at ${line}:${char}: ${diag.message}`
 }
 
+/**
+ * Filters diagnostics by severity level.
+ * @param diagnostics - Array of LSP diagnostics
+ * @param severityFilter - Filter level ("error", "warning", etc.) or "all"
+ * @returns Filtered diagnostics matching the severity
+ */
 export function filterDiagnosticsBySeverity(
   diagnostics: Diagnostic[],
   severityFilter?: "error" | "warning" | "information" | "hint" | "all"
@@ -183,6 +227,11 @@ export function filterDiagnosticsBySeverity(
   return diagnostics.filter((d) => d.severity === targetSeverity)
 }
 
+/**
+ * Formats a PrepareRename result into a description of the renameable range.
+ * @param result - The prepare rename result from LSP
+ * @returns Human-readable description of what can be renamed
+ */
 export function formatPrepareRenameResult(
   result: PrepareRenameResult | PrepareRenameDefaultBehavior | Range | null
 ): string {
@@ -215,6 +264,7 @@ export function formatPrepareRenameResult(
   return "Cannot rename at this position"
 }
 
+/** Formats a single TextEdit into a string showing range and replacement text. */
 export function formatTextEdit(edit: TextEdit): string {
   const startLine = edit.range.start.line + 1
   const startChar = edit.range.start.character
@@ -227,6 +277,12 @@ export function formatTextEdit(edit: TextEdit): string {
   return `  ${rangeStr}: "${preview}"`
 }
 
+/**
+ * Formats a WorkspaceEdit into a human-readable diff-like summary.
+ * Shows changed files, edit counts, and text replacement details.
+ * @param edit - The workspace edit from LSP
+ * @returns Formatted string or "No changes" if null
+ */
 export function formatWorkspaceEdit(edit: WorkspaceEdit | null): string {
   if (!edit) return "No changes"
 
@@ -267,6 +323,7 @@ export function formatWorkspaceEdit(edit: WorkspaceEdit | null): string {
   return lines.join("\n")
 }
 
+/** Result of applying workspace edits to disk. */
 export interface ApplyResult {
   success: boolean
   filesModified: string[]
@@ -274,6 +331,13 @@ export interface ApplyResult {
   errors: string[]
 }
 
+/**
+ * Applies text edits to a single file on disk.
+ * Processes edits in reverse order to preserve line positions.
+ * @param filePath - Path to the file to edit
+ * @param edits - Array of text edits to apply
+ * @returns Success status, edit count, and optional error
+ */
 function applyTextEditsToFile(filePath: string, edits: TextEdit[]): { success: boolean; editCount: number; error?: string } {
   try {
     let content = readFileSync(filePath, "utf-8")
@@ -310,6 +374,12 @@ function applyTextEditsToFile(filePath: string, edits: TextEdit[]): { success: b
   }
 }
 
+/**
+ * Applies a workspace edit (multiple files) to disk.
+ * Processes each file's text edits sequentially.
+ * @param edit - The workspace edit from LSP, or null
+ * @returns Result with modified files list, total edits, and any errors
+ */
 export function applyWorkspaceEdit(edit: WorkspaceEdit | null): ApplyResult {
   if (!edit) {
     return { success: false, filesModified: [], totalEdits: 0, errors: ["No edit provided"] }
@@ -384,6 +454,7 @@ export function applyWorkspaceEdit(edit: WorkspaceEdit | null): ApplyResult {
   return result
 }
 
+/** Formats an ApplyResult into a human-readable summary of applied edits. */
 export function formatApplyResult(result: ApplyResult): string {
   const lines: string[] = []
 

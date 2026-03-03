@@ -1,5 +1,6 @@
 import type { CategoryConfig } from "../../config/schema"
 
+/** Category prompt for visual/UI engineering tasks. */
 export const VISUAL_CATEGORY_PROMPT_APPEND = `<Category_Context>
 You are working on VISUAL/UI tasks.
 
@@ -30,6 +31,7 @@ Response format:
 - Risks and mitigations (if relevant)
 </Category_Context>`
 
+/** Category prompt for highly creative/artistic tasks. */
 export const ARTISTRY_CATEGORY_PROMPT_APPEND = `<Category_Context>
 You are working on HIGHLY CREATIVE / ARTISTIC tasks.
 
@@ -122,6 +124,7 @@ THIS CATEGORY USES A MID-TIER MODEL (claude-sonnet-4-5).
 3. EXPECTED OUTPUT: Define concrete success criteria
 </Caller_Warning>`
 
+/** Category prompt for unspecified high-effort tasks. */
 export const UNSPECIFIED_HIGH_CATEGORY_PROMPT_APPEND = `<Category_Context>
 You are working on tasks that don't fit specific categories but require substantial effort.
 
@@ -155,6 +158,7 @@ Approach:
 
 
 
+/** Default model configurations for each task category. */
 export const DEFAULT_CATEGORIES: Record<string, CategoryConfig> = {
   "visual-engineering": { model: "google/gemini-3-pro" },
   ultrabrain: { model: "openai/gpt-5.2-codex", variant: "xhigh" },
@@ -165,6 +169,7 @@ export const DEFAULT_CATEGORIES: Record<string, CategoryConfig> = {
   writing: { model: "google/gemini-3-flash" },
 }
 
+/** Maps category names to their prompt append strings. */
 export const CATEGORY_PROMPT_APPENDS: Record<string, string> = {
   "visual-engineering": VISUAL_CATEGORY_PROMPT_APPEND,
   ultrabrain: STRATEGIC_CATEGORY_PROMPT_APPEND,
@@ -175,6 +180,7 @@ export const CATEGORY_PROMPT_APPENDS: Record<string, string> = {
   writing: WRITING_CATEGORY_PROMPT_APPEND,
 }
 
+/** Human-readable descriptions for each task category. */
 export const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   "visual-engineering": "Frontend, UI/UX, design, styling, animation",
   ultrabrain: "Deep logical reasoning, complex architecture decisions requiring extensive analysis",

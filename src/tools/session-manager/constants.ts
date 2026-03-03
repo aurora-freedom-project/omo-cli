@@ -2,12 +2,19 @@ import { join } from "node:path"
 import { getOpenCodeStorageDir } from "../../shared/data-path"
 import { getClaudeConfigDir } from "../../shared"
 
+/** Root storage directory for OpenCode data. */
 export const OPENCODE_STORAGE = getOpenCodeStorageDir()
+/** Directory for message storage files. */
 export const MESSAGE_STORAGE = join(OPENCODE_STORAGE, "message")
+/** Directory for message part storage files. */
 export const PART_STORAGE = join(OPENCODE_STORAGE, "part")
+/** Directory for session metadata files. */
 export const SESSION_STORAGE = join(OPENCODE_STORAGE, "session")
+/** Directory for session todo list files. */
 export const TODO_DIR = join(getClaudeConfigDir(), "todos")
+/** Directory for session transcript log files. */
 export const TRANSCRIPT_DIR = join(getClaudeConfigDir(), "transcripts")
+/** Tool description for the session_list command. */
 export const SESSION_LIST_DESCRIPTION = `List all OpenCode sessions with optional filtering.
 
 Returns a list of available session IDs with metadata including message count, date range, and agents used.
@@ -23,6 +30,7 @@ Example output:
 | ses_abc123 | 45 | 2025-12-20 | 2025-12-24 | build, architect |
 | ses_def456 | 12 | 2025-12-19 | 2025-12-19 | build |`
 
+/** Tool description for the session_read command. */
 export const SESSION_READ_DESCRIPTION = `Read messages and history from an OpenCode session.
 
 Returns a formatted view of session messages with role, timestamp, and content. Optionally includes todos and transcript data.
@@ -44,6 +52,7 @@ Hello, can you help me with...
 [Message 2] assistant (2025-12-20 10:30:15)
 Of course! Let me help you with...`
 
+/** Tool description for the session_search command. */
 export const SESSION_SEARCH_DESCRIPTION = `Search for content within OpenCode session messages.
 
 Performs full-text search across session messages and returns matching excerpts with context.
@@ -66,6 +75,7 @@ Found 3 matches across 2 sessions:
 [ses_def456] Message msg_012 (user)
 ...use the **session manager** to find...`
 
+/** Tool description for the session_info command. */
 export const SESSION_INFO_DESCRIPTION = `Get metadata and statistics about an OpenCode session.
 
 Returns detailed information about a session including message count, date range, agents used, and available data sources.
@@ -82,6 +92,7 @@ Agents Used: build, architect, researcher
 Has Todos: Yes (12 items, 8 completed)
 Has Transcript: Yes (234 entries)`
 
+/** Tool description for the session_delete command. */
 export const SESSION_DELETE_DESCRIPTION = `Delete an OpenCode session and all associated data.
 
 Removes session messages, parts, todos, and transcript. This operation cannot be undone.
@@ -94,4 +105,5 @@ Example:
 session_delete(session_id="ses_abc123", confirm=true)
 Successfully deleted session ses_abc123`
 
+/** Common prefix for all session manager tool names. */
 export const TOOL_NAME_PREFIX = "session_"

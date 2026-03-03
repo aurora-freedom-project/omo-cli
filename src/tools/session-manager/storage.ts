@@ -5,10 +5,17 @@ import { Effect } from "effect"
 import { MESSAGE_STORAGE, PART_STORAGE, SESSION_STORAGE, TODO_DIR, TRANSCRIPT_DIR } from "./constants"
 import type { SessionMessage, SessionInfo, TodoItem, SessionMetadata } from "./types"
 
+/** Options for filtering main sessions. */
 export interface GetMainSessionsOptions {
   directory?: string
 }
 
+/**
+ * Retrieves all main (non-child) sessions with metadata.
+ * Reads session JSON files and filters out sub-sessions.
+ * @param options - Options including optional directory filter
+ * @returns Array of session metadata sorted by creation time
+ */
 export async function getMainSessions(options: GetMainSessionsOptions): Promise<SessionMetadata[]> {
   if (!existsSync(SESSION_STORAGE)) return []
 
@@ -49,6 +56,11 @@ export async function getMainSessions(options: GetMainSessionsOptions): Promise<
   )
 }
 
+/**
+ * Retrieves all session IDs from storage.
+ * Recursively scans message and session directories.
+ * @returns Array of unique session ID strings
+ */
 export async function getAllSessions(): Promise<string[]> {
   if (!existsSync(MESSAGE_STORAGE)) return []
 
@@ -80,6 +92,12 @@ export async function getAllSessions(): Promise<string[]> {
   return [...new Set(sessions)]
 }
 
+/**
+ * Finds the message directory for a given session.
+ * Checks both message storage and session storage paths.
+ * @param sessionID - The session ID to look up
+ * @returns Path to the session's message directory
+ */
 export function getMessageDir(sessionID: string): string {
   if (!existsSync(MESSAGE_STORAGE)) return ""
 
@@ -106,10 +124,17 @@ export function getMessageDir(sessionID: string): string {
   return ""
 }
 
+/** Checks if a session exists in storage by its ID. */
 export function sessionExists(sessionID: string): boolean {
   return getMessageDir(sessionID) !== ""
 }
 
+/**
+ * Reads all messages for a session, sorted chronologically.
+ * Parses message JSON files and their associated parts.
+ * @param sessionID - The session ID to read
+ * @returns Array of session messages with parts populated
+ */
 export async function readSessionMessages(sessionID: string): Promise<SessionMessage[]> {
   const messageDir = getMessageDir(sessionID)
   if (!messageDir || !existsSync(messageDir)) return []
@@ -152,7 +177,12 @@ export async function readSessionMessages(sessionID: string): Promise<SessionMes
   )
 }
 
-async function readParts(messageID: string): Promise<Array<{ id: string; type: string;[key: string]: unknown }>> {
+/**
+ * Reads part data for a specific message.
+ * @param messageID - The message ID to read parts for
+ * @returns Array of part objects with id, type, and additional fields
+ */
+export async function readParts(messageID: string): Promise<Array<{ id: string; type: string;[key: string]: unknown }>> {
   const partDir = join(PART_STORAGE, messageID)
   if (!existsSync(partDir)) return []
 
@@ -181,6 +211,11 @@ async function readParts(messageID: string): Promise<Array<{ id: string; type: s
   )
 }
 
+/**
+ * Reads todo items associated with a session.
+ * @param sessionID - The session ID to read todos for
+ * @returns Array of TodoItem objects
+ */
 export async function readSessionTodos(sessionID: string): Promise<TodoItem[]> {
   if (!existsSync(TODO_DIR)) return []
 
@@ -218,6 +253,11 @@ export async function readSessionTodos(sessionID: string): Promise<TodoItem[]> {
   )
 }
 
+/**
+ * Reads the transcript entry count for a session.
+ * @param sessionID - The session ID to check
+ * @returns Number of transcript entries
+ */
 export async function readSessionTranscript(sessionID: string): Promise<number> {
   if (!existsSync(TRANSCRIPT_DIR)) return 0
 
@@ -235,6 +275,11 @@ export async function readSessionTranscript(sessionID: string): Promise<number> 
   )
 }
 
+/**
+ * Retrieves detailed session information including message stats and data sources.
+ * @param sessionID - The session ID to inspect
+ * @returns SessionInfo object or null if not found
+ */
 export async function getSessionInfo(sessionID: string): Promise<SessionInfo | null> {
   const messages = await readSessionMessages(sessionID)
   if (messages.length === 0) return null

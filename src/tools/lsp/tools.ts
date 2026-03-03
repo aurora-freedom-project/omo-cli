@@ -27,6 +27,7 @@ import type {
   WorkspaceEdit,
 } from "./types"
 
+/** LSP tool: Jump to symbol definition. */
 export const lsp_goto_definition: ToolDefinition = tool({
   description: "Jump to symbol definition. Find WHERE something is defined.",
   args: {
@@ -61,6 +62,7 @@ export const lsp_goto_definition: ToolDefinition = tool({
   },
 })
 
+/** LSP tool: Find all usages/references of a symbol across the workspace. */
 export const lsp_find_references: ToolDefinition = tool({
   description: "Find ALL usages/references of a symbol across the entire workspace.",
   args: {
@@ -98,6 +100,7 @@ export const lsp_find_references: ToolDefinition = tool({
   },
 })
 
+/** LSP tool: Get symbols from a document or search across the workspace. */
 export const lsp_symbols: ToolDefinition = tool({
   description: "Get symbols from file (document) or search across workspace. Use scope='document' for file outline, scope='workspace' for project-wide symbol search.",
   args: {
@@ -159,6 +162,7 @@ export const lsp_symbols: ToolDefinition = tool({
   },
 })
 
+/** LSP tool: Get diagnostics (errors, warnings) from the language server. */
 export const lsp_diagnostics: ToolDefinition = tool({
   description: "Get errors, warnings, hints from language server BEFORE running build.",
   args: {
@@ -206,6 +210,7 @@ export const lsp_diagnostics: ToolDefinition = tool({
   },
 })
 
+/** LSP tool: Check if a rename is valid at the given position. */
 export const lsp_prepare_rename: ToolDefinition = tool({
   description: "Check if rename is valid. Use BEFORE lsp_rename.",
   args: {
@@ -233,6 +238,7 @@ export const lsp_prepare_rename: ToolDefinition = tool({
   },
 })
 
+/** LSP tool: Rename a symbol across the entire workspace. */
 export const lsp_rename: ToolDefinition = tool({
   description: "Rename symbol across entire workspace. APPLIES changes to all files.",
   args: {
