@@ -1,4 +1,5 @@
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool"
+import { Effect } from "effect"
 import { BLOCKED_TMUX_SUBCOMMANDS, DEFAULT_TIMEOUT_MS, INTERACTIVE_BASH_DESCRIPTION } from "./constants"
 import { getCachedTmuxPath } from "./utils"
 
@@ -53,28 +54,30 @@ export const interactive_bash: ToolDefinition = tool({
     tmux_command: tool.schema.string().describe("The tmux command to execute (without 'tmux' prefix)"),
   },
   execute: async (args) => {
-    try {
-      const tmuxPath = getCachedTmuxPath() ?? "tmux"
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const tmuxPath = getCachedTmuxPath() ?? "tmux"
 
-      const parts = tokenizeCommand(args.tmux_command)
+          const parts = tokenizeCommand(args.tmux_command)
 
-      if (parts.length === 0) {
-        return "Error: Empty tmux command"
-      }
-
-      const subcommand = parts[0].toLowerCase()
-      if (BLOCKED_TMUX_SUBCOMMANDS.includes(subcommand)) {
-        const sessionIdx = parts.findIndex(p => p === "-t" || p.startsWith("-t"))
-        let sessionName = "omo-session"
-        if (sessionIdx !== -1) {
-          if (parts[sessionIdx] === "-t" && parts[sessionIdx + 1]) {
-            sessionName = parts[sessionIdx + 1]
-          } else if (parts[sessionIdx].startsWith("-t")) {
-            sessionName = parts[sessionIdx].slice(2)
+          if (parts.length === 0) {
+            return "Error: Empty tmux command"
           }
-        }
 
-        return `Error: '${parts[0]}' is blocked in interactive_bash.
+          const subcommand = parts[0].toLowerCase()
+          if (BLOCKED_TMUX_SUBCOMMANDS.includes(subcommand)) {
+            const sessionIdx = parts.findIndex(p => p === "-t" || p.startsWith("-t"))
+            let sessionName = "omo-session"
+            if (sessionIdx !== -1) {
+              if (parts[sessionIdx] === "-t" && parts[sessionIdx + 1]) {
+                sessionName = parts[sessionIdx + 1]
+              } else if (parts[sessionIdx].startsWith("-t")) {
+                sessionName = parts[sessionIdx].slice(2)
+              }
+            }
+
+            return `Error: '${parts[0]}' is blocked in interactive_bash.
 
 **USE BASH TOOL INSTEAD:**
 
@@ -87,40 +90,41 @@ tmux capture-pane -p -t ${sessionName} -S -1000
 \`\`\`
 
 The Bash tool can execute these commands directly. Do NOT retry with interactive_bash.`
-      }
+          }
 
-      const proc = Bun.spawn([tmuxPath, ...parts], {
-        stdout: "pipe",
-        stderr: "pipe",
-      })
+          const proc = Bun.spawn([tmuxPath, ...parts], {
+            stdout: "pipe",
+            stderr: "pipe",
+          })
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        const id = setTimeout(() => {
-          proc.kill()
-          reject(new Error(`Timeout after ${DEFAULT_TIMEOUT_MS}ms`))
-        }, DEFAULT_TIMEOUT_MS)
-        proc.exited.then(() => clearTimeout(id))
-      })
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            const id = setTimeout(() => {
+              proc.kill()
+              reject(new Error(`Timeout after ${DEFAULT_TIMEOUT_MS}ms`))
+            }, DEFAULT_TIMEOUT_MS)
+            proc.exited.then(() => clearTimeout(id))
+          })
 
-      // Read stdout and stderr in parallel to avoid race conditions
-      const [stdout, stderr, exitCode] = await Promise.race([
-        Promise.all([
-          new Response(proc.stdout).text(),
-          new Response(proc.stderr).text(),
-          proc.exited,
-        ]),
-        timeoutPromise,
-      ])
+          const [stdout, stderr, exitCode] = await Promise.race([
+            Promise.all([
+              new Response(proc.stdout).text(),
+              new Response(proc.stderr).text(),
+              proc.exited,
+            ]),
+            timeoutPromise,
+          ])
 
-      // Check exitCode properly - return error even if stderr is empty
-      if (exitCode !== 0) {
-        const errorMsg = stderr.trim() || `Command failed with exit code ${exitCode}`
-        return `Error: ${errorMsg}`
-      }
+          if (exitCode !== 0) {
+            const errorMsg = stderr.trim() || `Command failed with exit code ${exitCode}`
+            return `Error: ${errorMsg}`
+          }
 
-      return stdout || "(no output)"
-    } catch (e) {
-      return `Error: ${e instanceof Error ? e.message : String(e)}`
-    }
+          return stdout || "(no output)"
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e) => {
+        return Effect.succeed(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      }))
+    )
   },
 })

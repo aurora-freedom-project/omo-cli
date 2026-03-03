@@ -1,4 +1,5 @@
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool"
+import { Effect } from "effect"
 import { CLI_LANGUAGES } from "./constants"
 import { runSg } from "./cli"
 import { formatSearchResult, formatReplaceResult } from "./utils"
@@ -47,31 +48,36 @@ export const ast_grep_search: ToolDefinition = tool({
     context: tool.schema.number().optional().describe("Context lines around match"),
   },
   execute: async (args, context) => {
-    try {
-      const result = await runSg({
-        pattern: args.pattern,
-        lang: args.lang as CliLanguage,
-        paths: args.paths,
-        globs: args.globs,
-        context: args.context,
-      })
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const result = await runSg({
+            pattern: args.pattern,
+            lang: args.lang as CliLanguage,
+            paths: args.paths,
+            globs: args.globs,
+            context: args.context,
+          })
 
-      let output = formatSearchResult(result)
+          let output = formatSearchResult(result)
 
-      if (result.matches.length === 0 && !result.error) {
-        const hint = getEmptyResultHint(args.pattern, args.lang as CliLanguage)
-        if (hint) {
-          output += `\n\n${hint}`
-        }
-      }
+          if (result.matches.length === 0 && !result.error) {
+            const hint = getEmptyResultHint(args.pattern, args.lang as CliLanguage)
+            if (hint) {
+              output += `\n\n${hint}`
+            }
+          }
 
-      showOutputToUser(context, output)
-      return output
-    } catch (e) {
-      const output = `Error: ${e instanceof Error ? e.message : String(e)}`
-      showOutputToUser(context, output)
-      return output
-    }
+          showOutputToUser(context, output)
+          return output
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e) => {
+        const output = `Error: ${e instanceof Error ? e.message : String(e)}`
+        showOutputToUser(context, output)
+        return Effect.succeed(output)
+      }))
+    )
   },
 })
 
@@ -89,23 +95,28 @@ export const ast_grep_replace: ToolDefinition = tool({
     dryRun: tool.schema.boolean().optional().describe("Preview changes without applying (default: true)"),
   },
   execute: async (args, context) => {
-    try {
-      const result = await runSg({
-        pattern: args.pattern,
-        rewrite: args.rewrite,
-        lang: args.lang as CliLanguage,
-        paths: args.paths,
-        globs: args.globs,
-        updateAll: args.dryRun === false,
-      })
-      const output = formatReplaceResult(result, args.dryRun !== false)
-      showOutputToUser(context, output)
-      return output
-    } catch (e) {
-      const output = `Error: ${e instanceof Error ? e.message : String(e)}`
-      showOutputToUser(context, output)
-      return output
-    }
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const result = await runSg({
+            pattern: args.pattern,
+            rewrite: args.rewrite,
+            lang: args.lang as CliLanguage,
+            paths: args.paths,
+            globs: args.globs,
+            updateAll: args.dryRun === false,
+          })
+          const output = formatReplaceResult(result, args.dryRun !== false)
+          showOutputToUser(context, output)
+          return output
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e) => {
+        const output = `Error: ${e instanceof Error ? e.message : String(e)}`
+        showOutputToUser(context, output)
+        return Effect.succeed(output)
+      }))
+    )
   },
 })
 

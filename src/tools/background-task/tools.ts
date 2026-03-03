@@ -1,5 +1,6 @@
 import { tool, type PluginInput, type ToolDefinition } from "@opencode-ai/plugin"
-import { existsSync, readdirSync } from "node:fs"
+import { Effect } from "effect"
+import { existsSync } from "node:fs"
 import { join } from "node:path"
 import type { BackgroundManager, BackgroundTask } from "../../features/background-agent"
 import type { BackgroundTaskArgs, BackgroundOutputArgs, BackgroundCancelArgs } from "./types"
@@ -8,22 +9,9 @@ import { findNearestMessageWithFields, findFirstMessageWithAgent, MESSAGE_STORAG
 import { getSessionAgent } from "../../features/claude-code-session-state"
 import { log } from "../../shared/logger"
 import { consumeNewMessages } from "../../shared/session-cursor"
+import { getMessageDir } from "../../shared/session-utils"
 
 type OpencodeClient = PluginInput["client"]
-
-function getMessageDir(sessionID: string): string | null {
-  if (!existsSync(MESSAGE_STORAGE)) return null
-
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) return directPath
-
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) return sessionPath
-  }
-
-  return null
-}
 
 function formatDuration(start: Date, end?: Date): string {
   const duration = (end ?? new Date()).getTime() - start.getTime()
@@ -63,46 +51,48 @@ export function createBackgroundTask(manager: BackgroundManager): ToolDefinition
         return `[ERROR] Agent parameter is required. Please specify which agent to use (e.g., "explorer", "researcher", "build", etc.)`
       }
 
-      try {
-        const messageDir = getMessageDir(ctx.sessionID)
-        const prevMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
-        const firstMessageAgent = messageDir ? findFirstMessageWithAgent(messageDir) : null
-        const sessionAgent = getSessionAgent(ctx.sessionID)
-        const parentAgent = ctx.agent ?? sessionAgent ?? firstMessageAgent ?? prevMessage?.agent
+      return Effect.runPromise(
+        Effect.tryPromise({
+          try: async () => {
+            const messageDir = getMessageDir(ctx.sessionID)
+            const prevMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
+            const firstMessageAgent = messageDir ? findFirstMessageWithAgent(messageDir) : null
+            const sessionAgent = getSessionAgent(ctx.sessionID)
+            const parentAgent = ctx.agent ?? sessionAgent ?? firstMessageAgent ?? prevMessage?.agent
 
-        log("[background_task] parentAgent resolution", {
-          sessionID: ctx.sessionID,
-          ctxAgent: ctx.agent,
-          sessionAgent,
-          firstMessageAgent,
-          prevMessageAgent: prevMessage?.agent,
-          resolvedParentAgent: parentAgent,
-        })
+            log("[background_task] parentAgent resolution", {
+              sessionID: ctx.sessionID,
+              ctxAgent: ctx.agent,
+              sessionAgent,
+              firstMessageAgent,
+              prevMessageAgent: prevMessage?.agent,
+              resolvedParentAgent: parentAgent,
+            })
 
-        const parentModel = prevMessage?.model?.providerID && prevMessage?.model?.modelID
-          ? {
-            providerID: prevMessage.model.providerID,
-            modelID: prevMessage.model.modelID,
-            ...(prevMessage.model.variant ? { variant: prevMessage.model.variant } : {})
-          }
-          : undefined
+            const parentModel = prevMessage?.model?.providerID && prevMessage?.model?.modelID
+              ? {
+                providerID: prevMessage.model.providerID,
+                modelID: prevMessage.model.modelID,
+                ...(prevMessage.model.variant ? { variant: prevMessage.model.variant } : {})
+              }
+              : undefined
 
-        const task = await manager.launch({
-          description: args.description,
-          prompt: args.prompt,
-          agent: args.agent.trim(),
-          parentSessionID: ctx.sessionID,
-          parentMessageID: ctx.messageID,
-          parentModel,
-          parentAgent,
-        })
+            const task = await manager.launch({
+              description: args.description,
+              prompt: args.prompt,
+              agent: args.agent.trim(),
+              parentSessionID: ctx.sessionID,
+              parentMessageID: ctx.messageID,
+              parentModel,
+              parentAgent,
+            })
 
-        ctx.metadata?.({
-          title: args.description,
-          metadata: { sessionId: task.sessionID },
-        })
+            ctx.metadata?.({
+              title: args.description,
+              metadata: { sessionId: task.sessionID },
+            })
 
-        return `Background task launched successfully.
+            return `Background task launched successfully.
 
 Task ID: ${task.id}
 Session ID: ${task.sessionID}
@@ -114,10 +104,13 @@ The system will notify you when the task completes.
 Use \`background_output\` tool with task_id="${task.id}" to check progress:
 - block=false (default): Check status immediately - returns full status info
 - block=true: Wait for completion (rarely needed since system notifies)`
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        return `[ERROR] Failed to launch background task: ${message}`
-      }
+          },
+          catch: (error) => error,
+        }).pipe(Effect.catchAll((error) => {
+          const message = error instanceof Error ? error.message : String(error)
+          return Effect.succeed(`[ERROR] Failed to launch background task: ${message}`)
+        }))
+      )
     },
   })
 }
@@ -330,59 +323,59 @@ export function createBackgroundOutput(manager: BackgroundManager, client: Openc
       timeout: tool.schema.number().optional().describe("Max wait time in ms (default: 60000, max: 600000)"),
     },
     async execute(args: BackgroundOutputArgs) {
-      try {
-        const task = manager.getTask(args.task_id)
-        if (!task) {
-          return `Task not found: ${args.task_id}`
-        }
+      return Effect.runPromise(
+        Effect.tryPromise({
+          try: async () => {
+            const task = manager.getTask(args.task_id)
+            if (!task) {
+              return `Task not found: ${args.task_id}`
+            }
 
-        const shouldBlock = args.block === true
-        const timeoutMs = Math.min(args.timeout ?? 60000, 600000)
+            const shouldBlock = args.block === true
+            const timeoutMs = Math.min(args.timeout ?? 60000, 600000)
 
-        // Already completed: return result immediately (regardless of block flag)
-        if (task.status === "completed") {
-          return await formatTaskResult(task, client)
-        }
+            if (task.status === "completed") {
+              return await formatTaskResult(task, client)
+            }
 
-        // Error or cancelled: return status immediately
-        if (task.status === "error" || task.status === "cancelled") {
-          return formatTaskStatus(task)
-        }
+            if (task.status === "error" || task.status === "cancelled") {
+              return formatTaskStatus(task)
+            }
 
-        // Non-blocking and still running: return status
-        if (!shouldBlock) {
-          return formatTaskStatus(task)
-        }
+            if (!shouldBlock) {
+              return formatTaskStatus(task)
+            }
 
-        // Blocking: poll until completion or timeout
-        const startTime = Date.now()
+            const startTime = Date.now()
 
-        while (Date.now() - startTime < timeoutMs) {
-          await delay(1000)
+            while (Date.now() - startTime < timeoutMs) {
+              await delay(1000)
 
-          const currentTask = manager.getTask(args.task_id)
-          if (!currentTask) {
-            return `Task was deleted: ${args.task_id}`
-          }
+              const currentTask = manager.getTask(args.task_id)
+              if (!currentTask) {
+                return `Task was deleted: ${args.task_id}`
+              }
 
-          if (currentTask.status === "completed") {
-            return await formatTaskResult(currentTask, client)
-          }
+              if (currentTask.status === "completed") {
+                return await formatTaskResult(currentTask, client)
+              }
 
-          if (currentTask.status === "error" || currentTask.status === "cancelled") {
-            return formatTaskStatus(currentTask)
-          }
-        }
+              if (currentTask.status === "error" || currentTask.status === "cancelled") {
+                return formatTaskStatus(currentTask)
+              }
+            }
 
-        // Timeout exceeded: return current status
-        const finalTask = manager.getTask(args.task_id)
-        if (!finalTask) {
-          return `Task was deleted: ${args.task_id}`
-        }
-        return `Timeout exceeded (${timeoutMs}ms). Task still ${finalTask.status}.\n\n${formatTaskStatus(finalTask)}`
-      } catch (error) {
-        return `Error getting output: ${error instanceof Error ? error.message : String(error)}`
-      }
+            const finalTask = manager.getTask(args.task_id)
+            if (!finalTask) {
+              return `Task was deleted: ${args.task_id}`
+            }
+            return `Timeout exceeded (${timeoutMs}ms). Task still ${finalTask.status}.\n\n${formatTaskStatus(finalTask)}`
+          },
+          catch: (error) => error,
+        }).pipe(Effect.catchAll((error) => {
+          return Effect.succeed(`Error getting output: ${error instanceof Error ? error.message : String(error)}`)
+        }))
+      )
     },
   })
 }
@@ -395,55 +388,57 @@ export function createBackgroundCancel(manager: BackgroundManager, client: Openc
       all: tool.schema.boolean().optional().describe("Cancel all running background tasks (default: false)"),
     },
     async execute(args: BackgroundCancelArgs, toolContext) {
-      try {
-        const cancelAll = args.all === true
+      return Effect.runPromise(
+        Effect.tryPromise({
+          try: async () => {
+            const cancelAll = args.all === true
 
-        if (!cancelAll && !args.taskId) {
-          return `[ERROR] Invalid arguments: Either provide a taskId or set all=true to cancel all running tasks.`
-        }
-
-        if (cancelAll) {
-          const tasks = manager.getAllDescendantTasks(toolContext.sessionID)
-          const cancellableTasks = tasks.filter(t => t.status === "running" || t.status === "pending")
-
-          if (cancellableTasks.length === 0) {
-            return `No running or pending background tasks to cancel.`
-          }
-
-          const cancelledInfo: Array<{
-            id: string
-            description: string
-            status: string
-            sessionID?: string
-          }> = []
-
-          for (const task of cancellableTasks) {
-            if (task.status === "pending") {
-              manager.cancelPendingTask(task.id)
-              cancelledInfo.push({
-                id: task.id,
-                description: task.description,
-                status: "pending",
-                sessionID: undefined,
-              })
-            } else if (task.status === "running") {
-              manager.cancelRunningTask(task.id)
-              cancelledInfo.push({
-                id: task.id,
-                description: task.description,
-                status: "running",
-                sessionID: task.sessionID,
-              })
+            if (!cancelAll && !args.taskId) {
+              return `[ERROR] Invalid arguments: Either provide a taskId or set all=true to cancel all running tasks.`
             }
-          }
 
-          const tableRows = cancelledInfo
-            .map(t => `| \`${t.id}\` | ${t.description} | ${t.status} | ${t.sessionID ? `\`${t.sessionID}\`` : "(not started)"} |`)
-            .join("\n")
+            if (cancelAll) {
+              const tasks = manager.getAllDescendantTasks(toolContext.sessionID)
+              const cancellableTasks = tasks.filter(t => t.status === "running" || t.status === "pending")
 
-          const resumableTasks = cancelledInfo.filter(t => t.sessionID)
-          const resumeSection = resumableTasks.length > 0
-            ? `\n## Continue Instructions
+              if (cancellableTasks.length === 0) {
+                return `No running or pending background tasks to cancel.`
+              }
+
+              const cancelledInfo: Array<{
+                id: string
+                description: string
+                status: string
+                sessionID?: string
+              }> = []
+
+              for (const task of cancellableTasks) {
+                if (task.status === "pending") {
+                  manager.cancelPendingTask(task.id)
+                  cancelledInfo.push({
+                    id: task.id,
+                    description: task.description,
+                    status: "pending",
+                    sessionID: undefined,
+                  })
+                } else if (task.status === "running") {
+                  manager.cancelRunningTask(task.id)
+                  cancelledInfo.push({
+                    id: task.id,
+                    description: task.description,
+                    status: "running",
+                    sessionID: task.sessionID,
+                  })
+                }
+              }
+
+              const tableRows = cancelledInfo
+                .map(t => `| \`${t.id}\` | ${t.description} | ${t.status} | ${t.sessionID ? `\`${t.sessionID}\`` : "(not started)"} |`)
+                .join("\n")
+
+              const resumableTasks = cancelledInfo.filter(t => t.sessionID)
+              const resumeSection = resumableTasks.length > 0
+                ? `\n## Continue Instructions
 
 To continue a cancelled task, use:
 \`\`\`
@@ -452,53 +447,53 @@ delegate_task(session_id="<session_id>", prompt="Continue: <your follow-up>")
 
 Continuable sessions:
 ${resumableTasks.map(t => `- \`${t.sessionID}\` (${t.description})`).join("\n")}`
-            : ""
+                : ""
 
-          return `Cancelled ${cancellableTasks.length} background task(s):
+              return `Cancelled ${cancellableTasks.length} background task(s):
 
 | Task ID | Description | Status | Session ID |
 |---------|-------------|--------|------------|
 ${tableRows}
 ${resumeSection}`
-        }
+            }
 
-        const task = manager.getTask(args.taskId!)
-        if (!task) {
-          return `[ERROR] Task not found: ${args.taskId}`
-        }
+            const task = manager.getTask(args.taskId!)
+            if (!task) {
+              return `[ERROR] Task not found: ${args.taskId}`
+            }
 
-        if (task.status !== "running" && task.status !== "pending") {
-          return `[ERROR] Cannot cancel task: current status is "${task.status}".
+            if (task.status !== "running" && task.status !== "pending") {
+              return `[ERROR] Cannot cancel task: current status is "${task.status}".
 Only running or pending tasks can be cancelled.`
-        }
+            }
 
-        if (task.status === "pending") {
-          // Pending task: use manager method (no session to abort, no slot to release)
-          const cancelled = manager.cancelPendingTask(task.id)
-          if (!cancelled) {
-            return `[ERROR] Failed to cancel pending task: ${task.id}`
-          }
+            if (task.status === "pending") {
+              const cancelled = manager.cancelPendingTask(task.id)
+              if (!cancelled) {
+                return `[ERROR] Failed to cancel pending task: ${task.id}`
+              }
 
-          return `Pending task cancelled successfully
+              return `Pending task cancelled successfully
 
 Task ID: ${task.id}
 Description: ${task.description}
 Status: ${task.status}`
-        }
+            }
 
-        // Running task: use manager method for proper lifecycle cleanup
-        // (releases concurrency slot, cleans pendingByParent, aborts session)
-        manager.cancelRunningTask(task.id)
+            manager.cancelRunningTask(task.id)
 
-        return `Task cancelled successfully
+            return `Task cancelled successfully
 
 Task ID: ${task.id}
 Description: ${task.description}
 Session ID: ${task.sessionID}
 Status: ${task.status}`
-      } catch (error) {
-        return `[ERROR] Error cancelling task: ${error instanceof Error ? error.message : String(error)}`
-      }
+          },
+          catch: (error) => error,
+        }).pipe(Effect.catchAll((error) => {
+          return Effect.succeed(`[ERROR] Error cancelling task: ${error instanceof Error ? error.message : String(error)}`)
+        }))
+      )
     },
   })
 }

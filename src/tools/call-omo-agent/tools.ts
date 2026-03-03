@@ -1,5 +1,6 @@
 import { tool, type PluginInput, type ToolDefinition } from "@opencode-ai/plugin"
-import { existsSync, readdirSync } from "node:fs"
+import { Effect } from "effect"
+import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { ALLOWED_AGENTS, CALL_OMO_AGENT_DESCRIPTION } from "./constants"
 import type { CallOmoAgentArgs } from "./types"
@@ -9,20 +10,7 @@ import { consumeNewMessages } from "../../shared/session-cursor"
 import type { SessionCreateBody, MessageWithParts } from "../../shared/sdk-types"
 import { findFirstMessageWithAgent, findNearestMessageWithFields, MESSAGE_STORAGE } from "../../features/hook-message-injector"
 import { getSessionAgent } from "../../features/claude-code-session-state"
-
-function getMessageDir(sessionID: string): string | null {
-  if (!existsSync(MESSAGE_STORAGE)) return null
-
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) return directPath
-
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) return sessionPath
-  }
-
-  return null
-}
+import { getMessageDir } from "../../shared/session-utils"
 
 type ToolContextWithMetadata = {
   sessionID: string
@@ -83,38 +71,40 @@ async function executeBackground(
   toolContext: ToolContextWithMetadata,
   manager: BackgroundManager
 ): Promise<string> {
-  try {
-    const messageDir = getMessageDir(toolContext.sessionID)
-    const prevMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
-    const firstMessageAgent = messageDir ? findFirstMessageWithAgent(messageDir) : null
-    const sessionAgent = getSessionAgent(toolContext.sessionID)
-    const parentAgent = toolContext.agent ?? sessionAgent ?? firstMessageAgent ?? prevMessage?.agent
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const messageDir = getMessageDir(toolContext.sessionID)
+        const prevMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
+        const firstMessageAgent = messageDir ? findFirstMessageWithAgent(messageDir) : null
+        const sessionAgent = getSessionAgent(toolContext.sessionID)
+        const parentAgent = toolContext.agent ?? sessionAgent ?? firstMessageAgent ?? prevMessage?.agent
 
-    log("[call_omo_agent] parentAgent resolution", {
-      sessionID: toolContext.sessionID,
-      messageDir,
-      ctxAgent: toolContext.agent,
-      sessionAgent,
-      firstMessageAgent,
-      prevMessageAgent: prevMessage?.agent,
-      resolvedParentAgent: parentAgent,
-    })
+        log("[call_omo_agent] parentAgent resolution", {
+          sessionID: toolContext.sessionID,
+          messageDir,
+          ctxAgent: toolContext.agent,
+          sessionAgent,
+          firstMessageAgent,
+          prevMessageAgent: prevMessage?.agent,
+          resolvedParentAgent: parentAgent,
+        })
 
-    const task = await manager.launch({
-      description: args.description,
-      prompt: args.prompt,
-      agent: args.subagent_type,
-      parentSessionID: toolContext.sessionID,
-      parentMessageID: toolContext.messageID,
-      parentAgent,
-    })
+        const task = await manager.launch({
+          description: args.description,
+          prompt: args.prompt,
+          agent: args.subagent_type,
+          parentSessionID: toolContext.sessionID,
+          parentMessageID: toolContext.messageID,
+          parentAgent,
+        })
 
-    toolContext.metadata?.({
-      title: args.description,
-      metadata: { sessionId: task.sessionID },
-    })
+        toolContext.metadata?.({
+          title: args.description,
+          metadata: { sessionId: task.sessionID },
+        })
 
-    return `Background agent task launched successfully.
+        return `Background agent task launched successfully.
 
 Task ID: ${task.id}
 Session ID: ${task.sessionID}
@@ -126,10 +116,13 @@ The system will notify you when the task completes.
 Use \`background_output\` tool with task_id="${task.id}" to check progress:
 - block=false (default): Check status immediately - returns full status info
 - block=true: Wait for completion (rarely needed since system notifies)`
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return `Failed to launch background agent task: ${message}`
-  }
+      },
+      catch: (error) => error,
+    }).pipe(Effect.catchAll((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      return Effect.succeed(`Failed to launch background agent task: ${message}`)
+    }))
+  )
 }
 
 async function executeSync(
@@ -201,27 +194,34 @@ Original error: ${createResult.error}`
   log(`[call_omo_agent] Sending prompt to session ${sessionID}`)
   log(`[call_omo_agent] Prompt text:`, args.prompt.substring(0, 100))
 
-  try {
-    await ctx.client.session.prompt({
-      path: { id: sessionID },
-      body: {
-        agent: args.subagent_type,
-        tools: {
-          ...getAgentToolRestrictions(args.subagent_type),
-          task: false,
-          delegate_task: false,
-        },
-        parts: [{ type: "text", text: args.prompt }],
+  const promptResult = await Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        await ctx.client.session.prompt({
+          path: { id: sessionID },
+          body: {
+            agent: args.subagent_type,
+            tools: {
+              ...getAgentToolRestrictions(args.subagent_type),
+              task: false,
+              delegate_task: false,
+            },
+            parts: [{ type: "text", text: args.prompt }],
+          },
+        })
+        return null
       },
-    })
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    log(`[call_omo_agent] Prompt error:`, errorMessage)
-    if (errorMessage.includes("agent.name") || errorMessage.includes("undefined")) {
-      return `Error: Agent "${args.subagent_type}" not found. Make sure the agent is registered in your opencode.json or provided by a plugin.\n\n<task_metadata>\nsession_id: ${sessionID}\n</task_metadata>`
-    }
-    return `Error: Failed to send prompt: ${errorMessage}\n\n<task_metadata>\nsession_id: ${sessionID}\n</task_metadata>`
-  }
+      catch: (error) => error,
+    }).pipe(Effect.catchAll((error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      log(`[call_omo_agent] Prompt error:`, errorMessage)
+      if (errorMessage.includes("agent.name") || errorMessage.includes("undefined")) {
+        return Effect.succeed(`Error: Agent "${args.subagent_type}" not found. Make sure the agent is registered in your opencode.json or provided by a plugin.\n\n<task_metadata>\nsession_id: ${sessionID}\n</task_metadata>`)
+      }
+      return Effect.succeed(`Error: Failed to send prompt: ${errorMessage}\n\n<task_metadata>\nsession_id: ${sessionID}\n</task_metadata>`)
+    }))
+  )
+  if (promptResult !== null) return promptResult
 
   log(`[call_omo_agent] Prompt sent, polling for completion...`)
 
