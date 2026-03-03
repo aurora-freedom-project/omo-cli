@@ -1,11 +1,13 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 
+/** Pattern matching for delegate_task error detection. */
 export interface DelegateTaskErrorPattern {
   pattern: string
   errorType: string
   fixHint: string
 }
 
+/** Known error patterns for delegate_task validation failures. */
 export const DELEGATE_TASK_ERROR_PATTERNS: DelegateTaskErrorPattern[] = [
   {
     pattern: "run_in_background",
@@ -54,11 +56,13 @@ export const DELEGATE_TASK_ERROR_PATTERNS: DelegateTaskErrorPattern[] = [
   },
 ]
 
+/** Detected delegate_task error with type classification. */
 export interface DetectedError {
   errorType: string
   originalOutput: string
 }
 
+/** Detects delegate_task errors in tool output by pattern matching. */
 export function detectDelegateTaskError(output: string): DetectedError | null {
   if (!output.includes("[ERROR]") && !output.includes("Invalid arguments")) return null
 
@@ -79,6 +83,7 @@ function extractAvailableList(output: string): string | null {
   return availableMatch ? availableMatch[1].trim() : null
 }
 
+/** Builds retry guidance text for a detected delegate_task error. */
 export function buildRetryGuidance(errorInfo: DetectedError): string {
   const pattern = DELEGATE_TASK_ERROR_PATTERNS.find(
     (p) => p.errorType === errorInfo.errorType
@@ -118,6 +123,7 @@ delegate_task(
   return guidance
 }
 
+/** Creates the delegate_task retry hook that auto-injects guidance on error. */
 export function createDelegateTaskRetryHook(_ctx: PluginInput) {
   return {
     "tool.execute.after": async (
