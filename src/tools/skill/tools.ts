@@ -173,7 +173,7 @@ export function createSkillTool(options: SkillLoadOptions = {}): ToolDefinition 
     args: {
       name: tool.schema.string().describe("The skill identifier from available_skills (e.g., 'code-review')"),
     },
-    async execute(args: SkillArgs, ctx?: { agent?: string }) {
+    async execute(args: { name: string }, ctx?: { agent?: string }) {
       const skills = await getSkills()
       const skill = skills.find(s => s.name === args.name)
 

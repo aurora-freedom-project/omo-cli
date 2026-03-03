@@ -23,6 +23,11 @@ export interface SkillInfo {
   description: string
   location?: string
   score?: number
+  scope?: string
+  license?: string
+  compatibility?: string
+  metadata?: Record<string, unknown>
+  allowedTools?: string[]
 }
 
 /** Options for the skill tool execution (pre-loaded skills, MCP manager). */
