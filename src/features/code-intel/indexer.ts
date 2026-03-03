@@ -1,6 +1,7 @@
 import { spawnSync } from "child_process"
 import { readFileSync, existsSync } from "fs"
 import { resolve, relative, basename } from "path"
+import { Effect } from "effect"
 import { log } from "../../shared/logger"
 import { parseFile, computeFileHash, getLanguage } from "./code-parser"
 import {
@@ -40,26 +41,31 @@ export interface IndexResult {
 // ---------------------------------------------------------------------------
 
 function getTrackedFiles(projectDir: string): string[] {
-    try {
-        const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
-            cwd: projectDir,
-            encoding: "utf-8",
-            timeout: 30000,
-        })
+    return Effect.runSync(
+        Effect.try({
+            try: () => {
+                const result = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
+                    cwd: projectDir,
+                    encoding: "utf-8",
+                    timeout: 30000,
+                })
 
-        if (result.status !== 0 || !result.stdout) {
-            log("[indexer] git ls-files failed, falling back to basic file scan")
-            return []
-        }
+                if (result.status !== 0 || !result.stdout) {
+                    log("[indexer] git ls-files failed, falling back to basic file scan")
+                    return [] as string[]
+                }
 
-        return result.stdout
-            .split("\n")
-            .map(f => f.trim())
-            .filter(Boolean)
-    } catch (err) {
-        log("[indexer] Failed to list tracked files", { err })
-        return []
-    }
+                return result.stdout
+                    .split("\n")
+                    .map(f => f.trim())
+                    .filter(Boolean)
+            },
+            catch: (err) => err,
+        }).pipe(Effect.catchAll((err) => {
+            log("[indexer] Failed to list tracked files", { err })
+            return Effect.succeed([] as string[])
+        }))
+    )
 }
 
 function filterByLanguage(files: string[]): string[] {
@@ -140,52 +146,67 @@ export async function indexProject(options: IndexOptions): Promise<IndexResult> 
 
         if (!existsSync(absPath)) continue
 
-        try {
-            const content = readFileSync(absPath, "utf-8")
-            const hash = computeFileHash(content)
+        const fileResult = await Effect.runPromise(
+            Effect.tryPromise({
+                try: async () => {
+                    const content = readFileSync(absPath, "utf-8")
+                    const hash = computeFileHash(content)
 
-            // Incremental: skip unchanged files
-            if (existingHashMap.get(relPath) === hash) {
-                result.filesSkipped++
-                continue
-            }
-
-            result.filesScanned++
-
-            // Parse the file
-            const parseResult = parseFile(relPath, content, project)
-
-            // Store elements
-            for (const element of parseResult.elements) {
-                try {
-                    // Generate embedding if vector mode
-                    if (useVectors) {
-                        const embeddingText = [element.name, element.signature, element.docstring]
-                            .filter(Boolean)
-                            .join(" ")
-                        element.embedding = await generateEmbedding(embeddingText)
+                    // Incremental: skip unchanged files
+                    if (existingHashMap.get(relPath) === hash) {
+                        result.filesSkipped++
+                        return
                     }
 
-                    await addCodeElement(element)
-                    result.elementsIndexed++
-                } catch (err) {
-                    result.errors.push(`Failed to store element ${element.name} in ${relPath}: ${err}`)
-                }
-            }
+                    result.filesScanned++
 
-            // Store relations
-            for (const relation of parseResult.relations) {
-                try {
-                    await addCodeRelation(relation.sourceId, relation.targetId, relation.kind)
-                    result.relationsIndexed++
-                } catch (err) {
-                    // Relations may fail if target element doesn't exist yet — that's OK
-                    log("[indexer] Relation store skipped", { relation, err })
-                }
-            }
-        } catch (err) {
-            result.errors.push(`Failed to process ${relPath}: ${err}`)
-        }
+                    // Parse the file
+                    const parseResult = parseFile(relPath, content, project)
+
+                    // Store elements
+                    for (const element of parseResult.elements) {
+                        await Effect.runPromise(
+                            Effect.tryPromise({
+                                try: async () => {
+                                    if (useVectors) {
+                                        const embeddingText = [element.name, element.signature, element.docstring]
+                                            .filter(Boolean)
+                                            .join(" ")
+                                        element.embedding = await generateEmbedding(embeddingText)
+                                    }
+                                    await addCodeElement(element)
+                                    result.elementsIndexed++
+                                },
+                                catch: (err) => err,
+                            }).pipe(Effect.catchAll((err) => {
+                                result.errors.push(`Failed to store element ${element.name} in ${relPath}: ${err}`)
+                                return Effect.void
+                            }))
+                        )
+                    }
+
+                    // Store relations
+                    for (const relation of parseResult.relations) {
+                        await Effect.runPromise(
+                            Effect.tryPromise({
+                                try: async () => {
+                                    await addCodeRelation(relation.sourceId, relation.targetId, relation.kind)
+                                    result.relationsIndexed++
+                                },
+                                catch: (err) => err,
+                            }).pipe(Effect.catchAll((err) => {
+                                log("[indexer] Relation store skipped", { relation, err })
+                                return Effect.void
+                            }))
+                        )
+                    }
+                },
+                catch: (err) => err,
+            }).pipe(Effect.catchAll((err) => {
+                result.errors.push(`Failed to process ${relPath}: ${err}`)
+                return Effect.void
+            }))
+        )
     }
 
     result.durationMs = Date.now() - startTime

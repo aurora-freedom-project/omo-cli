@@ -1,5 +1,6 @@
 import { promises as fs, type Dirent } from "fs"
 import { join, basename } from "path"
+import { Effect } from "effect"
 import { parseFrontmatter } from "../../shared/frontmatter"
 import { sanitizeModelField } from "../../shared/model-sanitizer"
 import { isMarkdownFile } from "../../shared/file-utils"
@@ -13,32 +14,42 @@ async function loadCommandsFromDir(
   visited: Set<string> = new Set(),
   prefix: string = ""
 ): Promise<LoadedCommand[]> {
-  try {
-    await fs.access(commandsDir)
-  } catch {
-    return []
-  }
+  const accessible = await Effect.runPromise(
+    Effect.tryPromise({
+      try: () => fs.access(commandsDir),
+      catch: () => "not-found" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed("not-found" as const)))
+  )
+  if (accessible === "not-found") return []
 
-  let realPath: string
-  try {
-    realPath = await fs.realpath(commandsDir)
-  } catch (error) {
-    log(`Failed to resolve command directory: ${commandsDir}`, error)
-    return []
-  }
+  const realPathResult = await Effect.runPromise(
+    Effect.tryPromise({
+      try: () => fs.realpath(commandsDir),
+      catch: (error) => error,
+    }).pipe(Effect.catchAll((error) => {
+      log(`Failed to resolve command directory: ${commandsDir}`, error)
+      return Effect.succeed(null)
+    }))
+  )
+  if (!realPathResult) return []
+  const realPath = realPathResult
 
   if (visited.has(realPath)) {
     return []
   }
   visited.add(realPath)
 
-  let entries: Dirent[]
-  try {
-    entries = await fs.readdir(commandsDir, { withFileTypes: true })
-  } catch (error) {
-    log(`Failed to read command directory: ${commandsDir}`, error)
-    return []
-  }
+  const entriesResult = await Effect.runPromise(
+    Effect.tryPromise({
+      try: () => fs.readdir(commandsDir, { withFileTypes: true }),
+      catch: (error) => error,
+    }).pipe(Effect.catchAll((error) => {
+      log(`Failed to read command directory: ${commandsDir}`, error)
+      return Effect.succeed(null)
+    }))
+  )
+  if (!entriesResult) return []
+  const entries = entriesResult
 
   const commands: LoadedCommand[] = []
 
@@ -58,11 +69,13 @@ async function loadCommandsFromDir(
     const baseCommandName = basename(entry.name, ".md")
     const commandName = prefix ? `${prefix}:${baseCommandName}` : baseCommandName
 
-    try {
-      const content = await fs.readFile(commandPath, "utf-8")
-      const { data, body } = parseFrontmatter<CommandFrontmatter>(content)
+    const parsed = await Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const content = await fs.readFile(commandPath, "utf-8")
+          const { data, body } = parseFrontmatter<CommandFrontmatter>(content)
 
-      const wrappedTemplate = `<command-instruction>
+          const wrappedTemplate = `<command-instruction>
 ${body.trim()}
 </command-instruction>
 
@@ -70,30 +83,29 @@ ${body.trim()}
 $ARGUMENTS
 </user-request>`
 
-      const formattedDescription = `(${scope}) ${data.description || ""}`
+          const formattedDescription = `(${scope}) ${data.description || ""}`
 
-      const isOpencodeSource = scope === "opencode" || scope === "opencode-project"
-      const definition: CommandDefinition = {
-        name: commandName,
-        description: formattedDescription,
-        template: wrappedTemplate,
-        agent: data.agent,
-        model: sanitizeModelField(data.model, isOpencodeSource ? "opencode" : "claude-code"),
-        subtask: data.subtask,
-        argumentHint: data["argument-hint"],
-        handoffs: data.handoffs,
-      }
+          const isOpencodeSource = scope === "opencode" || scope === "opencode-project"
+          const definition: CommandDefinition = {
+            name: commandName,
+            description: formattedDescription,
+            template: wrappedTemplate,
+            agent: data.agent,
+            model: sanitizeModelField(data.model, isOpencodeSource ? "opencode" : "claude-code"),
+            subtask: data.subtask,
+            argumentHint: data["argument-hint"],
+            handoffs: data.handoffs,
+          }
 
-      commands.push({
-        name: commandName,
-        path: commandPath,
-        definition,
-        scope,
-      })
-    } catch (error) {
-      log(`Failed to parse command: ${commandPath}`, error)
-      continue
-    }
+          return { name: commandName, path: commandPath, definition, scope } as LoadedCommand
+        },
+        catch: (error) => error,
+      }).pipe(Effect.catchAll((error) => {
+        log(`Failed to parse command: ${commandPath}`, error)
+        return Effect.succeed(null)
+      }))
+    )
+    if (parsed) commands.push(parsed)
   }
 
   return commands
