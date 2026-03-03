@@ -1,6 +1,18 @@
+/**
+ * @module config/schema
+ *
+ * Zod schemas defining the complete omo-cli configuration structure.
+ * Used for validation of `omo-cli.json` and `omo-cli.jsonc` config files.
+ *
+ * Exports two categories:
+ * - **Schemas** (`*Schema`): Zod validators for parsing and validation
+ * - **Types** (`*Config`, `*Name`): TypeScript types inferred from schemas
+ */
+
 import { z } from "zod"
 import { AnyMcpNameSchema, McpNameSchema } from "../mcp/types"
 
+/** Permission value: ask the user, allow automatically, or deny. */
 const PermissionValue = z.enum(["ask", "allow", "deny"])
 
 const BashPermission = z.union([
@@ -23,6 +35,7 @@ const AgentPermissionSchema = z.object({
   task: z.union([PermissionValue, z.record(z.string(), PermissionValue)]).optional(),
 })
 
+/** All recognized agent names (native + legacy, resolved via AGENT_NAME_MAP). */
 export const BuiltinAgentNameSchema = z.enum([
   // New native-friendly names
   "orchestrator",
@@ -54,6 +67,7 @@ export const BuiltinAgentNameSchema = z.enum([
   "atlas",
 ])
 
+/** Built-in skill names that can be disabled via `disabled_skills`. */
 export const BuiltinSkillNameSchema = z.enum([
   "playwright",
   "agent-browser",
@@ -61,6 +75,7 @@ export const BuiltinSkillNameSchema = z.enum([
   "git-master",
 ])
 
+/** Agent names that can have overrides in the `agents` config section. */
 export const OverridableAgentNameSchema = z.enum([
   // Native names
   "build",
@@ -93,8 +108,10 @@ export const OverridableAgentNameSchema = z.enum([
   "atlas",
 ])
 
+/** Alias for BuiltinAgentNameSchema — the canonical agent name validator. */
 export const AgentNameSchema = BuiltinAgentNameSchema
 
+/** All recognized hook names that can be disabled via `disabled_hooks`. */
 export const HookNameSchema = z.enum([
   "todo-continuation-enforcer",
   "context-window-monitor",
@@ -130,6 +147,10 @@ export const HookNameSchema = z.enum([
   "coder-md-only",
   "worker-notepad",
   "navigator",
+  "question-label-truncator",
+  "subagent-question-blocker",
+  "memory-capture",
+  "task-resume-info",
   // Legacy hook names (backwards compat)
   "prometheus-md-only",
   "sisyphus-junior-notepad",
@@ -137,11 +158,13 @@ export const HookNameSchema = z.enum([
   "start-work",
 ])
 
+/** Built-in slash command names that can be disabled. */
 export const BuiltinCommandNameSchema = z.enum([
   "init-deep",
   "start-work",
 ])
 
+/** Per-agent configuration overrides (model, tools, prompt, etc.). */
 export const AgentOverrideConfigSchema = z.object({
   /** @deprecated Use `category` instead. Model is inherited from category defaults. */
   model: z.string().optional(),
@@ -182,6 +205,7 @@ export const AgentOverrideConfigSchema = z.object({
   providerOptions: z.record(z.string(), z.unknown()).optional(),
 })
 
+/** Map of agent names to their individual override configurations. */
 export const AgentOverridesSchema = z.object({
   // Native names
   build: AgentOverrideConfigSchema.optional(),
@@ -214,6 +238,7 @@ export const AgentOverridesSchema = z.object({
   atlas: AgentOverrideConfigSchema.optional(),
 })
 
+/** Controls which Claude Code integration features are enabled. */
 export const ClaudeCodeConfigSchema = z.object({
   mcp: z.boolean().optional(),
   commands: z.boolean().optional(),
@@ -224,6 +249,7 @@ export const ClaudeCodeConfigSchema = z.object({
   plugins_override: z.record(z.string(), z.boolean()).optional(),
 })
 
+/** Legacy Sisyphus agent behavior toggles. */
 export const SisyphusAgentConfigSchema = z.object({
   disabled: z.boolean().optional(),
   default_builder_enabled: z.boolean().optional(),
@@ -231,6 +257,7 @@ export const SisyphusAgentConfigSchema = z.object({
   replace_plan: z.boolean().optional(),
 })
 
+/** Category configuration — shared model/tool defaults inherited by agents assigned to this category. */
 export const CategoryConfigSchema = z.object({
   /** Human-readable description of the category's purpose. Shown in delegate_task prompt. */
   description: z.string().optional(),
@@ -251,6 +278,7 @@ export const CategoryConfigSchema = z.object({
   is_unstable_agent: z.boolean().optional(),
 })
 
+/** Built-in category names for agent grouping (native + legacy). */
 export const BuiltinCategoryNameSchema = z.enum([
   // Friendly names
   "frontend",
@@ -272,13 +300,16 @@ export const BuiltinCategoryNameSchema = z.enum([
   "business-logic", // Was missing in original enum but used in default config? Let's add it to be safe if it was implicitly allowed or missing.
 ])
 
+/** Map of category names to their configurations. */
 export const CategoriesConfigSchema = z.record(z.string(), CategoryConfigSchema)
 
+/** Comment checker feature configuration. */
 export const CommentCheckerConfigSchema = z.object({
   /** Custom prompt to replace the default warning message. Use {{comments}} placeholder for detected comments XML. */
   custom_prompt: z.string().optional(),
 })
 
+/** Dynamic context pruning strategies and thresholds. */
 export const DynamicContextPruningConfigSchema = z.object({
   /** Enable dynamic context pruning (default: false) */
   enabled: z.boolean().default(false),
@@ -315,6 +346,7 @@ export const DynamicContextPruningConfigSchema = z.object({
   }).optional(),
 })
 
+/** Experimental / opt-in feature toggles. */
 export const ExperimentalConfigSchema = z.object({
   aggressive_truncation: z.boolean().optional(),
   auto_resume: z.boolean().optional(),
@@ -324,6 +356,7 @@ export const ExperimentalConfigSchema = z.object({
   dynamic_context_pruning: DynamicContextPruningConfigSchema.optional(),
 })
 
+/** Skill source: either a path string or an object with path + glob options. */
 export const SkillSourceSchema = z.union([
   z.string(),
   z.object({
@@ -333,6 +366,7 @@ export const SkillSourceSchema = z.union([
   }),
 ])
 
+/** Full skill definition with template, model, agent assignment, and metadata. */
 export const SkillDefinitionSchema = z.object({
   description: z.string().optional(),
   template: z.string().optional(),
@@ -348,11 +382,13 @@ export const SkillDefinitionSchema = z.object({
   disable: z.boolean().optional(),
 })
 
+/** Skill entry: `true` to enable, or a full SkillDefinition for customization. */
 export const SkillEntrySchema = z.union([
   z.boolean(),
   SkillDefinitionSchema,
 ])
 
+/** Skills config: simple string array or detailed record with sources/enable/disable. */
 export const SkillsConfigSchema = z.union([
   z.array(z.string()),
   z.record(z.string(), SkillEntrySchema).and(z.object({
@@ -362,6 +398,7 @@ export const SkillsConfigSchema = z.union([
   }).partial()),
 ])
 
+/** Ralph loop iteration settings (opt-in). */
 export const RalphLoopConfigSchema = z.object({
   /** Enable ralph loop functionality (default: false - opt-in feature) */
   enabled: z.boolean().default(false),
@@ -371,6 +408,7 @@ export const RalphLoopConfigSchema = z.object({
   state_dir: z.string().optional(),
 })
 
+/** Background task concurrency and timeout settings. */
 export const BackgroundTaskConfigSchema = z.object({
   defaultConcurrency: z.number().min(1).optional(),
   providerConcurrency: z.record(z.string(), z.number().min(0)).optional(),
@@ -379,11 +417,13 @@ export const BackgroundTaskConfigSchema = z.object({
   staleTimeoutMs: z.number().min(60000).optional(),
 })
 
+/** Session notification feature configuration. */
 export const NotificationConfigSchema = z.object({
   /** Force enable session-notification even if external notification plugins are detected (default: false) */
   force_enable: z.boolean().optional(),
 })
 
+/** Git commit watermark/co-author settings. */
 export const GitMasterConfigSchema = z.object({
   /** Add "Ultraworked with Orchestrator" footer to commit messages (default: true) */
   commit_footer: z.boolean().default(true),
@@ -391,8 +431,10 @@ export const GitMasterConfigSchema = z.object({
   include_co_authored_by: z.boolean().default(true),
 })
 
+/** Valid browser automation provider names. */
 export const BrowserAutomationProviderSchema = z.enum(["playwright", "agent-browser", "dev-browser"])
 
+/** Browser automation engine configuration. */
 export const BrowserAutomationConfigSchema = z.object({
   /**
    * Browser automation provider to use for the "playwright" skill.
@@ -403,6 +445,7 @@ export const BrowserAutomationConfigSchema = z.object({
   provider: BrowserAutomationProviderSchema.default("playwright"),
 })
 
+/** Valid tmux layout presets. */
 export const TmuxLayoutSchema = z.enum([
   'main-horizontal',  // main pane top, agent panes bottom stack
   'main-vertical',    // main pane left, agent panes right stack (default)
@@ -411,6 +454,7 @@ export const TmuxLayoutSchema = z.enum([
   'even-vertical',    // all panes vertical stack
 ])
 
+/** Tmux pane management configuration. */
 export const TmuxConfigSchema = z.object({
   enabled: z.boolean().default(false),
   layout: TmuxLayoutSchema.default('main-vertical'),
@@ -419,6 +463,7 @@ export const TmuxConfigSchema = z.object({
   agent_pane_min_width: z.number().min(20).default(40),
 })
 
+/** Orchestrator tasks system configuration. */
 export const SisyphusTasksConfigSchema = z.object({
   /** Enable Orchestrator Tasks system (default: false) */
   enabled: z.boolean().default(false),
@@ -428,6 +473,7 @@ export const SisyphusTasksConfigSchema = z.object({
   claude_code_compat: z.boolean().default(false),
 })
 
+/** Orchestrator swarm system configuration. */
 export const SisyphusSwarmConfigSchema = z.object({
   /** Enable Orchestrator Swarm system (default: false) */
   enabled: z.boolean().default(false),
@@ -437,6 +483,7 @@ export const SisyphusSwarmConfigSchema = z.object({
   ui_mode: z.enum(["toast", "tmux", "both"]).default("toast"),
 })
 
+/** Combined Orchestrator (tasks + swarm) configuration. */
 export const SisyphusConfigSchema = z.object({
   tasks: SisyphusTasksConfigSchema.optional(),
   swarm: SisyphusSwarmConfigSchema.optional(),
@@ -472,6 +519,7 @@ export const PrivacyConfigSchema = z.object({
 })
 
 
+/** SurrealDB persistent memory configuration. */
 export const MemoryConfigSchema = z.object({
   /** Enable omo-memory persistent memory via SurrealDB (default: false) */
   enabled: z.boolean().default(false),
@@ -500,6 +548,7 @@ const ModelPriceSchema = z.object({
   output: z.number(),
 })
 
+/** Cost metering and budget tracking configuration. */
 export const CostMeteringConfigSchema = z.object({
   /** Enable cost metering (default: false) */
   enabled: z.boolean().default(false),
@@ -515,6 +564,21 @@ export const CostMeteringConfigSchema = z.object({
   default_pricing: ModelPriceSchema.optional(),
 })
 
+/** Safety guard limits and circuit breaker configuration. */
+export const SafetyConfigSchema = z.object({
+  /** Max todo-continuation injections per session before stopping (default: 50) */
+  max_continuations: z.number().min(5).max(500).default(50),
+  /** Max delegation depth to prevent A→B→C→A cascades (default: 5) */
+  max_delegation_depth: z.number().min(2).max(20).default(5),
+  /** Consecutive errors before circuit breaker activates (default: 3) */
+  circuit_breaker_threshold: z.number().min(1).max(10).default(3),
+  /** Circuit breaker backoff base in ms (default: 5000) */
+  circuit_breaker_backoff_base_ms: z.number().min(1000).max(30000).default(5000),
+  /** Circuit breaker max backoff in ms (default: 120000 = 2min) */
+  circuit_breaker_backoff_max_ms: z.number().min(10000).max(600000).default(120000),
+})
+
+/** Root omo-cli configuration schema — validates omo-cli.json files. */
 export const OmoCliConfigSchema = z.object({
   $schema: z.string().optional(),
   disabled_mcps: z.array(AnyMcpNameSchema).optional(),
@@ -545,38 +609,76 @@ export const OmoCliConfigSchema = z.object({
   memory: MemoryConfigSchema.optional(),
   /** Cost metering: Track token usage and estimate USD costs */
   cost_metering: CostMeteringConfigSchema.optional(),
+  /** Safety guards: loop limits, delegation depth, circuit breaker */
+  safety: SafetyConfigSchema.optional(),
 })
 
+// ─── Inferred Types ─────────────────────────────────────────────────────────
+// TypeScript types inferred from the Zod schemas above.
+
+/** Complete omo-cli configuration — validated against OmoCliConfigSchema. */
 export type OmoCliConfig = z.infer<typeof OmoCliConfigSchema>
+/** Per-agent override configuration. */
 export type AgentOverrideConfig = z.infer<typeof AgentOverrideConfigSchema>
+/** Map of agent names to their overrides. */
 export type AgentOverrides = z.infer<typeof AgentOverridesSchema>
+/** Background task concurrency and timeout settings. */
 export type BackgroundTaskConfig = z.infer<typeof BackgroundTaskConfigSchema>
+/** Valid agent name string literal. */
 export type AgentName = z.infer<typeof AgentNameSchema>
+/** Valid hook name string literal. */
 export type HookName = z.infer<typeof HookNameSchema>
+/** Valid built-in command name. */
 export type BuiltinCommandName = z.infer<typeof BuiltinCommandNameSchema>
+/** Valid built-in skill name. */
 export type BuiltinSkillName = z.infer<typeof BuiltinSkillNameSchema>
+/** Sisyphus agent behavior configuration. */
 export type SisyphusAgentConfig = z.infer<typeof SisyphusAgentConfigSchema>
+/** Comment checker configuration. */
 export type CommentCheckerConfig = z.infer<typeof CommentCheckerConfigSchema>
+/** Experimental feature toggles. */
 export type ExperimentalConfig = z.infer<typeof ExperimentalConfigSchema>
+/** Dynamic context pruning strategy configuration. */
 export type DynamicContextPruningConfig = z.infer<typeof DynamicContextPruningConfigSchema>
+/** Skills configuration — array or record format. */
 export type SkillsConfig = z.infer<typeof SkillsConfigSchema>
+/** Individual skill definition with metadata. */
 export type SkillDefinition = z.infer<typeof SkillDefinitionSchema>
+/** Ralph loop iteration configuration. */
 export type RalphLoopConfig = z.infer<typeof RalphLoopConfigSchema>
+/** Session notification configuration. */
 export type NotificationConfig = z.infer<typeof NotificationConfigSchema>
+/** Category model/tool defaults configuration. */
 export type CategoryConfig = z.infer<typeof CategoryConfigSchema>
+/** Map of category names to configurations. */
 export type CategoriesConfig = z.infer<typeof CategoriesConfigSchema>
+/** Valid built-in category name. */
 export type BuiltinCategoryName = z.infer<typeof BuiltinCategoryNameSchema>
+/** Git commit message configuration. */
 export type GitMasterConfig = z.infer<typeof GitMasterConfigSchema>
+/** Browser automation provider selection. */
 export type BrowserAutomationProvider = z.infer<typeof BrowserAutomationProviderSchema>
+/** Browser automation engine configuration. */
 export type BrowserAutomationConfig = z.infer<typeof BrowserAutomationConfigSchema>
+/** Tmux pane management configuration. */
 export type TmuxConfig = z.infer<typeof TmuxConfigSchema>
+/** Tmux window layout preset. */
 export type TmuxLayout = z.infer<typeof TmuxLayoutSchema>
+/** Orchestrator tasks system configuration. */
 export type SisyphusTasksConfig = z.infer<typeof SisyphusTasksConfigSchema>
+/** Orchestrator swarm system configuration. */
 export type SisyphusSwarmConfig = z.infer<typeof SisyphusSwarmConfigSchema>
+/** Orchestrator (tasks + swarm) configuration. */
 export type SisyphusConfig = z.infer<typeof SisyphusConfigSchema>
+/** Coding verbosity level (1-10). */
 export type CodingLevel = z.infer<typeof CodingLevelSchema>
+/** Privacy awareness configuration. */
 export type PrivacyConfig = z.infer<typeof PrivacyConfigSchema>
+/** SurrealDB persistent memory configuration. */
 export type MemoryConfig = z.infer<typeof MemoryConfigSchema>
+/** Cost metering and budget tracking configuration. */
 export type CostMeteringConfig = z.infer<typeof CostMeteringConfigSchema>
+/** Safety guard limits and circuit breaker configuration. */
+export type SafetyConfig = z.infer<typeof SafetyConfigSchema>
 
 export { AnyMcpNameSchema, type AnyMcpName, McpNameSchema, type McpName } from "../mcp/types"

@@ -115,6 +115,7 @@ function getMergedServers(): ServerWithSource[] {
   })
 }
 
+/** Finds the best LSP server for a given file extension. */
 export function findServerForExtension(ext: string): ServerLookupResult {
   const servers = getMergedServers()
 
@@ -158,10 +159,12 @@ export function findServerForExtension(ext: string): ServerLookupResult {
   }
 }
 
+/** Gets the language ID for a file extension. */
 export function getLanguageId(ext: string): string {
   return EXT_TO_LANG[ext] || "plaintext"
 }
 
+/** Checks if an LSP server command is installed and available. */
 export function isServerInstalled(command: string[]): boolean {
   if (command.length === 0) return false
 
@@ -227,6 +230,7 @@ export function isServerInstalled(command: string[]): boolean {
   return false
 }
 
+/** Returns all configured and built-in LSP servers with their status. */
 export function getAllServers(): Array<{
   id: string
   installed: boolean
@@ -286,6 +290,7 @@ export function getAllServers(): Array<{
   return result
 }
 
+/** Returns the configuration file paths for project, user, and opencode. */
 export function getConfigPaths_(): { project: string; user: string; opencode: string } {
   return getConfigPaths()
 }
