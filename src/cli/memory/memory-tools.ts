@@ -1,4 +1,5 @@
 import type { PluginInput } from "@opencode-ai/plugin"
+import { Effect } from "effect"
 import { log } from "../../shared/logger"
 import { addConcept, searchSimilar, graphTraverse, initSchema, configureSurreal } from "./surreal-client"
 import { generateEmbedding } from "./embedder"
@@ -78,23 +79,28 @@ export function createMemoryTools(
             required: ["content", "tags"],
         },
         execute: async (args) => {
-            try {
-                if (!config.enabled) return "Memory is disabled in config."
-                await ensureReady(config)
+            return Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        if (!config.enabled) return "Memory is disabled in config."
+                        await ensureReady(config)
 
-                const content = args.content as string
-                const tags = (args.tags as string[]) ?? []
-                const source = (args.source as string) ?? "user"
+                        const content = args.content as string
+                        const tags = (args.tags as string[]) ?? []
+                        const source = (args.source as string) ?? "user"
 
-                const embedding = await generateEmbedding(content)
-                const id = await addConcept({ content, tags, embedding, source, project })
+                        const embedding = await generateEmbedding(content)
+                        const id = await addConcept({ content, tags, embedding, source, project })
 
-                log("[memory_add] Concept stored", { id, tags })
-                return `✓ Memory stored (${id}). Tags: ${tags.join(", ")}`
-            } catch (err) {
-                log("[memory_add] error", { err })
-                return `Memory storage failed: ${err instanceof Error ? err.message : String(err)}`
-            }
+                        log("[memory_add] Concept stored", { id, tags })
+                        return `✓ Memory stored (${id}). Tags: ${tags.join(", ")}`
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    log("[memory_add] error", { err })
+                    return Effect.succeed(`Memory storage failed: ${err instanceof Error ? err.message : String(err)}`)
+                }))
+            )
         },
     }
 
@@ -116,32 +122,37 @@ export function createMemoryTools(
             required: ["query"],
         },
         execute: async (args) => {
-            try {
-                if (!config.enabled) return "Memory is disabled in config."
-                await ensureReady(config)
+            return Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        if (!config.enabled) return "Memory is disabled in config."
+                        await ensureReady(config)
 
-                const query = args.query as string
-                const limit = parseInt((args.limit as string) ?? "5", 10)
+                        const query = args.query as string
+                        const limit = parseInt((args.limit as string) ?? "5", 10)
 
-                const embedding = await generateEmbedding(query)
-                const results = await searchSimilar(embedding, limit, project)
+                        const embedding = await generateEmbedding(query)
+                        const results = await searchSimilar(embedding, limit, project)
 
-                if (results.length === 0) {
-                    return "No relevant memories found."
-                }
+                        if (results.length === 0) {
+                            return "No relevant memories found."
+                        }
 
-                const formatted = results
-                    .map(
-                        (r, i) =>
-                            `${i + 1}. [score: ${r.score.toFixed(3)}] ${r.content}\n   Tags: ${r.tags.join(", ")}`
-                    )
-                    .join("\n\n")
+                        const formatted = results
+                            .map(
+                                (r, i) =>
+                                    `${i + 1}. [score: ${r.score.toFixed(3)}] ${r.content}\n   Tags: ${r.tags.join(", ")}`
+                            )
+                            .join("\n\n")
 
-                return `Found ${results.length} relevant memories:\n\n${formatted}`
-            } catch (err) {
-                log("[memory_search] error", { err })
-                return `Memory search failed: ${err instanceof Error ? err.message : String(err)}`
-            }
+                        return `Found ${results.length} relevant memories:\n\n${formatted}`
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    log("[memory_search] error", { err })
+                    return Effect.succeed(`Memory search failed: ${err instanceof Error ? err.message : String(err)}`)
+                }))
+            )
         },
     }
 
@@ -163,28 +174,33 @@ export function createMemoryTools(
             required: ["concept_id"],
         },
         execute: async (args) => {
-            try {
-                if (!config.enabled) return "Memory is disabled in config."
-                await ensureReady(config)
+            return Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        if (!config.enabled) return "Memory is disabled in config."
+                        await ensureReady(config)
 
-                const conceptId = args.concept_id as string
-                const depth = parseInt((args.depth as string) ?? "2", 10)
+                        const conceptId = args.concept_id as string
+                        const depth = parseInt((args.depth as string) ?? "2", 10)
 
-                const results = await graphTraverse(conceptId, Math.min(depth, 5))
+                        const results = await graphTraverse(conceptId, Math.min(depth, 5))
 
-                if (results.length === 0) {
-                    return "No connected concepts found."
-                }
+                        if (results.length === 0) {
+                            return "No connected concepts found."
+                        }
 
-                const formatted = results
-                    .map((r, i) => `${i + 1}. ${r.content}\n   Tags: ${r.tags.join(", ")}`)
-                    .join("\n\n")
+                        const formatted = results
+                            .map((r, i) => `${i + 1}. ${r.content}\n   Tags: ${r.tags.join(", ")}`)
+                            .join("\n\n")
 
-                return `Found ${results.length} related concepts:\n\n${formatted}`
-            } catch (err) {
-                log("[memory_graph] error", { err })
-                return `Graph traversal failed: ${err instanceof Error ? err.message : String(err)}`
-            }
+                        return `Found ${results.length} related concepts:\n\n${formatted}`
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    log("[memory_graph] error", { err })
+                    return Effect.succeed(`Graph traversal failed: ${err instanceof Error ? err.message : String(err)}`)
+                }))
+            )
         },
     }
 
@@ -210,23 +226,27 @@ export function createMemoryTools(
             required: ["source_id", "target_id", "relation_type"],
         },
         execute: async (args) => {
-            try {
-                if (!config.enabled) return "Memory is disabled in config."
-                await ensureReady(config)
+            return Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        if (!config.enabled) return "Memory is disabled in config."
+                        await ensureReady(config)
 
-                const sourceId = args.source_id as string
-                const targetId = args.target_id as string
-                const relationType = args.relation_type as string
+                        const sourceId = args.source_id as string
+                        const targetId = args.target_id as string
+                        const relationType = args.relation_type as string
 
-                // Dynamically import `linkConcepts` since it's an exported function in surreal-client
-                const { linkConcepts } = await import("./surreal-client")
-                await linkConcepts(sourceId, targetId, relationType)
+                        const { linkConcepts } = await import("./surreal-client")
+                        await linkConcepts(sourceId, targetId, relationType)
 
-                return `✓ Successfully linked concepts: ${sourceId} -[${relationType}]-> ${targetId}`
-            } catch (err) {
-                log("[memory_link] error", { err })
-                return `Failed to link concepts: ${err instanceof Error ? err.message : String(err)}`
-            }
+                        return `✓ Successfully linked concepts: ${sourceId} -[${relationType}]-> ${targetId}`
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    log("[memory_link] error", { err })
+                    return Effect.succeed(`Failed to link concepts: ${err instanceof Error ? err.message : String(err)}`)
+                }))
+            )
         },
     }
 
