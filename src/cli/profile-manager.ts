@@ -1,15 +1,33 @@
+/**
+ * @module cli/profile-manager
+ * 
+ * Manages configuration profiles for the omo-cli. A profile is a distinct configuration
+ * environment (e.g., standard, cheap, enterprise) stored as an `omo-cli.json` file.
+ * This module allows listing available profiles, applying an active profile, and 
+ * tracking the currently selected profile.
+ */
+
 import { existsSync, readFileSync, writeFileSync, readdirSync, copyFileSync, mkdirSync } from "node:fs"
 import { join, dirname } from "node:path"
+import { Effect } from "effect"
 import { parseJsonc, getOpenCodeConfigPaths } from "../shared"
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Represents metadata about an available configuration profile.
+ */
 export interface ProfileInfo {
+    /** The name of the profile (corresponds to its directory name). */
     name: string
+    /** The absolute file path to the profile's `omo-cli.json` file. */
     path: string
-    /** Quick summary derived from the brain-tier model */
+    /** 
+     * A human-readable, quick summary of the profile derived from its loaded agent models,
+     * providing a glanceable description of its primary capabilities (e.g., "Claude + OpenAI").
+     */
     summary: string
 }
 
@@ -57,8 +75,12 @@ function getOmoConfigPath(): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Scan the profiles/ directory and return all available profiles.
- * Each profile is a subfolder containing omo-cli.json.
+ * Scans the local `profiles/` directory and returns all available profiles.
+ * 
+ * Each valid profile is a subfolder containing an `omo-cli.json` file.
+ * The function parses each profile to extract a summary and ignores malformed configs.
+ * 
+ * @returns {ProfileInfo[]} An array of discovered profiles, sorted alphabetically by name.
  */
 export function listProfiles(): ProfileInfo[] {
     const profilesDir = getProfilesDir()
@@ -76,33 +98,33 @@ export function listProfiles(): ProfileInfo[] {
         const configPath = join(profilesDir, entry.name, "omo-cli.json")
         if (!existsSync(configPath)) continue
 
-        try {
-            const content = readFileSync(configPath, "utf-8")
-            const config = parseJsonc<OmoConfig>(content)
-            const summary = deriveProfileSummary(config)
-
-            profiles.push({
-                name: entry.name,
-                path: configPath,
-                summary,
-            })
-        } catch {
-            // Skip malformed profile configs
-        }
+        const parsed = Effect.runSync(
+            Effect.try({
+                try: () => {
+                    const content = readFileSync(configPath, "utf-8")
+                    const config = parseJsonc<OmoConfig>(content)
+                    const summary = deriveProfileSummary(config)
+                    return { name: entry.name, path: configPath, summary } as ProfileInfo
+                },
+                catch: () => "skip" as const,
+            }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+        )
+        if (parsed) profiles.push(parsed)
     }
 
-    // Sort: alphabetical but "mike" first if present
-    profiles.sort((a, b) => {
-        if (a.name === "mike") return -1
-        if (b.name === "mike") return 1
-        return a.name.localeCompare(b.name)
-    })
+    // Sort alphabetically
+    profiles.sort((a, b) => a.name.localeCompare(b.name))
 
     return profiles
 }
 
 /**
- * Apply a profile by copying its omo-cli.json to ~/.config/opencode/.
+ * Applies a given profile by copying its configuration to the global OpenCode config path.
+ * 
+ * This effectively updates the user's active `omo-cli.json` and updates the active profile marker.
+ * 
+ * @param {string} name - The name of the profile to apply.
+ * @returns {{ success: boolean; path: string; error?: string }} The result of the application attempt.
  */
 export function applyProfile(name: string): { success: boolean; path: string; error?: string } {
     const profilesDir = getProfilesDir()
@@ -114,55 +136,75 @@ export function applyProfile(name: string): { success: boolean; path: string; er
 
     const destPath = getOmoConfigPath()
 
-    try {
-        // Ensure destination directory exists
-        const destDir = dirname(destPath)
-        if (!existsSync(destDir)) {
-            mkdirSync(destDir, { recursive: true })
-        }
+    return Effect.runSync(
+        Effect.try({
+            try: () => {
+                // Ensure destination directory exists
+                const destDir = dirname(destPath)
+                if (!existsSync(destDir)) {
+                    mkdirSync(destDir, { recursive: true })
+                }
 
-        copyFileSync(sourcePath, destPath)
-        setActiveProfile(name)
-        return { success: true, path: destPath }
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        return { success: false, path: destPath, error: msg }
-    }
+                copyFileSync(sourcePath, destPath)
+                setActiveProfile(name)
+                return { success: true, path: destPath }
+            },
+            catch: (err) => err,
+        }).pipe(Effect.catchAll((err) => {
+            const msg = err instanceof Error ? err.message : String(err)
+            return Effect.succeed({ success: false, path: destPath, error: msg })
+        }))
+    )
 }
 
 /**
- * Set the active profile name marker.
+ * Sets the active profile marker file to the specified profile name.
+ * This is used to persist across CLI sessions which profile is currently selected.
+ * Fails silently if the marker cannot be written.
+ * 
+ * @param {string} name - The name of the active profile.
  */
 export function setActiveProfile(name: string): void {
     const markerPath = getActiveProfilePath()
-    try {
-        const dir = dirname(markerPath)
-        if (!existsSync(dir)) {
-            mkdirSync(dir, { recursive: true })
-        }
-        writeFileSync(markerPath, name + "\n")
-    } catch {
-        // Silently fail — marker is non-critical
-    }
+    Effect.runSync(
+        Effect.try({
+            try: () => {
+                const dir = dirname(markerPath)
+                if (!existsSync(dir)) {
+                    mkdirSync(dir, { recursive: true })
+                }
+                writeFileSync(markerPath, name + "\n")
+            },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.void))
+    )
 }
 
 /**
- * Get the currently active profile name, or null if none.
+ * Retrieves the currently active profile name from the marker file.
+ * 
+ * @returns {string | null} The active profile name, or `null` if none is set or an error occurs.
  */
 export function getActiveProfile(): string | null {
     const markerPath = getActiveProfilePath()
-    try {
-        if (existsSync(markerPath)) {
-            return readFileSync(markerPath, "utf-8").trim() || null
-        }
-    } catch {
-        // Silently fail
-    }
-    return null
+    return Effect.runSync(
+        Effect.try({
+            try: () => {
+                if (existsSync(markerPath)) {
+                    return readFileSync(markerPath, "utf-8").trim() || null
+                }
+                return null
+            },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+    )
 }
 
 /**
- * Get the profiles directory path (for creating new profiles).
+ * Gets the absolute path to the directory containing all configuration profiles.
+ * Used internally, or for UI hints when creating new profiles.
+ * 
+ * @returns {string} The resolved absolute path to the `profiles/` directory.
  */
 export function getProfilesDirectory(): string {
     return getProfilesDir()
@@ -199,15 +241,17 @@ function deriveProfileSummary(config: OmoConfig | null): string {
 import type { ProfileSummary } from "./types"
 
 /**
- * Derive a ProfileSummary from a specific profile's omo-cli.json.
- * Dynamically detects providers from the model strings in the profile.
+ * Derives a minimal `ProfileSummary` from a specific profile's configuration.
+ * 
+ * This specifically extracts the memory configuration flag used during the application
+ * installation pipeline to know if auxiliary services (like omo-memory Docker via SurrealDB)
+ * need to be started.
+ * 
+ * @param {string} name - The name of the profile to inspect.
+ * @returns {ProfileSummary} A summary object containing the `enableMemory` flag.
  */
 export function deriveInstallConfigFromProfile(name: string): ProfileSummary {
-    const defaultResult: ProfileSummary = {
-        providers: new Set<string>(),
-        hasClaudeOpus: false,
-        enableMemory: false,
-    }
+    const defaultResult: ProfileSummary = { enableMemory: false }
 
     const profilesDir = getProfilesDir()
     const configPath = join(profilesDir, name, "omo-cli.json")
@@ -216,44 +260,15 @@ export function deriveInstallConfigFromProfile(name: string): ProfileSummary {
         return defaultResult
     }
 
-    try {
-        const content = readFileSync(configPath, "utf-8")
-        const config = parseJsonc<OmoConfig>(content)
-
-        if (!config?.agents) {
-            return defaultResult
-        }
-
-        const res = { ...defaultResult }
-        const allModels = Object.values(config.agents).map(a => a.model)
-        if (config.categories) {
-            allModels.push(...Object.values(config.categories).map(c => c.model))
-        }
-
-        for (const model of allModels) {
-            // Extract dynamic provider (prefix before '/')
-            if (model.includes("antigravity-claude") || model.startsWith("anthropic/")) {
-                res.providers.add("anthropic")
-                if (model.includes("opus-4-6")) {
-                    res.hasClaudeOpus = true
-                }
-            } else if (model.includes("antigravity-gemini") || model.startsWith("google/")) {
-                res.providers.add("google")
-            } else if (model.includes("/")) {
-                res.providers.add(model.split("/")[0])
-            } else if (model.includes("antigravity")) {
-                res.providers.add("google")
-            }
-        }
-
-        // Read memory config
-        if (config.memory?.enabled) {
-            res.enableMemory = true
-        }
-
-        return res
-    } catch {
-        return defaultResult
-    }
+    return Effect.runSync(
+        Effect.try({
+            try: () => {
+                const content = readFileSync(configPath, "utf-8")
+                const config = parseJsonc<OmoConfig>(content)
+                return { enableMemory: config?.memory?.enabled === true }
+            },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(defaultResult)))
+    )
 }
 
