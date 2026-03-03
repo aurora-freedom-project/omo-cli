@@ -5,6 +5,7 @@
  * Based on https://code.claude.com/docs/en/plugins-reference
  */
 
+/** Scope of a plugin installation (user, project, local, managed). */
 export type PluginScope = "user" | "project" | "local" | "managed"
 
 /**
@@ -66,7 +67,7 @@ export interface PluginManifest {
   repository?: string
   license?: string
   keywords?: string[]
-  
+
   // Component paths (can be string or array)
   commands?: string | string[]
   agents?: string | string[]
@@ -87,11 +88,13 @@ export interface HookEntry {
   agent?: string
 }
 
+/** Matcher for hook events with optional glob pattern. */
 export interface HookMatcher {
   matcher?: string
   hooks: HookEntry[]
 }
 
+/** Configuration object containing all hook event matchers. */
 export interface HooksConfig {
   hooks?: {
     PreToolUse?: HookMatcher[]
@@ -122,6 +125,7 @@ export interface PluginMcpServer {
   disabled?: boolean
 }
 
+/** Map of MCP server names to their configurations. */
 export interface McpServersConfig {
   mcpServers?: Record<string, PluginMcpServer>
 }
@@ -148,6 +152,7 @@ export interface LspServerConfig {
   }
 }
 
+/** Map of language identifiers to LSP server configurations. */
 export interface LspServersConfig {
   [language: string]: LspServerConfig
 }
@@ -162,7 +167,7 @@ export interface LoadedPlugin {
   installPath: string
   manifest?: PluginManifest
   pluginKey: string
-  
+
   // Resolved paths for components
   commandsDir?: string
   agentsDir?: string
@@ -180,6 +185,7 @@ export interface PluginLoadResult {
   errors: PluginLoadError[]
 }
 
+/** Error encountered while loading a plugin. */
 export interface PluginLoadError {
   pluginKey: string
   installPath: string

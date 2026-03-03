@@ -1,3 +1,4 @@
+/** OAuth2 Dynamic Client Registration request body. */
 export type ClientRegistrationRequest = {
   redirect_uris: string[]
   client_name: string
@@ -6,11 +7,13 @@ export type ClientRegistrationRequest = {
   token_endpoint_auth_method: "none" | "client_secret_post"
 }
 
+/** OAuth2 client credentials (ID + optional secret). */
 export type ClientCredentials = {
   clientId: string
   clientSecret?: string
 }
 
+/** Storage interface for persisting client registrations. */
 export type ClientRegistrationStorage = {
   getClientRegistration: (serverIdentifier: string) => ClientCredentials | null
   setClientRegistration: (
@@ -19,6 +22,7 @@ export type ClientRegistrationStorage = {
   ) => void
 }
 
+/** Options for dynamic client registration. */
 export type DynamicClientRegistrationOptions = {
   registrationEndpoint?: string | null
   serverIdentifier?: string
@@ -30,11 +34,13 @@ export type DynamicClientRegistrationOptions = {
   fetch?: DcrFetch
 }
 
+/** Fetch function type for DCR HTTP requests. */
 export type DcrFetch = (
   input: string,
   init?: { method?: string; headers?: Record<string, string>; body?: string }
 ) => Promise<{ ok: boolean; json: () => Promise<unknown> }>
 
+/** Gets existing client credentials or registers a new client via DCR. */
 export async function getOrRegisterClient(
   options: DynamicClientRegistrationOptions
 ): Promise<ClientCredentials | null> {

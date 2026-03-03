@@ -5,6 +5,7 @@ import { parseFrontmatter } from "../../shared/frontmatter"
 import { readFileSync } from "node:fs"
 import type { GitMasterConfig, BrowserAutomationProvider } from "../../config/schema"
 
+/** Options for resolving skill content with optional configuration. */
 export interface SkillResolutionOptions {
 	gitMasterConfig?: GitMasterConfig
 	browserProvider?: BrowserAutomationProvider
@@ -63,6 +64,7 @@ async function extractSkillTemplate(skill: LoadedSkill): Promise<string> {
 
 export { clearSkillCache, getAllSkills, extractSkillTemplate }
 
+/** Injects git-master configuration (commit footer, co-author) into a skill template. */
 export function injectGitMasterConfig(template: string, config?: GitMasterConfig): string {
 	const commitFooter = config?.commit_footer ?? true
 	const includeCoAuthoredBy = config?.include_co_authored_by ?? true
@@ -121,6 +123,7 @@ export function injectGitMasterConfig(template: string, config?: GitMasterConfig
 	return template + "\n\n" + injection
 }
 
+/** Resolves a single skill by name using builtin skills (synchronous). */
 export function resolveSkillContent(skillName: string, options?: SkillResolutionOptions): string | null {
 	const skills = createBuiltinSkills({ browserProvider: options?.browserProvider })
 	const skill = skills.find((s) => s.name === skillName)
@@ -133,6 +136,7 @@ export function resolveSkillContent(skillName: string, options?: SkillResolution
 	return skill.template
 }
 
+/** Resolves multiple skills by name, returning resolved map and not-found list. */
 export function resolveMultipleSkills(skillNames: string[], options?: SkillResolutionOptions): {
 	resolved: Map<string, string>
 	notFound: string[]
@@ -159,6 +163,7 @@ export function resolveMultipleSkills(skillNames: string[], options?: SkillResol
 	return { resolved, notFound }
 }
 
+/** Resolves a single skill by name using all discovered + builtin skills (async). */
 export async function resolveSkillContentAsync(
 	skillName: string,
 	options?: SkillResolutionOptions
@@ -176,6 +181,7 @@ export async function resolveSkillContentAsync(
 	return template
 }
 
+/** Resolves multiple skills by name using all discovered + builtin skills (async). */
 export async function resolveMultipleSkillsAsync(
 	skillNames: string[],
 	options?: SkillResolutionOptions
