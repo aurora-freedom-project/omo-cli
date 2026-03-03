@@ -1,4 +1,5 @@
 import type { PluginInput } from "@opencode-ai/plugin"
+import { Effect } from "effect"
 import { getCachedVersion, getLocalDevVersion, findPluginEntry, getLatestVersion, updatePinnedVersion } from "./checker"
 import { invalidatePackage } from "./cache"
 import { PACKAGE_NAME } from "./constants"
@@ -27,11 +28,11 @@ export function isPrereleaseOrDistTag(pinnedVersion: string | null): boolean {
 
 export function extractChannel(version: string | null): string {
   if (!version) return "latest"
-  
+
   if (isDistTag(version)) {
     return version
   }
-  
+
   if (isPrereleaseVersion(version)) {
     const prereleasePart = version.split("-")[1]
     if (prereleasePart) {
@@ -41,7 +42,7 @@ export function extractChannel(version: string | null): string {
       }
     }
   }
-  
+
   return "latest"
 }
 
@@ -82,14 +83,14 @@ export function createAutoUpdateCheckerHook(ctx: PluginInput, options: AutoUpdat
 
         if (localDevVersion) {
           if (showStartupToast) {
-            showLocalDevToast(ctx, displayVersion, isSisyphusEnabled).catch(() => {})
+            showLocalDevToast(ctx, displayVersion, isSisyphusEnabled).catch(() => { })
           }
           log("[auto-update-checker] Local development mode")
           return
         }
 
         if (showStartupToast) {
-          showVersionToast(ctx, displayVersion, getToastMessage(false)).catch(() => {})
+          showVersionToast(ctx, displayVersion, getToastMessage(false)).catch(() => { })
         }
 
         runBackgroundUpdateCheck(ctx, autoUpdate, getToastMessage).catch(err => {
@@ -162,13 +163,16 @@ async function runBackgroundUpdateCheck(
 }
 
 async function runBunInstallSafe(): Promise<boolean> {
-  try {
-    return await runBunInstall()
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    log("[auto-update-checker] bun install error:", errorMessage)
-    return false
-  }
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: () => runBunInstall(),
+      catch: (err) => err,
+    }).pipe(Effect.catchAll((err) => {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      log("[auto-update-checker] bun install error:", errorMessage)
+      return Effect.succeed(false)
+    }))
+  )
 }
 
 async function showModelCacheWarningIfNeeded(ctx: PluginInput): Promise<void> {
@@ -183,7 +187,7 @@ async function showModelCacheWarningIfNeeded(ctx: PluginInput): Promise<void> {
         duration: 10000,
       },
     })
-    .catch(() => {})
+    .catch(() => { })
 
   log("[auto-update-checker] Model cache warning shown")
 }
@@ -191,7 +195,7 @@ async function showModelCacheWarningIfNeeded(ctx: PluginInput): Promise<void> {
 async function updateAndShowConnectedProvidersCacheStatus(ctx: PluginInput): Promise<void> {
   const hadCache = hasConnectedProvidersCache()
 
-  updateConnectedProvidersCache(ctx.client).catch(() => {})
+  updateConnectedProvidersCache(ctx.client).catch(() => { })
 
   if (!hadCache) {
     await ctx.client.tui
@@ -203,7 +207,7 @@ async function updateAndShowConnectedProvidersCacheStatus(ctx: PluginInput): Pro
           duration: 8000,
         },
       })
-      .catch(() => {})
+      .catch(() => { })
 
     log("[auto-update-checker] Connected providers cache toast shown (first run)")
   } else {
@@ -225,7 +229,7 @@ async function showConfigErrorsIfAny(ctx: PluginInput): Promise<void> {
         duration: 10000,
       },
     })
-    .catch(() => {})
+    .catch(() => { })
 
   log(`[auto-update-checker] Config load errors shown: ${errors.length} error(s)`)
   clearConfigLoadErrors()
@@ -272,7 +276,7 @@ async function showUpdateAvailableToast(
         duration: 8000,
       },
     })
-    .catch(() => {})
+    .catch(() => { })
   log(`[auto-update-checker] Update available toast shown: v${latestVersion}`)
 }
 
@@ -286,7 +290,7 @@ async function showAutoUpdatedToast(ctx: PluginInput, oldVersion: string, newVer
         duration: 8000,
       },
     })
-    .catch(() => {})
+    .catch(() => { })
   log(`[auto-update-checker] Auto-updated toast shown: v${oldVersion} → v${newVersion}`)
 }
 

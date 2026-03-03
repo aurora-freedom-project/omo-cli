@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { log } from "../../shared/logger"
 import { addConcept, searchSimilar } from "../../cli/memory/surreal-client"
 import { generateEmbedding } from "../../cli/memory/embedder"
@@ -78,51 +79,56 @@ export function createMemoryCaptureHook(config: MemoryConfig, directory: string)
             input: ChatMessageInput,
             output: ChatMessageOutput
         ): Promise<void> => {
-            try {
-                const promptText = output.parts
-                    .filter((p) => p.type === "text" && p.text)
-                    .map((p) => p.text)
-                    .join("\n")
-                    .trim()
+            await Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        const promptText = output.parts
+                            .filter((p) => p.type === "text" && p.text)
+                            .map((p) => p.text)
+                            .join("\n")
+                            .trim()
 
-                if (!promptText) return
+                        if (!promptText) return
 
-                const insights = extractKeyInsights(promptText)
-                if (insights.length === 0) return
+                        const insights = extractKeyInsights(promptText)
+                        if (insights.length === 0) return
 
-                for (const insight of insights) {
-                    // Deduplicate: check if very similar concept already exists
-                    const embedding = await generateEmbedding(insight)
-                    const similar = await searchSimilar(embedding, 1, directory)
+                        for (const insight of insights) {
+                            const embedding = await generateEmbedding(insight)
+                            const similar = await searchSimilar(embedding, 1, directory)
 
-                    if (similar.length > 0 && similar[0].score >= SIMILARITY_THRESHOLD) {
-                        log("[memory-capture] Skipping duplicate concept", {
-                            score: similar[0].score,
-                            sessionID: input.sessionID,
-                        })
-                        continue
-                    }
+                            if (similar.length > 0 && similar[0].score >= SIMILARITY_THRESHOLD) {
+                                log("[memory-capture] Skipping duplicate concept", {
+                                    score: similar[0].score,
+                                    sessionID: input.sessionID,
+                                })
+                                continue
+                            }
 
-                    const tags = extractTags(promptText, input.agent)
+                            const tags = extractTags(promptText, input.agent)
 
-                    await addConcept({
-                        content: insight,
-                        tags,
-                        embedding,
-                        source: "auto",
-                        project: directory,
-                    })
+                            await addConcept({
+                                content: insight,
+                                tags,
+                                embedding,
+                                source: "auto",
+                                project: directory,
+                            })
 
-                    log("[memory-capture] Auto-captured insight", {
-                        length: insight.length,
-                        tags,
-                        sessionID: input.sessionID,
-                    })
-                }
-            } catch (err) {
-                // Silent — never break the chat pipeline
-                log("[memory-capture] Error (ignored)", { err })
-            }
+                            log("[memory-capture] Auto-captured insight", {
+                                length: insight.length,
+                                tags,
+                                sessionID: input.sessionID,
+                            })
+                        }
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    // Silent — never break the chat pipeline
+                    log("[memory-capture] Error (ignored)", { err })
+                    return Effect.void
+                }))
+            )
         },
     }
 }
