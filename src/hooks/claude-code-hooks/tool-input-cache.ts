@@ -30,7 +30,7 @@ export function getToolInput(
   const entry = cache.get(key)
   if (!entry) return null
 
-   cache.delete(key)
+  cache.delete(key)
   if (Date.now() - entry.timestamp > CACHE_TTL) return null
 
   return entry.toolInput
@@ -45,3 +45,12 @@ setInterval(() => {
     }
   }
 }, CACHE_TTL)
+
+/** Remove all cached tool inputs for a given session. */
+export function cleanupToolInputCacheForSession(sessionId: string): void {
+  for (const key of cache.keys()) {
+    if (key.startsWith(`${sessionId}:`)) {
+      cache.delete(key)
+    }
+  }
+}

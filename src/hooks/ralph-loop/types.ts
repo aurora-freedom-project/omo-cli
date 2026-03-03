@@ -16,4 +16,9 @@ export interface RalphLoopOptions {
   getTranscriptPath?: (sessionId: string) => string
   apiTimeout?: number
   checkSessionExists?: (sessionId: string) => Promise<boolean>
+  safetyConfig?: {
+    circuit_breaker_threshold?: number
+    circuit_breaker_backoff_base_ms?: number
+    circuit_breaker_backoff_max_ms?: number
+  }
 }

@@ -19,5 +19,5 @@ export interface ConfigMergeResult {
 
 export interface DetectedConfig {
   isInstalled: boolean
-  providers: Set<string>
+  providers?: Set<string>
 }
