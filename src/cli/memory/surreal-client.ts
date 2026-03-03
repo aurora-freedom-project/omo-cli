@@ -1,6 +1,7 @@
 import { log } from "../../shared/logger"
 import { Effect } from "effect"
 
+/** Configuration for connecting to a SurrealDB instance. */
 export interface SurrealConnectionConfig {
     url: string        // e.g. "http://localhost:18000/rpc"
     user: string       // e.g. "root"
@@ -38,6 +39,7 @@ export function getConnectionConfig(): Readonly<SurrealConnectionConfig> {
     return { ...connectionConfig }
 }
 
+/** A concept stored in the SurrealDB memory graph. */
 export interface Concept {
     id?: string
     content: string
@@ -48,6 +50,7 @@ export interface Concept {
     created?: string
 }
 
+/** A concept with a similarity score from vector search. */
 export interface SimilarConcept extends Concept {
     score: number
 }
@@ -121,13 +124,14 @@ DEFINE FIELD IF NOT EXISTS kind ON code_relation TYPE string;
 `
 }
 
-// Keep legacy export for backward compatibility with tests
+/** Pre-built SurrealQL schema DDL string for legacy compatibility. */
 export const SURREALQL_SCHEMA = buildSchemaSQL()
 
 // ---------------------------------------------------------------------------
 // Code Intelligence types
 // ---------------------------------------------------------------------------
 
+/** A code element (function, class, etc.) stored in the code intelligence graph. */
 export interface CodeElement {
     id?: string
     name: string
@@ -147,12 +151,14 @@ export interface CodeElement {
     fileHash?: string
 }
 
+/** A relationship between two code elements (calls, imports, extends). */
 export interface CodeRelation {
     sourceId: string
     targetId: string
     kind: "calls" | "imports" | "extends" | "implements"
 }
 
+/** Overview statistics for indexed code in a project. */
 export interface CodeOverview {
     fileCount: number
     elementCounts: Array<{ kind: string; count: number }>
@@ -163,6 +169,7 @@ export interface CodeOverview {
 // RPC
 // ---------------------------------------------------------------------------
 
+/** Raw response from a SurrealDB RPC call. */
 interface RpcResponse<T = unknown> {
     id?: string
     result?: T
@@ -244,6 +251,11 @@ export async function initSchema(): Promise<void> {
 // Memory (concept) operations — existing
 // ---------------------------------------------------------------------------
 
+/**
+ * Stores a new concept in the memory graph.
+ * @param concept - Concept to store (without ID)
+ * @returns The generated concept ID
+ */
 export async function addConcept(concept: Omit<Concept, "id">): Promise<string> {
     const result = await rpc<Array<{ result: Array<{ id: string }> }>>(
         "query",
@@ -266,6 +278,12 @@ export async function addConcept(concept: Omit<Concept, "id">): Promise<string> 
     return id
 }
 
+/**
+ * Creates a link between two concepts in the graph.
+ * @param sourceId - Source concept ID
+ * @param targetId - Target concept ID
+ * @param relationType - Type of relationship
+ */
 export async function linkConcepts(
     sourceId: string,
     targetId: string,
@@ -283,6 +301,13 @@ export async function linkConcepts(
     log("[surreal-client] Concepts linked", { src, tgt, type: relationType })
 }
 
+/**
+ * Searches for concepts similar to the given embedding vector.
+ * @param embedding - Query embedding vector
+ * @param limit - Maximum results to return (default: 5)
+ * @param project - Optional project filter
+ * @returns Array of concepts with similarity scores
+ */
 export async function searchSimilar(
     embedding: number[],
     limit = 5,
@@ -304,6 +329,12 @@ export async function searchSimilar(
     return result?.[0]?.result ?? []
 }
 
+/**
+ * Traverses the concept graph from a starting node.
+ * @param conceptId - Starting concept ID
+ * @param depth - Maximum traversal depth (default: 2)
+ * @returns Array of connected concepts
+ */
 export async function graphTraverse(
     conceptId: string,
     depth = 2
@@ -330,6 +361,7 @@ export async function addRelation(
     log("[surreal-client] Relation added", { fromId, toId, relation })
 }
 
+/** Checks if the SurrealDB connection is active. */
 export async function isConnected(): Promise<boolean> {
     return await Effect.runPromise(
         Effect.tryPromise({
@@ -343,6 +375,11 @@ export async function isConnected(): Promise<boolean> {
 // Code Intelligence operations — NEW
 // ---------------------------------------------------------------------------
 
+/**
+ * Stores a code element in the code intelligence graph.
+ * @param element - Code element to store
+ * @returns The generated element ID
+ */
 export async function addCodeElement(element: CodeElement): Promise<string> {
     const result = await rpc<Array<{ result: Array<{ id: string }> }>>(
         "query",

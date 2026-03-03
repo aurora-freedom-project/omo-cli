@@ -1,27 +1,32 @@
 import type { AgentPromptMetadata, BuiltinAgentName } from "./types"
 
+/** Metadata about an available agent for prompt building. */
 export interface AvailableAgent {
   name: BuiltinAgentName
   description: string
   metadata: AgentPromptMetadata
 }
 
+/** Metadata about an available tool for prompt building. */
 export interface AvailableTool {
   name: string
   category: "lsp" | "ast" | "search" | "session" | "command" | "other"
 }
 
+/** Metadata about an available skill for prompt building. */
 export interface AvailableSkill {
   name: string
   description: string
   location: "user" | "project" | "plugin"
 }
 
+/** Metadata about a task category for prompt building. */
 export interface AvailableCategory {
   name: string
   description: string
 }
 
+/** Categorizes tool names into typed tool objects (lsp, ast, search, etc.). */
 export function categorizeTools(toolNames: string[]): AvailableTool[] {
   return toolNames.map((name) => {
     let category: AvailableTool["category"] = "other"
@@ -40,7 +45,8 @@ export function categorizeTools(toolNames: string[]): AvailableTool[] {
   })
 }
 
-function formatToolsForPrompt(tools: AvailableTool[]): string {
+/** Formats categorized tools into a prompt section for agent system prompts. */
+export function formatToolsForPrompt(tools: AvailableTool[]): string {
   const lspTools = tools.filter((t) => t.category === "lsp")
   const astTools = tools.filter((t) => t.category === "ast")
   const searchTools = tools.filter((t) => t.category === "search")
@@ -62,6 +68,7 @@ function formatToolsForPrompt(tools: AvailableTool[]): string {
   return parts.join(", ")
 }
 
+/** Builds a section listing key triggers for agent delegation. */
 export function buildKeyTriggersSection(agents: AvailableAgent[], _skills: AvailableSkill[] = []): string {
   const keyTriggers = agents
     .filter((a) => a.metadata.keyTrigger)
@@ -75,6 +82,7 @@ ${keyTriggers.join("\n")}
 - **"Look into" + "create PR"** → Not just research. Full implementation cycle expected.`
 }
 
+/** Builds the tool selection decision table for agent prompts. */
 export function buildToolSelectionTable(
   agents: AvailableAgent[],
   tools: AvailableTool[] = [],
@@ -280,6 +288,7 @@ Briefly announce "Consulting Architect for [reason]" before invocation.
 </Architect_Usage>`
 }
 
+/** Builds the hard blocks section listing forbidden actions for agents. */
 export function buildHardBlocksSection(): string {
   const blocks = [
     "| Type error suppression (`as any`, `@ts-ignore`) | Never |",
@@ -295,6 +304,7 @@ export function buildHardBlocksSection(): string {
 ${blocks.join("\n")}`
 }
 
+/** Builds the anti-patterns section warning agents about common mistakes. */
 export function buildAntiPatternsSection(): string {
   const patterns = [
     "| **Type Safety** | `as any`, `@ts-ignore`, `@ts-expect-error` |",
@@ -311,6 +321,10 @@ export function buildAntiPatternsSection(): string {
 ${patterns.join("\n")}`
 }
 
+/**
+ * Builds the complete UltraWork delegation prompt section.
+ * Combines all sub-sections into a comprehensive system prompt.
+ */
 export function buildUltraworkSection(
   agents: AvailableAgent[],
   categories: AvailableCategory[],

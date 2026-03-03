@@ -1,5 +1,6 @@
 import color from "picocolors"
 
+/** Unicode symbols used in doctor output formatting. */
 export const SYMBOLS = {
   check: color.green("\u2713"),
   cross: color.red("\u2717"),
@@ -10,6 +11,7 @@ export const SYMBOLS = {
   skip: color.dim("\u25CB"),
 } as const
 
+/** Color functions mapped to check result statuses. */
 export const STATUS_COLORS = {
   pass: color.green,
   fail: color.red,
@@ -17,6 +19,7 @@ export const STATUS_COLORS = {
   skip: color.dim,
 } as const
 
+/** Unique identifiers for each health check. */
 export const CHECK_IDS = {
   OPENCODE_INSTALLATION: "opencode-installation",
   PLUGIN_REGISTRATION: "plugin-registration",
@@ -36,6 +39,7 @@ export const CHECK_IDS = {
   VERSION_STATUS: "version-status",
 } as const
 
+/** Human-readable names for each check ID. */
 export const CHECK_NAMES: Record<string, string> = {
   [CHECK_IDS.OPENCODE_INSTALLATION]: "OpenCode Installation",
   [CHECK_IDS.PLUGIN_REGISTRATION]: "Plugin Registration",
@@ -55,6 +59,7 @@ export const CHECK_NAMES: Record<string, string> = {
   [CHECK_IDS.VERSION_STATUS]: "Version Status",
 } as const
 
+/** Human-readable names for each check category. */
 export const CATEGORY_NAMES: Record<string, string> = {
   installation: "Installation",
   configuration: "Configuration",
@@ -64,13 +69,17 @@ export const CATEGORY_NAMES: Record<string, string> = {
   updates: "Updates",
 } as const
 
+/** Process exit codes for doctor command. */
 export const EXIT_CODES = {
   SUCCESS: 0,
   FAILURE: 1,
 } as const
 
+/** Minimum compatible OpenCode version for omo-cli. */
 export const MIN_OPENCODE_VERSION = "1.0.150"
 
+/** NPM package name for version checks. */
 export const PACKAGE_NAME = "omo-cli"
 
+/** List of OpenCode binary names to search for. */
 export const OPENCODE_BINARIES = ["opencode", "opencode-desktop"] as const

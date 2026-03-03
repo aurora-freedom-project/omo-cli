@@ -2,6 +2,7 @@ import color from "picocolors"
 import type { CheckResult, DoctorSummary, CheckCategory, DoctorResult } from "./types"
 import { SYMBOLS, STATUS_COLORS, CATEGORY_NAMES } from "./constants"
 
+/** Formats a check status into its colored symbol (✓, ✗, ⚠, ○). */
 export function formatStatusSymbol(status: CheckResult["status"]): string {
   switch (status) {
     case "pass":
@@ -15,6 +16,7 @@ export function formatStatusSymbol(status: CheckResult["status"]): string {
   }
 }
 
+/** Formats a single check result as a colored line with optional details. */
 export function formatCheckResult(result: CheckResult, verbose: boolean): string {
   const symbol = formatStatusSymbol(result.status)
   const colorFn = STATUS_COLORS[result.status]
@@ -34,11 +36,13 @@ export function formatCheckResult(result: CheckResult, verbose: boolean): string
   return line
 }
 
+/** Formats a category header with name and separator line. */
 export function formatCategoryHeader(category: CheckCategory): string {
   const name = CATEGORY_NAMES[category] || category
   return `\n${color.bold(color.white(name))}\n${color.dim("\u2500".repeat(40))}`
 }
 
+/** Formats the summary section showing pass/fail/warn/skip counts. */
 export function formatSummary(summary: DoctorSummary): string {
   const lines: string[] = []
 
@@ -60,10 +64,12 @@ export function formatSummary(summary: DoctorSummary): string {
   return lines.join("\n")
 }
 
+/** Formats the doctor header banner. */
 export function formatHeader(): string {
   return `\n${color.bgMagenta(color.white(" oMoMoMoMo... Doctor "))}\n`
 }
 
+/** Formats the footer message based on overall health status. */
 export function formatFooter(summary: DoctorSummary): string {
   if (summary.failed > 0) {
     return `\n${SYMBOLS.cross} ${color.red("Issues detected. Please review the errors above.")}\n`
@@ -74,15 +80,18 @@ export function formatFooter(summary: DoctorSummary): string {
   return `\n${SYMBOLS.check} ${color.green("All systems operational!")}\n`
 }
 
+/** Formats a progress indicator showing current check being run. */
 export function formatProgress(current: number, total: number, name: string): string {
   const progress = color.dim(`[${current}/${total}]`)
   return `${progress} Checking ${name}...`
 }
 
+/** Formats doctor results as JSON string. */
 export function formatJsonOutput(result: DoctorResult): string {
   return JSON.stringify(result, null, 2)
 }
 
+/** Formats detail lines with bullet points. */
 export function formatDetails(details: string[]): string {
   return details.map((d) => `      ${SYMBOLS.bullet} ${color.dim(d)}`).join("\n")
 }
@@ -92,6 +101,7 @@ function stripAnsi(str: string): string {
   return str.replace(/\x1b\[[0-9;]*m/g, "")
 }
 
+/** Formats content inside a Unicode box with optional title. */
 export function formatBox(content: string, title?: string): string {
   const lines = content.split("\n")
   const maxWidth = Math.max(...lines.map((l) => stripAnsi(l).length), title?.length ?? 0) + 4
@@ -103,9 +113,9 @@ export function formatBox(content: string, title?: string): string {
   if (title) {
     output.push(
       color.dim("\u250C\u2500") +
-        color.bold(` ${title} `) +
-        color.dim("\u2500".repeat(maxWidth - title.length - 4)) +
-        color.dim("\u2510")
+      color.bold(` ${title} `) +
+      color.dim("\u2500".repeat(maxWidth - title.length - 4)) +
+      color.dim("\u2510")
     )
   } else {
     output.push(color.dim("\u250C") + border + color.dim("\u2510"))
@@ -123,6 +133,7 @@ export function formatBox(content: string, title?: string): string {
   return output.join("\n")
 }
 
+/** Extracts actionable suggestions from failed check results. */
 export function formatHelpSuggestions(results: CheckResult[]): string[] {
   const suggestions: string[] = []
 
