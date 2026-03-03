@@ -1,7 +1,11 @@
+/** Part type for LLM thinking/reasoning content. */
 export type ThinkingPartType = "thinking" | "redacted_thinking" | "reasoning"
+/** Part type for meta/step markers. */
 export type MetaPartType = "step-start" | "step-finish"
+/** Part type for user-visible content (text, tools). */
 export type ContentPartType = "text" | "tool" | "tool_use" | "tool_result"
 
+/** Stored metadata for a session message. */
 export interface StoredMessageMeta {
   id: string
   sessionID: string
@@ -14,6 +18,7 @@ export interface StoredMessageMeta {
   error?: unknown
 }
 
+/** Stored text part of a message. */
 export interface StoredTextPart {
   id: string
   sessionID: string
@@ -24,6 +29,7 @@ export interface StoredTextPart {
   ignored?: boolean
 }
 
+/** Stored tool invocation part of a message. */
 export interface StoredToolPart {
   id: string
   sessionID: string
@@ -39,6 +45,7 @@ export interface StoredToolPart {
   }
 }
 
+/** Stored reasoning/thinking part of a message. */
 export interface StoredReasoningPart {
   id: string
   sessionID: string
@@ -47,6 +54,7 @@ export interface StoredReasoningPart {
   text: string
 }
 
+/** Stored step marker part (start/finish). */
 export interface StoredStepPart {
   id: string
   sessionID: string
@@ -54,6 +62,7 @@ export interface StoredStepPart {
   type: "step-start" | "step-finish"
 }
 
+/** Union type for all stored part variants. */
 export type StoredPart = StoredTextPart | StoredToolPart | StoredReasoningPart | StoredStepPart | {
   id: string
   sessionID: string
@@ -62,6 +71,7 @@ export type StoredPart = StoredTextPart | StoredToolPart | StoredReasoningPart |
   [key: string]: unknown
 }
 
+/** Data received from an OpenCode message event for recovery processing. */
 export interface MessageData {
   info?: {
     id?: string
@@ -88,6 +98,7 @@ export interface MessageData {
   }>
 }
 
+/** Configuration for resuming a session after recovery. */
 export interface ResumeConfig {
   sessionID: string
   agent?: string

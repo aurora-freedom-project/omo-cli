@@ -1,5 +1,7 @@
+/** Status of a single doctor health check. */
 export type CheckStatus = "pass" | "fail" | "warn" | "skip"
 
+/** Result of running a single health check. */
 export interface CheckResult {
   name: string
   status: CheckStatus
@@ -8,8 +10,10 @@ export interface CheckResult {
   duration?: number
 }
 
+/** Async function that performs a health check. */
 export type CheckFunction = () => Promise<CheckResult>
 
+/** Category grouping for health checks. */
 export type CheckCategory =
   | "installation"
   | "configuration"
@@ -18,6 +22,7 @@ export type CheckCategory =
   | "tools"
   | "updates"
 
+/** Definition of a single health check with metadata. */
 export interface CheckDefinition {
   id: string
   name: string
@@ -26,12 +31,14 @@ export interface CheckDefinition {
   critical?: boolean
 }
 
+/** Options for running the doctor command. */
 export interface DoctorOptions {
   verbose?: boolean
   json?: boolean
   category?: CheckCategory
 }
 
+/** Summary statistics from a doctor run. */
 export interface DoctorSummary {
   total: number
   passed: number
@@ -41,12 +48,14 @@ export interface DoctorSummary {
   duration: number
 }
 
+/** Complete result of a doctor run. */
 export interface DoctorResult {
   results: CheckResult[]
   summary: DoctorSummary
   exitCode: number
 }
 
+/** Information about the OpenCode installation. */
 export interface OpenCodeInfo {
   installed: boolean
   version: string | null
@@ -54,6 +63,7 @@ export interface OpenCodeInfo {
   binary: "opencode" | "opencode-desktop" | null
 }
 
+/** Information about plugin registration status. */
 export interface PluginInfo {
   registered: boolean
   configPath: string | null
@@ -62,6 +72,7 @@ export interface PluginInfo {
   pinnedVersion: string | null
 }
 
+/** Information about configuration validity. */
 export interface ConfigInfo {
   exists: boolean
   path: string | null
@@ -70,8 +81,10 @@ export interface ConfigInfo {
   errors: string[]
 }
 
+/** Supported authentication provider identifiers. */
 export type AuthProviderId = "anthropic" | "openai" | "google"
 
+/** Information about an authentication provider's status. */
 export interface AuthProviderInfo {
   id: AuthProviderId
   name: string
@@ -80,6 +93,7 @@ export interface AuthProviderInfo {
   error?: string
 }
 
+/** Information about an external dependency's availability. */
 export interface DependencyInfo {
   name: string
   required: boolean
@@ -89,6 +103,7 @@ export interface DependencyInfo {
   installHint?: string
 }
 
+/** Information about an LSP language server. */
 export interface LspServerInfo {
   id: string
   installed: boolean
@@ -96,6 +111,7 @@ export interface LspServerInfo {
   source: "builtin" | "config" | "plugin"
 }
 
+/** Information about an MCP server. */
 export interface McpServerInfo {
   id: string
   type: "builtin" | "user"
@@ -104,6 +120,7 @@ export interface McpServerInfo {
   error?: string
 }
 
+/** Information about version update status. */
 export interface VersionCheckInfo {
   currentVersion: string | null
   latestVersion: string | null

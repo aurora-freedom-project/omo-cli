@@ -6,10 +6,16 @@ import { getTmuxPath } from "../../tools/interactive-bash/utils"
 let serverAvailable: boolean | null = null
 let serverCheckUrl: string | null = null
 
+/** Checks if the current process is running inside a tmux session. */
 export function isInsideTmux(): boolean {
   return !!process.env.TMUX
 }
 
+/**
+ * Checks if the OpenCode server is running and healthy.
+ * @param serverUrl - Base URL of the server
+ * @returns True if the server responds to health checks
+ */
 export async function isServerRunning(serverUrl: string): Promise<boolean> {
   if (serverCheckUrl === serverUrl && serverAvailable === true) {
     return true
@@ -46,22 +52,31 @@ export async function isServerRunning(serverUrl: string): Promise<boolean> {
   return false
 }
 
+/** Resets the cached server availability state. */
 export function resetServerCheck(): void {
   serverAvailable = null
   serverCheckUrl = null
 }
 
+/** Tmux pane split direction: horizontal (-h) or vertical (-v). */
 export type SplitDirection = "-h" | "-v"
 
+/** Gets the current tmux pane ID from environment. */
 export function getCurrentPaneId(): string | undefined {
   return process.env.TMUX_PANE
 }
 
+/** Dimensions of a tmux pane and its parent window. */
 export interface PaneDimensions {
   paneWidth: number
   windowWidth: number
 }
 
+/**
+ * Gets the size dimensions of a tmux pane.
+ * @param paneId - Tmux pane identifier
+ * @returns Pane and window widths, or null if unavailable
+ */
 export async function getPaneDimensions(paneId: string): Promise<PaneDimensions | null> {
   const tmux = await getTmuxPath()
   if (!tmux) return null
@@ -81,6 +96,16 @@ export async function getPaneDimensions(paneId: string): Promise<PaneDimensions 
   return { paneWidth, windowWidth }
 }
 
+/**
+ * Spawns a new tmux pane for a sub-agent session.
+ * @param sessionId - OpenCode session ID
+ * @param description - Human-readable description for the pane
+ * @param config - Tmux configuration
+ * @param serverUrl - OpenCode server URL
+ * @param targetPaneId - Optional pane to split from
+ * @param splitDirection - Split direction (default: horizontal)
+ * @returns Result with success status and pane ID
+ */
 export async function spawnTmuxPane(
   sessionId: string,
   description: string,
@@ -147,6 +172,11 @@ export async function spawnTmuxPane(
   return { success: true, paneId }
 }
 
+/**
+ * Closes a tmux pane.
+ * @param paneId - Tmux pane identifier to close
+ * @returns True if the pane was successfully closed
+ */
 export async function closeTmuxPane(paneId: string): Promise<boolean> {
   const { log } = await import("../logger")
 
@@ -179,6 +209,15 @@ export async function closeTmuxPane(paneId: string): Promise<boolean> {
   return exitCode === 0
 }
 
+/**
+ * Replaces the content of an existing tmux pane with a new session.
+ * @param paneId - Tmux pane to replace
+ * @param sessionId - New OpenCode session ID
+ * @param description - Human-readable description
+ * @param config - Tmux configuration
+ * @param serverUrl - OpenCode server URL
+ * @returns Result with success status and pane ID
+ */
 export async function replaceTmuxPane(
   paneId: string,
   sessionId: string,
@@ -226,6 +265,12 @@ export async function replaceTmuxPane(
   return { success: true, paneId }
 }
 
+/**
+ * Applies a tmux window layout with optional main pane sizing.
+ * @param tmux - Path to tmux binary
+ * @param layout - Layout to apply (even-horizontal, main-vertical, etc.)
+ * @param mainPaneSize - Percentage size for main pane
+ */
 export async function applyLayout(
   tmux: string,
   layout: TmuxLayout,
@@ -245,6 +290,11 @@ export async function applyLayout(
   }
 }
 
+/**
+ * Enforces a 50/50 split width for the main tmux pane.
+ * @param mainPaneId - Tmux pane to resize
+ * @param windowWidth - Total window width
+ */
 export async function enforceMainPaneWidth(
   mainPaneId: string,
   windowWidth: number
