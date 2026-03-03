@@ -1,4 +1,5 @@
 import { injectHookMessage } from "../../features/hook-message-injector"
+import { Effect } from "effect"
 import { log } from "../../shared/logger"
 import { formatSystemDirective, SystemDirectiveTypes } from "../../shared/system-directive"
 
@@ -58,46 +59,45 @@ This context is critical for maintaining continuity after compaction.
 `
 
 async function queryMemoryConcepts(project?: string): Promise<string | null> {
-  try {
-    const surreal = await import("../../cli/memory/surreal-client")
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const surreal = await import("../../cli/memory/surreal-client")
 
-    const connected = await surreal.isConnected()
-    if (!connected) return null
+        const connected = await surreal.isConnected()
+        if (!connected) return null
 
-    // Use searchSimilar with an empty embedding isn't ideal;
-    // instead, do a direct HTTP query for recent concepts
-    const whereClause = project ? `WHERE project = "${project}"` : ""
-    const query = `SELECT content, tags FROM concept ${whereClause} ORDER BY created DESC LIMIT 10;`
+        const whereClause = project ? `WHERE project = "${project}"` : ""
+        const query = `SELECT content, tags FROM concept ${whereClause} ORDER BY created DESC LIMIT 10;`
 
-    // Leverage the internal rpc-style endpoint via fetch
-    const res = await fetch("http://127.0.0.1:18000/rpc", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        NS: "omo",
-        DB: "memory",
-        Authorization: `Basic ${btoa("root:omo-secret")}`,
+        const res = await fetch("http://127.0.0.1:18000/rpc", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            NS: "omo",
+            DB: "memory",
+            Authorization: `Basic ${btoa("root:omo-secret")}`,
+          },
+          body: JSON.stringify({ id: "1", method: "query", params: [query] }),
+          signal: AbortSignal.timeout(5000),
+        })
+
+        if (!res.ok) return null
+
+        const data = (await res.json()) as { result?: Array<{ result?: Array<{ content: string; tags?: string[] }> }> }
+        const rows = data.result?.[0]?.result
+        if (!rows || rows.length === 0) return null
+
+        const concepts = rows
+          .map((r) => `- ${r.content}${r.tags?.length ? ` [${r.tags.join(", ")}]` : ""}`)
+          .join("\n")
+
+        return `\n## 8. omo-memory: Recalled Concepts\nThe following concepts were previously stored in omo-memory and may be relevant:\n${concepts}\n`
       },
-      body: JSON.stringify({ id: "1", method: "query", params: [query] }),
-      signal: AbortSignal.timeout(5000),
-    })
-
-    if (!res.ok) return null
-
-    const data = (await res.json()) as { result?: Array<{ result?: Array<{ content: string; tags?: string[] }> }> }
-    const rows = data.result?.[0]?.result
-    if (!rows || rows.length === 0) return null
-
-    const concepts = rows
-      .map((r) => `- ${r.content}${r.tags?.length ? ` [${r.tags.join(", ")}]` : ""}`)
-      .join("\n")
-
-    return `\n## 8. omo-memory: Recalled Concepts\nThe following concepts were previously stored in omo-memory and may be relevant:\n${concepts}\n`
-  } catch {
-    // Memory not available — silently skip
-    return null
-  }
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
 }
 
 export function createCompactionContextInjector() {

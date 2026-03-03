@@ -1,4 +1,5 @@
 import { spawn } from "bun"
+import { Effect } from "effect"
 import { createLazyResolver } from "../shared/lazy-init"
 
 type Platform = "darwin" | "linux" | "win32" | "unsupported"
@@ -14,28 +15,27 @@ async function findCommand(commandName: string): Promise<string | null> {
   const isWindows = process.platform === "win32"
   const cmd = isWindows ? "where" : "which"
 
-  try {
-    const proc = spawn([cmd, commandName], {
-      stdout: "pipe",
-      stderr: "pipe",
-    })
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const proc = spawn([cmd, commandName], {
+          stdout: "pipe",
+          stderr: "pipe",
+        })
 
-    const exitCode = await proc.exited
-    if (exitCode !== 0) {
-      return null
-    }
+        const exitCode = await proc.exited
+        if (exitCode !== 0) return null
 
-    const stdout = await new Response(proc.stdout).text()
-    const path = stdout.trim().split("\n")[0]
+        const stdout = await new Response(proc.stdout).text()
+        const path = stdout.trim().split("\n")[0]
 
-    if (!path) {
-      return null
-    }
+        if (!path) return null
 
-    return path
-  } catch {
-    return null
-  }
+        return path
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
 }
 
 export async function getNotifySendPath(): Promise<string | null> {

@@ -29,12 +29,15 @@ export function parseRuleFrontmatter(content: string): RuleFrontmatterResult {
   const yamlContent = match[1];
   const body = match[2];
 
-  try {
-    const metadata = parseYamlContent(yamlContent);
-    return { metadata, body };
-  } catch {
-    return { metadata: {}, body: content };
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const metadata = parseYamlContent(yamlContent);
+        return { metadata, body };
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed({ metadata: {} as RuleMetadata, body: content })))
+  )
 }
 
 /**
