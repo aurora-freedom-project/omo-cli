@@ -1,4 +1,5 @@
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool"
+import { Effect } from "effect"
 import {
   DEFAULT_MAX_REFERENCES,
   DEFAULT_MAX_SYMBOLS,
@@ -34,32 +35,29 @@ export const lsp_goto_definition: ToolDefinition = tool({
     character: tool.schema.number().min(0).describe("0-based"),
   },
   execute: async (args, context) => {
-    try {
-      const result = await withLspClient(args.filePath, async (client) => {
-        return (await client.definition(args.filePath, args.line, args.character)) as
-          | Location
-          | Location[]
-          | LocationLink[]
-          | null
-      })
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const result = await withLspClient(args.filePath, async (client) => {
+            return (await client.definition(args.filePath, args.line, args.character)) as
+              | Location
+              | Location[]
+              | LocationLink[]
+              | null
+          })
 
-      if (!result) {
-        const output = "No definition found"
-        return output
-      }
+          if (!result) return "No definition found"
 
-      const locations = Array.isArray(result) ? result : [result]
-      if (locations.length === 0) {
-        const output = "No definition found"
-        return output
-      }
+          const locations = Array.isArray(result) ? result : [result]
+          if (locations.length === 0) return "No definition found"
 
-      const output = locations.map(formatLocation).join("\n")
-      return output
-    } catch (e) {
-      const output = `Error: ${e instanceof Error ? e.message : String(e)}`
-      return output
-    }
+          return locations.map(formatLocation).join("\n")
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e) =>
+        Effect.succeed(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      ))
+    )
   },
 })
 
@@ -72,31 +70,31 @@ export const lsp_find_references: ToolDefinition = tool({
     includeDeclaration: tool.schema.boolean().optional().describe("Include the declaration itself"),
   },
   execute: async (args, context) => {
-    try {
-      const result = await withLspClient(args.filePath, async (client) => {
-        return (await client.references(args.filePath, args.line, args.character, args.includeDeclaration ?? true)) as
-          | Location[]
-          | null
-      })
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const result = await withLspClient(args.filePath, async (client) => {
+            return (await client.references(args.filePath, args.line, args.character, args.includeDeclaration ?? true)) as
+              | Location[]
+              | null
+          })
 
-      if (!result || result.length === 0) {
-        const output = "No references found"
-        return output
-      }
+          if (!result || result.length === 0) return "No references found"
 
-      const total = result.length
-      const truncated = total > DEFAULT_MAX_REFERENCES
-      const limited = truncated ? result.slice(0, DEFAULT_MAX_REFERENCES) : result
-      const lines = limited.map(formatLocation)
-      if (truncated) {
-        lines.unshift(`Found ${total} references (showing first ${DEFAULT_MAX_REFERENCES}):`)
-      }
-      const output = lines.join("\n")
-      return output
-    } catch (e) {
-      const output = `Error: ${e instanceof Error ? e.message : String(e)}`
-      return output
-    }
+          const total = result.length
+          const truncated = total > DEFAULT_MAX_REFERENCES
+          const limited = truncated ? result.slice(0, DEFAULT_MAX_REFERENCES) : result
+          const lines = limited.map(formatLocation)
+          if (truncated) {
+            lines.unshift(`Found ${total} references (showing first ${DEFAULT_MAX_REFERENCES}):`)
+          }
+          return lines.join("\n")
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e) =>
+        Effect.succeed(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      ))
+    )
   },
 })
 
@@ -109,60 +107,55 @@ export const lsp_symbols: ToolDefinition = tool({
     limit: tool.schema.number().optional().describe("Max results (default 50)"),
   },
   execute: async (args, context) => {
-    try {
-      const scope = args.scope ?? "document"
-      
-      if (scope === "workspace") {
-        if (!args.query) {
-          return "Error: 'query' is required for workspace scope"
-        }
-        
-        const result = await withLspClient(args.filePath, async (client) => {
-          return (await client.workspaceSymbols(args.query!)) as SymbolInfo[] | null
-        })
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const scope = args.scope ?? "document"
 
-        if (!result || result.length === 0) {
-          return "No symbols found"
-        }
+          if (scope === "workspace") {
+            if (!args.query) return "Error: 'query' is required for workspace scope"
 
-        const total = result.length
-        const limit = Math.min(args.limit ?? DEFAULT_MAX_SYMBOLS, DEFAULT_MAX_SYMBOLS)
-        const truncated = total > limit
-        const limited = result.slice(0, limit)
-        const lines = limited.map(formatSymbolInfo)
-        if (truncated) {
-          lines.unshift(`Found ${total} symbols (showing first ${limit}):`)
-        }
-        return lines.join("\n")
-      } else {
-        const result = await withLspClient(args.filePath, async (client) => {
-          return (await client.documentSymbols(args.filePath)) as DocumentSymbol[] | SymbolInfo[] | null
-        })
+            const result = await withLspClient(args.filePath, async (client) => {
+              return (await client.workspaceSymbols(args.query!)) as SymbolInfo[] | null
+            })
 
-        if (!result || result.length === 0) {
-          return "No symbols found"
-        }
+            if (!result || result.length === 0) return "No symbols found"
 
-        const total = result.length
-        const limit = Math.min(args.limit ?? DEFAULT_MAX_SYMBOLS, DEFAULT_MAX_SYMBOLS)
-        const truncated = total > limit
-        const limited = truncated ? result.slice(0, limit) : result
+            const total = result.length
+            const limit = Math.min(args.limit ?? DEFAULT_MAX_SYMBOLS, DEFAULT_MAX_SYMBOLS)
+            const truncated = total > limit
+            const limited = result.slice(0, limit)
+            const lines = limited.map(formatSymbolInfo)
+            if (truncated) lines.unshift(`Found ${total} symbols (showing first ${limit}):`)
+            return lines.join("\n")
+          } else {
+            const result = await withLspClient(args.filePath, async (client) => {
+              return (await client.documentSymbols(args.filePath)) as DocumentSymbol[] | SymbolInfo[] | null
+            })
 
-        const lines: string[] = []
-        if (truncated) {
-          lines.push(`Found ${total} symbols (showing first ${limit}):`)
-        }
+            if (!result || result.length === 0) return "No symbols found"
 
-        if ("range" in limited[0]) {
-          lines.push(...(limited as DocumentSymbol[]).map((s) => formatDocumentSymbol(s)))
-        } else {
-          lines.push(...(limited as SymbolInfo[]).map(formatSymbolInfo))
-        }
-        return lines.join("\n")
-      }
-    } catch (e) {
-      return `Error: ${e instanceof Error ? e.message : String(e)}`
-    }
+            const total = result.length
+            const limit = Math.min(args.limit ?? DEFAULT_MAX_SYMBOLS, DEFAULT_MAX_SYMBOLS)
+            const truncated = total > limit
+            const limited = truncated ? result.slice(0, limit) : result
+
+            const lines: string[] = []
+            if (truncated) lines.push(`Found ${total} symbols (showing first ${limit}):`)
+
+            if ("range" in limited[0]) {
+              lines.push(...(limited as DocumentSymbol[]).map((s) => formatDocumentSymbol(s)))
+            } else {
+              lines.push(...(limited as SymbolInfo[]).map(formatSymbolInfo))
+            }
+            return lines.join("\n")
+          }
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e) =>
+        Effect.succeed(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      ))
+    )
   },
 })
 
@@ -176,40 +169,40 @@ export const lsp_diagnostics: ToolDefinition = tool({
       .describe("Filter by severity level"),
   },
   execute: async (args, context) => {
-    try {
-      const result = await withLspClient(args.filePath, async (client) => {
-        return (await client.diagnostics(args.filePath)) as { items?: Diagnostic[] } | Diagnostic[] | null
-      })
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const result = await withLspClient(args.filePath, async (client) => {
+            return (await client.diagnostics(args.filePath)) as { items?: Diagnostic[] } | Diagnostic[] | null
+          })
 
-      let diagnostics: Diagnostic[] = []
-      if (result) {
-        if (Array.isArray(result)) {
-          diagnostics = result
-        } else if (result.items) {
-          diagnostics = result.items
-        }
-      }
+          let diagnostics: Diagnostic[] = []
+          if (result) {
+            if (Array.isArray(result)) {
+              diagnostics = result
+            } else if (result.items) {
+              diagnostics = result.items
+            }
+          }
 
-      diagnostics = filterDiagnosticsBySeverity(diagnostics, args.severity)
+          diagnostics = filterDiagnosticsBySeverity(diagnostics, args.severity)
 
-      if (diagnostics.length === 0) {
-        const output = "No diagnostics found"
-        return output
-      }
+          if (diagnostics.length === 0) return "No diagnostics found"
 
-      const total = diagnostics.length
-      const truncated = total > DEFAULT_MAX_DIAGNOSTICS
-      const limited = truncated ? diagnostics.slice(0, DEFAULT_MAX_DIAGNOSTICS) : diagnostics
-      const lines = limited.map(formatDiagnostic)
-      if (truncated) {
-        lines.unshift(`Found ${total} diagnostics (showing first ${DEFAULT_MAX_DIAGNOSTICS}):`)
-      }
-      const output = lines.join("\n")
-      return output
-    } catch (e) {
-      const output = `Error: ${e instanceof Error ? e.message : String(e)}`
-      throw new Error(output)
-    }
+          const total = diagnostics.length
+          const truncated = total > DEFAULT_MAX_DIAGNOSTICS
+          const limited = truncated ? diagnostics.slice(0, DEFAULT_MAX_DIAGNOSTICS) : diagnostics
+          const lines = limited.map(formatDiagnostic)
+          if (truncated) {
+            lines.unshift(`Found ${total} diagnostics (showing first ${DEFAULT_MAX_DIAGNOSTICS}):`)
+          }
+          return lines.join("\n")
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e): Effect.Effect<string> => {
+        throw new Error(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      }))
+    )
   },
 })
 
@@ -221,19 +214,22 @@ export const lsp_prepare_rename: ToolDefinition = tool({
     character: tool.schema.number().min(0).describe("0-based"),
   },
   execute: async (args, context) => {
-    try {
-      const result = await withLspClient(args.filePath, async (client) => {
-        return (await client.prepareRename(args.filePath, args.line, args.character)) as
-          | PrepareRenameResult
-          | PrepareRenameDefaultBehavior
-          | null
-      })
-      const output = formatPrepareRenameResult(result)
-      return output
-    } catch (e) {
-      const output = `Error: ${e instanceof Error ? e.message : String(e)}`
-      return output
-    }
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const result = await withLspClient(args.filePath, async (client) => {
+            return (await client.prepareRename(args.filePath, args.line, args.character)) as
+              | PrepareRenameResult
+              | PrepareRenameDefaultBehavior
+              | null
+          })
+          return formatPrepareRenameResult(result)
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e) =>
+        Effect.succeed(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      ))
+    )
   },
 })
 
@@ -246,16 +242,19 @@ export const lsp_rename: ToolDefinition = tool({
     newName: tool.schema.string().describe("New symbol name"),
   },
   execute: async (args, context) => {
-    try {
-      const edit = await withLspClient(args.filePath, async (client) => {
-        return (await client.rename(args.filePath, args.line, args.character, args.newName)) as WorkspaceEdit | null
-      })
-      const result = applyWorkspaceEdit(edit)
-      const output = formatApplyResult(result)
-      return output
-    } catch (e) {
-      const output = `Error: ${e instanceof Error ? e.message : String(e)}`
-      return output
-    }
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: async () => {
+          const edit = await withLspClient(args.filePath, async (client) => {
+            return (await client.rename(args.filePath, args.line, args.character, args.newName)) as WorkspaceEdit | null
+          })
+          const result = applyWorkspaceEdit(edit)
+          return formatApplyResult(result)
+        },
+        catch: (e) => e,
+      }).pipe(Effect.catchAll((e) =>
+        Effect.succeed(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      ))
+    )
   },
 })
