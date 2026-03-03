@@ -43,14 +43,7 @@ export const loadConfigFromPathEffect = (path: string): Effect.Effect<PluginExte
 
 async function loadConfigFromPath(path: string): Promise<PluginExtendedConfig | null> {
   if (!existsSync(path)) return null
-
-  try {
-    const content = await Bun.file(path).text()
-    return JSON.parse(content) as PluginExtendedConfig
-  } catch (error) {
-    log("Failed to load config", { path, error })
-    return null
-  }
+  return Effect.runPromise(loadConfigFromPathEffect(path))
 }
 
 function mergeDisabledHooks(

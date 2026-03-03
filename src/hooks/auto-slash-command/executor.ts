@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "fs"
 import { join, basename, dirname } from "path"
+import { Effect } from "effect"
 import {
   parseFrontmatter,
   resolveCommandsInText,
@@ -221,16 +222,21 @@ export async function executeSlashCommand(parsed: ParsedSlashCommand, options?: 
     }
   }
 
-  try {
-    const template = await formatCommandTemplate(command, parsed.args)
-    return {
-      success: true,
-      replacementText: template,
-    }
-  } catch (err) {
-    return {
-      success: false,
-      error: `Failed to load command "/${parsed.command}": ${err instanceof Error ? err.message : String(err)}`,
-    }
-  }
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const template = await formatCommandTemplate(command, parsed.args)
+        return {
+          success: true as const,
+          replacementText: template,
+        }
+      },
+      catch: (err) => err,
+    }).pipe(Effect.catchAll((err) => {
+      return Effect.succeed({
+        success: false as const,
+        error: `Failed to load command "/${parsed.command}": ${err instanceof Error ? err.message : String(err)}`,
+      })
+    }))
+  )
 }
