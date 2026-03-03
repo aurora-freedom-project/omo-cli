@@ -1,4 +1,5 @@
 import type { PluginInput } from "@opencode-ai/plugin"
+import { Effect } from "effect"
 import {
     searchCode,
     findCallers,
@@ -35,38 +36,40 @@ interface Tool {
 let schemaInitialized = false
 
 async function ensureReady(config: MemoryConfig): Promise<boolean> {
-    try {
-        // Configure connection (same pattern as memory-tools)
-        const port = config.port ?? 18000
-        if (config.mode === "external") {
-            configureSurreal({
-                url: config.url ?? `http://127.0.0.1:${port}/rpc`,
-                user: config.user ?? "root",
-                pass: config.pass ?? "omo-secret",
-                namespace: config.namespace ?? "omo",
-                database: config.database ?? "memory",
-            })
-        } else {
-            configureSurreal({
-                url: `http://127.0.0.1:${port}/rpc`,
-                user: config.user ?? "root",
-                pass: config.pass ?? "omo-secret",
-                namespace: config.namespace ?? "omo",
-                database: config.database ?? "memory",
-            })
-        }
+    return Effect.runPromise(
+        Effect.tryPromise({
+            try: async () => {
+                const port = config.port ?? 18000
+                if (config.mode === "external") {
+                    configureSurreal({
+                        url: config.url ?? `http://127.0.0.1:${port}/rpc`,
+                        user: config.user ?? "root",
+                        pass: config.pass ?? "omo-secret",
+                        namespace: config.namespace ?? "omo",
+                        database: config.database ?? "memory",
+                    })
+                } else {
+                    configureSurreal({
+                        url: `http://127.0.0.1:${port}/rpc`,
+                        user: config.user ?? "root",
+                        pass: config.pass ?? "omo-secret",
+                        namespace: config.namespace ?? "omo",
+                        database: config.database ?? "memory",
+                    })
+                }
 
-        const connected = await isConnected()
-        if (!connected) return false
+                const connected = await isConnected()
+                if (!connected) return false
 
-        if (!schemaInitialized) {
-            await initSchema()
-            schemaInitialized = true
-        }
-        return true
-    } catch {
-        return false
-    }
+                if (!schemaInitialized) {
+                    await initSchema()
+                    schemaInitialized = true
+                }
+                return true
+            },
+            catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -103,24 +106,29 @@ export function createCodeIntelTools(
             const ready = await ensureReady(config)
             if (!ready) return "Code intelligence unavailable. SurrealDB not connected. Run 'omo-cli memory start' and 'omo-cli index'."
 
-            try {
-                const results = await searchCode(args.query, {
-                    kind: args.kind,
-                    limit: args.limit ?? 10,
-                    project,
-                })
+            return Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        const results = await searchCode(args.query, {
+                            kind: args.kind,
+                            limit: args.limit ?? 10,
+                            project,
+                        })
 
-                if (results.length === 0) {
-                    return `No results found for "${args.query}". Make sure 'omo-cli index' has been run.`
-                }
+                        if (results.length === 0) {
+                            return `No results found for "${args.query}". Make sure 'omo-cli index' has been run.`
+                        }
 
-                return results.map((r: Record<string, unknown>) =>
-                    `${r.kind} ${r.name} (${r.file}:${r.line_start})\n  ${r.signature}${r.docstring ? "\n  " + r.docstring : ""}`
-                ).join("\n\n")
-            } catch (err) {
-                log("[code-intel] search failed", { err })
-                return `Search error: ${err}`
-            }
+                        return results.map((r: Record<string, unknown>) =>
+                            `${r.kind} ${r.name} (${r.file}:${r.line_start})\n  ${r.signature}${r.docstring ? "\n  " + r.docstring : ""}`
+                        ).join("\n\n")
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    log("[code-intel] search failed", { err })
+                    return Effect.succeed(`Search error: ${err}`)
+                }))
+            )
         },
     }
 
@@ -140,21 +148,26 @@ export function createCodeIntelTools(
             const ready = await ensureReady(config)
             if (!ready) return "Code intelligence unavailable. SurrealDB not connected."
 
-            try {
-                const results = await findCallers(args.name, project)
+            return Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        const results = await findCallers(args.name, project)
 
-                if (results.length === 0) {
-                    return `No callers found for "${args.name}". Note: call relationships are best-effort based on AST analysis.`
-                }
+                        if (results.length === 0) {
+                            return `No callers found for "${args.name}". Note: call relationships are best-effort based on AST analysis.`
+                        }
 
-                return `${results.length} callers of "${args.name}":\n` +
-                    results.map((r: Record<string, unknown>) =>
-                        `  ${r.kind ?? r.caller_kind} ${r.name ?? r.caller_name} (${r.file ?? r.caller_file}:${r.line_start ?? r.caller_line})`
-                    ).join("\n")
-            } catch (err) {
-                log("[code-intel] callers query failed", { err })
-                return `Callers query error: ${err}`
-            }
+                        return `${results.length} callers of "${args.name}":\n` +
+                            results.map((r: Record<string, unknown>) =>
+                                `  ${r.kind ?? r.caller_kind} ${r.name ?? r.caller_name} (${r.file ?? r.caller_file}:${r.line_start ?? r.caller_line})`
+                            ).join("\n")
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    log("[code-intel] callers query failed", { err })
+                    return Effect.succeed(`Callers query error: ${err}`)
+                }))
+            )
         },
     }
 
@@ -174,24 +187,29 @@ export function createCodeIntelTools(
             const ready = await ensureReady(config)
             if (!ready) return "Code intelligence unavailable. SurrealDB not connected."
 
-            try {
-                const deps = await findDependencies(args.file, project)
+            return Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        const deps = await findDependencies(args.file, project)
 
-                const lines = [`File: ${args.file}\n`]
-                lines.push(`Imports (${deps.imports.length}):`)
-                for (const imp of deps.imports) {
-                    lines.push(`  → ${imp}`)
-                }
-                lines.push(`\nImported by (${deps.importedBy.length}):`)
-                for (const by of deps.importedBy) {
-                    lines.push(`  ← ${by}`)
-                }
+                        const lines = [`File: ${args.file}\n`]
+                        lines.push(`Imports (${deps.imports.length}):`)
+                        for (const imp of deps.imports) {
+                            lines.push(`  → ${imp}`)
+                        }
+                        lines.push(`\nImported by (${deps.importedBy.length}):`)
+                        for (const by of deps.importedBy) {
+                            lines.push(`  ← ${by}`)
+                        }
 
-                return lines.join("\n")
-            } catch (err) {
-                log("[code-intel] deps query failed", { err })
-                return `Dependencies query error: ${err}`
-            }
+                        return lines.join("\n")
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    log("[code-intel] deps query failed", { err })
+                    return Effect.succeed(`Dependencies query error: ${err}`)
+                }))
+            )
         },
     }
 
@@ -205,29 +223,34 @@ export function createCodeIntelTools(
             const ready = await ensureReady(config)
             if (!ready) return "Code intelligence unavailable. SurrealDB not connected."
 
-            try {
-                const overview = await getCodeOverview(project)
+            return Effect.runPromise(
+                Effect.tryPromise({
+                    try: async () => {
+                        const overview = await getCodeOverview(project)
 
-                const lines = [
-                    `Project Index Overview:`,
-                    `  Files: ${overview.fileCount}`,
-                    `  Exported symbols: ${overview.exportCount}`,
-                    ``,
-                    `Elements by kind:`,
-                ]
-                for (const { kind, count } of overview.elementCounts) {
-                    lines.push(`  ${kind}: ${count}`)
-                }
+                        const lines = [
+                            `Project Index Overview:`,
+                            `  Files: ${overview.fileCount}`,
+                            `  Exported symbols: ${overview.exportCount}`,
+                            ``,
+                            `Elements by kind:`,
+                        ]
+                        for (const { kind, count } of overview.elementCounts) {
+                            lines.push(`  ${kind}: ${count}`)
+                        }
 
-                if (overview.fileCount === 0) {
-                    lines.push(`\nNo files indexed yet. Run 'omo-cli index' to build the code intelligence index.`)
-                }
+                        if (overview.fileCount === 0) {
+                            lines.push(`\nNo files indexed yet. Run 'omo-cli index' to build the code intelligence index.`)
+                        }
 
-                return lines.join("\n")
-            } catch (err) {
-                log("[code-intel] overview query failed", { err })
-                return `Overview query error: ${err}`
-            }
+                        return lines.join("\n")
+                    },
+                    catch: (err) => err,
+                }).pipe(Effect.catchAll((err) => {
+                    log("[code-intel] overview query failed", { err })
+                    return Effect.succeed(`Overview query error: ${err}`)
+                }))
+            )
         },
     }
 

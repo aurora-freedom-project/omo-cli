@@ -1,11 +1,13 @@
 import { promises as fs } from "fs"
 import { join, basename } from "path"
+import { Effect } from "effect"
 import yaml from "js-yaml"
 import { parseFrontmatter } from "../../shared/frontmatter"
 import { sanitizeModelField } from "../../shared/model-sanitizer"
 import { resolveSymlinkAsync, isMarkdownFile } from "../../shared/file-utils"
 import { getClaudeConfigDir } from "../../shared"
 import { getOpenCodeConfigDir } from "../../shared/opencode-config-dir"
+import { UNIFIED_SKILLS_DIR } from "../../cli/skills-setup"
 import type { CommandDefinition } from "../claude-code-command-loader/types"
 import type { SkillScope, SkillMetadata, LoadedSkill, LazyContentLoader } from "./types"
 import type { SkillMcpConfig } from "../skill-mcp-manager/types"
@@ -14,40 +16,46 @@ function parseSkillMcpConfigFromFrontmatter(content: string): SkillMcpConfig | u
   const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)
   if (!frontmatterMatch) return undefined
 
-  try {
-    const parsed = yaml.load(frontmatterMatch[1]) as Record<string, unknown>
-    if (parsed && typeof parsed === "object" && "mcp" in parsed && parsed.mcp) {
-      return parsed.mcp as SkillMcpConfig
-    }
-  } catch {
-    return undefined
-  }
-  return undefined
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const parsed = yaml.load(frontmatterMatch[1]) as Record<string, unknown>
+        if (parsed && typeof parsed === "object" && "mcp" in parsed && parsed.mcp) {
+          return parsed.mcp as SkillMcpConfig
+        }
+        return undefined
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(undefined)))
+  )
 }
 
 async function loadMcpJsonFromDir(skillDir: string): Promise<SkillMcpConfig | undefined> {
   const mcpJsonPath = join(skillDir, "mcp.json")
 
-  try {
-    const content = await fs.readFile(mcpJsonPath, "utf-8")
-    const parsed = JSON.parse(content) as Record<string, unknown>
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const content = await fs.readFile(mcpJsonPath, "utf-8")
+        const parsed = JSON.parse(content) as Record<string, unknown>
 
-    if (parsed && typeof parsed === "object" && "mcpServers" in parsed && parsed.mcpServers) {
-      return parsed.mcpServers as SkillMcpConfig
-    }
+        if (parsed && typeof parsed === "object" && "mcpServers" in parsed && parsed.mcpServers) {
+          return parsed.mcpServers as SkillMcpConfig
+        }
 
-    if (parsed && typeof parsed === "object" && !("mcpServers" in parsed)) {
-      const hasCommandField = Object.values(parsed).some(
-        (v) => v && typeof v === "object" && "command" in (v as Record<string, unknown>)
-      )
-      if (hasCommandField) {
-        return parsed as SkillMcpConfig
-      }
-    }
-  } catch {
-    return undefined
-  }
-  return undefined
+        if (parsed && typeof parsed === "object" && !("mcpServers" in parsed)) {
+          const hasCommandField = Object.values(parsed).some(
+            (v) => v && typeof v === "object" && "command" in (v as Record<string, unknown>)
+          )
+          if (hasCommandField) {
+            return parsed as SkillMcpConfig
+          }
+        }
+        return undefined
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(undefined)))
+  )
 }
 
 function parseAllowedTools(allowedTools: string | string[] | undefined): string[] | undefined {
@@ -68,19 +76,21 @@ async function loadSkillFromPath(
   defaultName: string,
   scope: SkillScope
 ): Promise<LoadedSkill | null> {
-  try {
-    const content = await fs.readFile(skillPath, "utf-8")
-    const { data, body } = parseFrontmatter<SkillMetadata>(content)
-    const frontmatterMcp = parseSkillMcpConfigFromFrontmatter(content)
-    const mcpJsonMcp = await loadMcpJsonFromDir(resolvedPath)
-    const mcpConfig = mcpJsonMcp || frontmatterMcp
+  return Effect.runPromise(
+    Effect.tryPromise({
+      try: async () => {
+        const content = await fs.readFile(skillPath, "utf-8")
+        const { data, body } = parseFrontmatter<SkillMetadata>(content)
+        const frontmatterMcp = parseSkillMcpConfigFromFrontmatter(content)
+        const mcpJsonMcp = await loadMcpJsonFromDir(resolvedPath)
+        const mcpConfig = mcpJsonMcp || frontmatterMcp
 
-    const skillName = data.name || defaultName
-    const originalDescription = data.description || ""
-    const isOpencodeSource = scope === "opencode" || scope === "opencode-project"
-    const formattedDescription = `(${scope} - Skill) ${originalDescription}`
+        const skillName = data.name || defaultName
+        const originalDescription = data.description || ""
+        const isOpencodeSource = scope === "opencode" || scope === "opencode-project"
+        const formattedDescription = `(${scope} - Skill) ${originalDescription}`
 
-    const templateContent = `<skill-instruction>
+        const templateContent = `<skill-instruction>
 Base directory for this skill: ${resolvedPath}/
 File references (@path) in this skill are relative to this directory.
 
@@ -91,41 +101,39 @@ ${body.trim()}
 $ARGUMENTS
 </user-request>`
 
-    // RATIONALE: We read the file eagerly to ensure atomic consistency between
-    // metadata and body. We maintain the LazyContentLoader interface for
-    // compatibility, but the state is effectively eager.
-    const eagerLoader: LazyContentLoader = {
-      loaded: true,
-      content: templateContent,
-      load: async () => templateContent,
-    }
+        const eagerLoader: LazyContentLoader = {
+          loaded: true,
+          content: templateContent,
+          load: async () => templateContent,
+        }
 
-    const definition: CommandDefinition = {
-      name: skillName,
-      description: formattedDescription,
-      template: templateContent,
-      model: sanitizeModelField(data.model, isOpencodeSource ? "opencode" : "claude-code"),
-      agent: data.agent,
-      subtask: data.subtask,
-      argumentHint: data["argument-hint"],
-    }
+        const definition: CommandDefinition = {
+          name: skillName,
+          description: formattedDescription,
+          template: templateContent,
+          model: sanitizeModelField(data.model, isOpencodeSource ? "opencode" : "claude-code"),
+          agent: data.agent,
+          subtask: data.subtask,
+          argumentHint: data["argument-hint"],
+        }
 
-    return {
-      name: skillName,
-      path: skillPath,
-      resolvedPath,
-      definition,
-      scope,
-      license: data.license,
-      compatibility: data.compatibility,
-      metadata: data.metadata,
-      allowedTools: parseAllowedTools(data["allowed-tools"]),
-      mcpConfig,
-      lazyContent: eagerLoader,
-    }
-  } catch {
-    return null
-  }
+        return {
+          name: skillName,
+          path: skillPath,
+          resolvedPath,
+          definition,
+          scope,
+          license: data.license,
+          compatibility: data.compatibility,
+          metadata: data.metadata,
+          allowedTools: parseAllowedTools(data["allowed-tools"]),
+          mcpConfig,
+          lazyContent: eagerLoader,
+        } as LoadedSkill
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)))
+  )
 }
 
 async function loadSkillsFromDir(skillsDir: string, scope: SkillScope): Promise<LoadedSkill[]> {
@@ -142,21 +150,29 @@ async function loadSkillsFromDir(skillsDir: string, scope: SkillScope): Promise<
       const dirName = entry.name
 
       const skillMdPath = join(resolvedPath, "SKILL.md")
-      try {
-        await fs.access(skillMdPath)
+      const hasSkillMd = await Effect.runPromise(
+        Effect.tryPromise({
+          try: async () => { await fs.access(skillMdPath); return true },
+          catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+      )
+      if (hasSkillMd) {
         const skill = await loadSkillFromPath(skillMdPath, resolvedPath, dirName, scope)
         if (skill) skills.push(skill)
         continue
-      } catch {
       }
 
       const namedSkillMdPath = join(resolvedPath, `${dirName}.md`)
-      try {
-        await fs.access(namedSkillMdPath)
+      const hasNamedMd = await Effect.runPromise(
+        Effect.tryPromise({
+          try: async () => { await fs.access(namedSkillMdPath); return true },
+          catch: () => "fail" as const,
+        }).pipe(Effect.catchAll(() => Effect.succeed(false)))
+      )
+      if (hasNamedMd) {
         const skill = await loadSkillFromPath(namedSkillMdPath, resolvedPath, dirName, scope)
         if (skill) skills.push(skill)
         continue
-      } catch {
       }
 
       continue
@@ -182,9 +198,7 @@ function skillsToRecord(skills: LoadedSkill[]): Record<string, CommandDefinition
 }
 
 export async function loadOpencodeGlobalSkills(): Promise<Record<string, CommandDefinition>> {
-  const configDir = getOpenCodeConfigDir({ binary: "opencode" })
-  const opencodeSkillsDir = join(configDir, "skills")
-  const skills = await loadSkillsFromDir(opencodeSkillsDir, "opencode")
+  const skills = await loadGlobalSkillsWithUnified()
   return skillsToRecord(skills)
 }
 
@@ -217,9 +231,42 @@ export async function getSkillByName(name: string, options: DiscoverSkillsOption
 }
 
 export async function discoverOpencodeGlobalSkills(): Promise<LoadedSkill[]> {
+  return loadGlobalSkillsWithUnified()
+}
+
+/**
+ * Load skills from both ~/.config/_skills_/ (unified) and
+ * ~/.config/opencode/skills/ (native). User's native skills
+ * take priority — if a skill name exists in both, the native
+ * version wins. This way:
+ * - Users keep their custom skills untouched
+ * - ~/.config/_skills_/ skills are always available
+ * - No symlinks needed
+ */
+async function loadGlobalSkillsWithUnified(): Promise<LoadedSkill[]> {
   const configDir = getOpenCodeConfigDir({ binary: "opencode" })
   const opencodeSkillsDir = join(configDir, "skills")
-  return loadSkillsFromDir(opencodeSkillsDir, "opencode")
+
+  // Load from both paths in parallel
+  const [unifiedSkills, nativeSkills] = await Promise.all([
+    loadSkillsFromDir(UNIFIED_SKILLS_DIR, "opencode"),
+    loadSkillsFromDir(opencodeSkillsDir, "opencode"),
+  ])
+
+  // If same path (symlink), just return one set
+  if (opencodeSkillsDir === UNIFIED_SKILLS_DIR) {
+    return nativeSkills.length > 0 ? nativeSkills : unifiedSkills
+  }
+
+  // Dedup: native skills win over unified (user's custom setup takes priority)
+  const nativeNames = new Set(nativeSkills.map(s => s.name))
+  const merged = [...nativeSkills]
+  for (const skill of unifiedSkills) {
+    if (!nativeNames.has(skill.name)) {
+      merged.push(skill)
+    }
+  }
+  return merged
 }
 
 export async function discoverOpencodeProjectSkills(): Promise<LoadedSkill[]> {
