@@ -1,10 +1,11 @@
 import type { PluginInput } from "@opencode-ai/plugin";
+import { Effect } from "effect";
 
 const ANTHROPIC_ACTUAL_LIMIT =
-  process.env.ANTHROPIC_1M_CONTEXT === "true" ||
-  process.env.VERTEX_ANTHROPIC_1M_CONTEXT === "true"
-    ? 1_000_000
-    : 200_000;
+	process.env.ANTHROPIC_1M_CONTEXT === "true" ||
+		process.env.VERTEX_ANTHROPIC_1M_CONTEXT === "true"
+		? 1_000_000
+		: 200_000;
 const CHARS_PER_TOKEN_ESTIMATE = 4;
 const DEFAULT_TARGET_MAX_TOKENS = 50_000;
 
@@ -22,15 +23,20 @@ interface MessageWrapper {
 	info: { role: string } & Partial<AssistantMessageInfo>;
 }
 
+/** Result of a truncation operation */
 export interface TruncationResult {
 	result: string;
 	truncated: boolean;
 	removedCount?: number;
 }
 
+/** Options for dynamic truncation */
 export interface TruncationOptions {
+	/** Maximum token estimate for output (default: 50,000) */
 	targetMaxTokens?: number;
+	/** Number of header lines to always preserve (default: 3) */
 	preserveHeaderLines?: number;
+	/** Context window limit override */
 	contextWindowLimit?: number;
 }
 
@@ -38,6 +44,10 @@ function estimateTokens(text: string): number {
 	return Math.ceil(text.length / CHARS_PER_TOKEN_ESTIMATE);
 }
 
+/**
+ * Truncate text to fit within a token budget.
+ * Preserves header lines and adds truncation indicator.
+ */
 export function truncateToTokenLimit(
 	output: string,
 	maxTokens: number,
@@ -102,6 +112,10 @@ export function truncateToTokenLimit(
 	};
 }
 
+/**
+ * Get current context window usage for a session.
+ * Returns token counts and percentage used, or null if unavailable.
+ */
 export async function getContextWindowUsage(
 	ctx: PluginInput,
 	sessionID: string,
@@ -110,37 +124,44 @@ export async function getContextWindowUsage(
 	remainingTokens: number;
 	usagePercentage: number;
 } | null> {
-	try {
-		const response = await ctx.client.session.messages({
-			path: { id: sessionID },
-		});
+	return Effect.runPromise(
+		Effect.tryPromise({
+			try: async () => {
+				const response = await ctx.client.session.messages({
+					path: { id: sessionID },
+				});
 
-		const messages = (response.data ?? response) as MessageWrapper[];
+				const messages = (response.data ?? response) as MessageWrapper[];
 
-		const assistantMessages = messages
-			.filter((m) => m.info.role === "assistant")
-			.map((m) => m.info as AssistantMessageInfo);
+				const assistantMessages = messages
+					.filter((m) => m.info.role === "assistant")
+					.map((m) => m.info as AssistantMessageInfo);
 
-		if (assistantMessages.length === 0) return null;
+				if (assistantMessages.length === 0) return null;
 
-		const lastAssistant = assistantMessages[assistantMessages.length - 1];
-		const lastTokens = lastAssistant.tokens;
-		const usedTokens =
-			(lastTokens?.input ?? 0) +
-			(lastTokens?.cache?.read ?? 0) +
-			(lastTokens?.output ?? 0);
-		const remainingTokens = ANTHROPIC_ACTUAL_LIMIT - usedTokens;
+				const lastAssistant = assistantMessages[assistantMessages.length - 1];
+				const lastTokens = lastAssistant.tokens;
+				const usedTokens =
+					(lastTokens?.input ?? 0) +
+					(lastTokens?.cache?.read ?? 0) +
+					(lastTokens?.output ?? 0);
+				const remainingTokens = ANTHROPIC_ACTUAL_LIMIT - usedTokens;
 
-		return {
-			usedTokens,
-			remainingTokens,
-			usagePercentage: usedTokens / ANTHROPIC_ACTUAL_LIMIT,
-		};
-	} catch {
-		return null;
-	}
+				return {
+					usedTokens,
+					remainingTokens,
+					usagePercentage: usedTokens / ANTHROPIC_ACTUAL_LIMIT,
+				};
+			},
+			catch: () => "fail" as const,
+		}).pipe(Effect.catchAll(() => Effect.succeed(null)))
+	)
 }
 
+/**
+ * Dynamically truncate output based on current context window usage.
+ * Uses real-time token counts to maximize output while staying within limits.
+ */
 export async function dynamicTruncate(
 	ctx: PluginInput,
 	sessionID: string,
@@ -174,6 +195,7 @@ export async function dynamicTruncate(
 	return truncateToTokenLimit(output, maxOutputTokens, preserveHeaderLines);
 }
 
+/** Create a session-bound truncator with pre-configured context */
 export function createDynamicTruncator(ctx: PluginInput) {
 	return {
 		truncate: (

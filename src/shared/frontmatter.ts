@@ -21,14 +21,19 @@ export function parseFrontmatter<T = Record<string, unknown>>(
   const yamlContent = match[1]
   const body = match[2]
 
-  try {
-    // Use JSON_SCHEMA for security - prevents code execution via YAML tags
-    const parsed = yaml.load(yamlContent, { schema: yaml.JSON_SCHEMA })
-    const data = (parsed ?? {}) as T
-    return { data, body, hadFrontmatter: true, parseError: false }
-  } catch {
-    return { data: {} as T, body, hadFrontmatter: true, parseError: true }
-  }
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        // Use JSON_SCHEMA for security - prevents code execution via YAML tags
+        const parsed = yaml.load(yamlContent, { schema: yaml.JSON_SCHEMA })
+        const data = (parsed ?? {}) as T
+        return { data, body, hadFrontmatter: true, parseError: false } as FrontmatterResult<T>
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() =>
+      Effect.succeed({ data: {} as T, body, hadFrontmatter: true, parseError: true } as FrontmatterResult<T>)
+    ))
+  )
 }
 
 /**

@@ -71,16 +71,19 @@ export const loadOpencodePluginsEffect = (directory: string): Effect.Effect<stri
 
 export function loadOpencodePlugins(directory: string): string[] {
   for (const configPath of getConfigPaths(directory)) {
-    try {
-      if (!fs.existsSync(configPath)) continue
-      const content = fs.readFileSync(configPath, "utf-8")
-      const result = parseJsoncSafe<OpencodeConfig>(content)
-      if (result.data) {
-        return result.data.plugin ?? []
-      }
-    } catch {
-      continue
-    }
+    const plugins = Effect.runSync(
+      Effect.try({
+        try: () => {
+          if (!fs.existsSync(configPath)) return null
+          const content = fs.readFileSync(configPath, "utf-8")
+          const result = parseJsoncSafe<OpencodeConfig>(content)
+          if (result.data) return result.data.plugin ?? []
+          return null
+        },
+        catch: () => "fail" as const,
+      }).pipe(Effect.catchAll(() => Effect.succeed(null as string[] | null)))
+    )
+    if (plugins !== null) return plugins
   }
   return []
 }

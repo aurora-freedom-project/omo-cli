@@ -1,7 +1,21 @@
-import * as fs from "fs"
-import { log } from "./logger"
+/**
+ * @module shared/migration
+ * 
+ * Provides utilities for migrating legacy omo-cli configurations to the current version.
+ * This includes migrating old agent names, hook names, and hardcoded model strings 
+ * to their newer canonical category-based equivalents. It also provides an in-place
+ * migrator for the user's `omo-cli.json` configuration file.
+ */
 
-// Migration map: old keys → new canonical keys (for backward compatibility)
+import * as fs from "fs"
+import { Effect } from "effect"
+import { log } from "./logger"
+import type { Record as Rec } from "effect"
+
+/** 
+ * Maps legacy agent names to their canonical form. 
+ * Acts as the single source of truth for all agent name resolution and normalizes user input.
+ */
 export const AGENT_NAME_MAP: Record<string, string> = {
   // Orchestrator variants → "orchestrator"
   omo: "orchestrator",
@@ -55,6 +69,9 @@ export const AGENT_NAME_MAP: Record<string, string> = {
   consultant: "consultant",
 }
 
+/** 
+ * Set of all officially supported built-in agent canonical names recognized by omo-cli. 
+ */
 export const BUILTIN_AGENT_NAMES = new Set([
   "orchestrator",
   "architect",
@@ -69,8 +86,10 @@ export const BUILTIN_AGENT_NAMES = new Set([
   "build",
 ])
 
-// Migration map: old hook names → new hook names (for backward compatibility)
-// null means the hook was removed and should be filtered out from disabled_hooks
+/** 
+ * Maps legacy hook names to their canonical form. 
+ * A value of `null` indicates the hook was completely removed in newer versions.
+ */
 export const HOOK_NAME_MAP: Record<string, string | null> = {
   // Legacy names (backward compatibility)
   "anthropic-auto-compact": "anthropic-context-window-limit-recovery",
@@ -103,6 +122,12 @@ export const MODEL_TO_CATEGORY_MAP: Record<string, string> = {
   "anthropic/claude-sonnet-4-5": "unspecified-low",
 }
 
+/** 
+ * Migrates legacy agent name keys within an object to their canonical names using `AGENT_NAME_MAP`. 
+ * 
+ * @param {Record<string, unknown>} agents - An object map of agent configurations.
+ * @returns {{ migrated: Record<string, unknown>; changed: boolean }} The migrated object and a boolean indicating if any changes occurred.
+ */
 export function migrateAgentNames(agents: Record<string, unknown>): { migrated: Record<string, unknown>; changed: boolean } {
   const migrated: Record<string, unknown> = {}
   let changed = false
@@ -118,6 +143,13 @@ export function migrateAgentNames(agents: Record<string, unknown>): { migrated: 
   return { migrated, changed }
 }
 
+/** 
+ * Migrates a list of legacy hook names to their canonical names using `HOOK_NAME_MAP`. 
+ * Filters out hooks that have been explicitly removed.
+ * 
+ * @param {string[]} hooks - Array of hook names to migrate.
+ * @returns {{ migrated: string[]; changed: boolean; removed: string[] }} The migrated list, deletion records, and boolean changed flag.
+ */
 export function migrateHookNames(hooks: string[]): { migrated: string[]; changed: boolean; removed: string[] } {
   const migrated: string[] = []
   const removed: string[] = []
@@ -142,6 +174,12 @@ export function migrateHookNames(hooks: string[]): { migrated: string[]; changed
   return { migrated, changed, removed }
 }
 
+/** 
+ * Migrates a legacy agent configuration using hardcoded model strings into a category-based configuration.
+ * 
+ * @param {Record<string, unknown>} config - The raw agent configuration block.
+ * @returns {{ migrated: Record<string, unknown>; changed: boolean }} The updated config block and flag indicating if migrated.
+ */
 export function migrateAgentConfigToCategory(config: Record<string, unknown>): {
   migrated: Record<string, unknown>
   changed: boolean
@@ -162,25 +200,42 @@ export function migrateAgentConfigToCategory(config: Record<string, unknown>): {
   }
 }
 
+/** 
+ * Checks if an agent configuration perfectly matches the default values for its category.
+ * If so, the config is redundant and can be omitted.
+ * 
+ * @param {Record<string, unknown>} config - The custom agent configuration.
+ * @param {string} category - The category to compare defaults against.
+ * @returns {boolean} `true` if the config can safely be deleted, `false` otherwise.
+ */
 export function shouldDeleteAgentConfig(
   config: Record<string, unknown>,
   category: string
 ): boolean {
+  // Dynamic import to avoid circular dep with tools/
   const { DEFAULT_CATEGORIES } = require("../tools/delegate-task/constants")
-  const defaults = DEFAULT_CATEGORIES[category]
+  const defaults = DEFAULT_CATEGORIES[category] as Record<string, unknown> | undefined
   if (!defaults) return false
 
   const keys = Object.keys(config).filter((k) => k !== "category")
   if (keys.length === 0) return true
 
   for (const key of keys) {
-    if (config[key] !== (defaults as Record<string, unknown>)[key]) {
+    if (config[key] !== defaults[key]) {
       return false
     }
   }
   return true
 }
 
+/** 
+ * Reads a user's config file, migrates it in-place using all available migrators,
+ * and creates a backup of the original file if changes were written.
+ * 
+ * @param {string} configPath - The absolute filesystem path to the `omo-cli.json` or similar config file.
+ * @param {Record<string, unknown>} rawConfig - The parsed JSON configuration object.
+ * @returns {boolean} `true` if the file was modified and written back, `false` otherwise.
+ */
 export function migrateConfigFile(configPath: string, rawConfig: Record<string, unknown>): boolean {
   let needsWrite = false
 
@@ -191,8 +246,6 @@ export function migrateConfigFile(configPath: string, rawConfig: Record<string, 
       needsWrite = true
     }
   }
-
-
 
   if (rawConfig.omo_agent) {
     rawConfig.orchestrator_agent = rawConfig.omo_agent
@@ -228,16 +281,22 @@ export function migrateConfigFile(configPath: string, rawConfig: Record<string, 
   }
 
   if (needsWrite) {
-    try {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-      const backupPath = `${configPath}.bak.${timestamp}`
-      fs.copyFileSync(configPath, backupPath)
+    Effect.runSync(
+      Effect.try({
+        try: () => {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+          const backupPath = `${configPath}.bak.${timestamp}`
+          fs.copyFileSync(configPath, backupPath)
 
-      fs.writeFileSync(configPath, JSON.stringify(rawConfig, null, 2) + "\n", "utf-8")
-      log(`Migrated config file: ${configPath} (backup: ${backupPath})`)
-    } catch (err) {
-      log(`Failed to write migrated config to ${configPath}:`, err)
-    }
+          fs.writeFileSync(configPath, JSON.stringify(rawConfig, null, 2) + "\n", "utf-8")
+          log(`Migrated config file: ${configPath} (backup: ${backupPath})`)
+        },
+        catch: (err) => err,
+      }).pipe(Effect.catchAll((err) => {
+        log(`Failed to write migrated config to ${configPath}:`, err)
+        return Effect.void
+      }))
+    )
   }
 
   return needsWrite

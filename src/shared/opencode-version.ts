@@ -1,4 +1,5 @@
 import { execSync } from "child_process"
+import { Effect } from "effect"
 
 /**
  * Minimum OpenCode version required for this plugin.
@@ -76,21 +77,26 @@ export function getOpenCodeVersion(): string | null {
     return cache.value
   }
 
-  try {
-    const result = execSync("opencode --version", {
-      encoding: "utf-8",
-      timeout: 5000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim()
+  return Effect.runSync(
+    Effect.try({
+      try: () => {
+        const result = execSync("opencode --version", {
+          encoding: "utf-8",
+          timeout: 5000,
+          stdio: ["pipe", "pipe", "pipe"],
+        }).trim()
 
-    const versionMatch = result.match(/(\d+\.\d+\.\d+(?:-[\w.]+)?)/)
-    const version = versionMatch?.[1] ?? null
-    _versionCache.set(version)
-    return version
-  } catch {
-    _versionCache.set(null)
-    return null
-  }
+        const versionMatch = result.match(/(\d+\.\d+\.\d+(?:-[\w.]+)?)/)
+        const version = versionMatch?.[1] ?? null
+        _versionCache.set(version)
+        return version
+      },
+      catch: () => "fail" as const,
+    }).pipe(Effect.catchAll(() => {
+      _versionCache.set(null)
+      return Effect.succeed(null)
+    }))
+  )
 }
 
 /** Check if the installed OpenCode version meets a minimum requirement. Returns true if unknown. */
