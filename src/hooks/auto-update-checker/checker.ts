@@ -16,6 +16,7 @@ import {
 import * as os from "node:os"
 import { log } from "../../shared/logger"
 
+/** Checks if the project is running from a local development directory. */
 export function isLocalDevMode(directory: string): boolean {
   return getLocalDevPath(directory) !== null
 }
@@ -26,7 +27,8 @@ function stripJsonComments(json: string): string {
     .replace(/,(\s*[}\]])/g, "$1")
 }
 
-function getConfigPaths(directory: string): string[] {
+/** Returns all possible configuration file paths for the given directory. */
+export function getConfigPaths(directory: string): string[] {
   const paths = [
     path.join(directory, ".opencode", "opencode.json"),
     path.join(directory, ".opencode", "opencode.jsonc"),
@@ -55,6 +57,7 @@ function getConfigPaths(directory: string): string[] {
   return paths
 }
 
+/** Gets the local development path if running from source. */
 export function getLocalDevPath(directory: string): string | null {
   for (const configPath of getConfigPaths(directory)) {
     const localResult = Effect.runSync(
@@ -138,6 +141,7 @@ export function getLocalDevVersion(directory: string): string | null {
   )
 }
 
+/** Information about a plugin entry in the config. */
 export interface PluginEntryInfo {
   entry: string
   isPinned: boolean
@@ -145,6 +149,7 @@ export interface PluginEntryInfo {
   configPath: string
 }
 
+/** Searches config files for the omo-cli plugin entry. */
 export function findPluginEntry(directory: string): PluginEntryInfo | null {
   for (const configPath of getConfigPaths(directory)) {
     const entryResult = Effect.runSync(
@@ -176,6 +181,7 @@ export function findPluginEntry(directory: string): PluginEntryInfo | null {
   return null
 }
 
+/** Gets the cached latest version from the npm registry. */
 export function getCachedVersion(): string | null {
   const v1 = Effect.runSync(
     Effect.try({
@@ -297,6 +303,7 @@ export function updatePinnedVersion(configPath: string, oldEntry: string, newVer
   )
 }
 
+/** Fetches the latest version from npm registry for the given channel. */
 export async function getLatestVersion(channel: string = "latest"): Promise<string | null> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), NPM_FETCH_TIMEOUT)
@@ -323,6 +330,7 @@ export async function getLatestVersion(channel: string = "latest"): Promise<stri
   }
 }
 
+/** Performs a complete update check and returns the result. */
 export async function checkForUpdate(directory: string): Promise<UpdateCheckResult> {
   if (isLocalDevMode(directory)) {
     log("[auto-update-checker] Local dev mode detected, skipping update check")

@@ -1,3 +1,4 @@
+/** Parsed error data from a token limit exceeded response. */
 export interface ParsedTokenLimitError {
   currentTokens: number
   maxTokens: number
@@ -8,16 +9,19 @@ export interface ParsedTokenLimitError {
   messageIndex?: number
 }
 
+/** Retry state tracking for recovery attempts. */
 export interface RetryState {
   attempt: number
   lastAttemptTime: number
 }
 
+/** State tracking for truncation attempts. */
 export interface TruncateState {
   truncateAttempt: number
   lastTruncatedPartId?: string
 }
 
+/** Global state for auto-compaction across all sessions. */
 export interface AutoCompactState {
   pendingCompact: Set<string>
   errorDataBySession: Map<string, ParsedTokenLimitError>
@@ -27,6 +31,7 @@ export interface AutoCompactState {
   compactionInProgress: Set<string>
 }
 
+/** Configuration for retry behavior (delays, max attempts). */
 export const RETRY_CONFIG = {
   maxAttempts: 2,
   initialDelayMs: 2000,
@@ -34,6 +39,7 @@ export const RETRY_CONFIG = {
   maxDelayMs: 30000,
 } as const
 
+/** Configuration for truncation behavior (attempts, thresholds). */
 export const TRUNCATE_CONFIG = {
   maxTruncateAttempts: 20,
   minOutputSizeToTruncate: 500,

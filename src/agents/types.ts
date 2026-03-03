@@ -1,5 +1,6 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 
+/** Factory function that creates an agent configuration from a model name. */
 export type AgentFactory = (model: string) => AgentConfig
 
 /**
@@ -52,10 +53,12 @@ export interface AgentPromptMetadata {
   keyTrigger?: string
 }
 
+/** Checks if a model string identifies a GPT (OpenAI) model. */
 export function isGptModel(model: string): boolean {
   return model.startsWith("openai/") || model.startsWith("github-copilot/gpt-")
 }
 
+/** Union type of all built-in agent names (native + legacy). */
 export type BuiltinAgentName =
   // New native-friendly names
   | "orchestrator"
@@ -77,17 +80,21 @@ export type BuiltinAgentName =
   | "momus"
   | "atlas"
 
+/** Agent names that support configuration overrides. */
 export type OverridableAgentName =
   | "build"
   | "worker"
   | "builder"
   | BuiltinAgentName
 
+/** Alias for BuiltinAgentName — the canonical agent name type. */
 export type AgentName = BuiltinAgentName
 
+/** Configuration overrides for a specific agent. */
 export type AgentOverrideConfig = Partial<AgentConfig> & {
   prompt_append?: string
   variant?: string
 }
 
+/** Map of agent names to their override configurations. */
 export type AgentOverrides = Partial<Record<OverridableAgentName, AgentOverrideConfig>>

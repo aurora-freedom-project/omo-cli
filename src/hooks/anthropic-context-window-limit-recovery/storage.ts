@@ -32,6 +32,7 @@ interface StoredToolPart {
   originalSize?: number
 }
 
+/** Information about a tool result found during size analysis. */
 export interface ToolResultInfo {
   partPath: string
   partId: string
@@ -72,6 +73,7 @@ function getMessageIds(sessionID: string): string[] {
   return messageIds
 }
 
+/** Finds all non-truncated tool results sorted by output size (largest first). */
 export function findToolResultsBySize(sessionID: string): ToolResultInfo[] {
   const messageIds = getMessageIds(sessionID)
   const results: ToolResultInfo[] = []
@@ -110,11 +112,13 @@ export function findToolResultsBySize(sessionID: string): ToolResultInfo[] {
   return results.sort((a, b) => b.outputSize - a.outputSize)
 }
 
+/** Finds the single largest non-truncated tool result for a session. */
 export function findLargestToolResult(sessionID: string): ToolResultInfo | null {
   const results = findToolResultsBySize(sessionID)
   return results.length > 0 ? results[0] : null
 }
 
+/** Truncates a tool result output to a placeholder message. */
 export function truncateToolResult(partPath: string): {
   success: boolean
   toolName?: string
@@ -151,11 +155,13 @@ export function truncateToolResult(partPath: string): {
   )
 }
 
+/** Gets the total size of all non-truncated tool outputs for a session. */
 export function getTotalToolOutputSize(sessionID: string): number {
   const results = findToolResultsBySize(sessionID)
   return results.reduce((sum, r) => sum + r.outputSize, 0)
 }
 
+/** Counts how many tool results have been truncated in a session. */
 export function countTruncatedResults(sessionID: string): number {
   const messageIds = getMessageIds(sessionID)
   let count = 0
@@ -183,6 +189,7 @@ export function countTruncatedResults(sessionID: string): number {
   return count
 }
 
+/** Result of an aggressive truncation operation. */
 export interface AggressiveTruncateResult {
   success: boolean
   sufficient: boolean
@@ -192,6 +199,14 @@ export interface AggressiveTruncateResult {
   truncatedTools: Array<{ toolName: string; originalSize: number }>
 }
 
+/**
+ * Truncates tool results until token count drops below target.
+ * @param sessionID - Session to truncate
+ * @param currentTokens - Current token count
+ * @param maxTokens - Maximum allowed tokens
+ * @param targetRatio - Target ratio of max tokens (default: 0.8)
+ * @param charsPerToken - Characters per token estimate (default: 4)
+ */
 export function truncateUntilTargetTokens(
   sessionID: string,
   currentTokens: number,

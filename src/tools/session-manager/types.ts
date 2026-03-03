@@ -1,3 +1,4 @@
+/** A message within a session (user or assistant). */
 export interface SessionMessage {
   id: string
   role: "user" | "assistant"
@@ -9,6 +10,7 @@ export interface SessionMessage {
   parts: MessagePart[]
 }
 
+/** A part of a message (text, thinking, tool call, etc.). */
 export interface MessagePart {
   id: string
   type: string
@@ -21,6 +23,7 @@ export interface MessagePart {
   error?: string
 }
 
+/** Summary information about a session. */
 export interface SessionInfo {
   id: string
   message_count: number
@@ -33,6 +36,7 @@ export interface SessionInfo {
   transcript_entries?: number
 }
 
+/** A todo item tracked within a session. */
 export interface TodoItem {
   id: string
   content: string
@@ -40,6 +44,7 @@ export interface TodoItem {
   priority?: string
 }
 
+/** A search result from querying session messages. */
 export interface SearchResult {
   session_id: string
   message_id: string
@@ -49,6 +54,7 @@ export interface SearchResult {
   timestamp?: number
 }
 
+/** Metadata for a session (ID, project, timestamps, summary). */
 export interface SessionMetadata {
   id: string
   version?: string
@@ -67,6 +73,7 @@ export interface SessionMetadata {
   }
 }
 
+/** Arguments for listing sessions. */
 export interface SessionListArgs {
   limit?: number
   offset?: number
@@ -75,6 +82,7 @@ export interface SessionListArgs {
   project_path?: string
 }
 
+/** Arguments for reading a session's messages. */
 export interface SessionReadArgs {
   session_id: string
   include_todos?: boolean
@@ -82,6 +90,7 @@ export interface SessionReadArgs {
   limit?: number
 }
 
+/** Arguments for searching within sessions. */
 export interface SessionSearchArgs {
   query: string
   session_id?: string
@@ -89,10 +98,12 @@ export interface SessionSearchArgs {
   limit?: number
 }
 
+/** Arguments for getting session info. */
 export interface SessionInfoArgs {
   session_id: string
 }
 
+/** Arguments for deleting a session. */
 export interface SessionDeleteArgs {
   session_id: string
   confirm: boolean
