@@ -32,7 +32,7 @@ describe("cli/memory/docker-manager", () => {
         mockHomedir.mockClear()
         mockLog.mockClear()
 
-        globalFetchSpy = spyOn(globalThis, "fetch").mockImplementation(async () => ({ ok: true }) as never)
+        globalFetchSpy = spyOn(globalThis, "fetch").mockImplementation((async () => ({ ok: true }) as any) as any)
     })
 
     afterEach(() => {
@@ -62,7 +62,7 @@ describe("cli/memory/docker-manager", () => {
         test("returns stopped if container check limits throw string bounds", async () => {
             // First spawn check docker version passes
             // Second spawn (inspect) throws map
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("--version")) return { stdout: Buffer.from("") }
                 if (args.includes("inspect")) throw new Error("not found string")
                 return { stdout: Buffer.from("") }
@@ -72,7 +72,7 @@ describe("cli/memory/docker-manager", () => {
         })
 
         test("returns stopped if container running check resolves false limit arrays", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("inspect")) return { stdout: "false" }
                 return { stdout: Buffer.from("") }
             })
@@ -81,7 +81,7 @@ describe("cli/memory/docker-manager", () => {
         })
 
         test("returns running if all spawn checks map naturally passing fetch true limits", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("inspect")) return { stdout: "true " } // test trimming
                 return { stdout: Buffer.from("") }
             })
@@ -98,7 +98,7 @@ describe("cli/memory/docker-manager", () => {
 
         test("fast exits bounds if already running loops resolving true natively", async () => {
             // Mock running
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("inspect")) return { stdout: "true" }
                 return { stdout: Buffer.from("") }
             })
@@ -110,7 +110,7 @@ describe("cli/memory/docker-manager", () => {
 
         test("runs raw startup natively via compose if detected limit sets map correctly", async () => {
             // Mock stopped status, then true health afterwards
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (cmd === "docker" && args.includes("--version")) return { stdout: Buffer.from("") } // installed
                 if (cmd === "docker" && args.includes("inspect")) return { stdout: "false" } // not running
                 if (cmd === "docker" && args.includes("version")) return { stdout: Buffer.from("") } // compose installed
@@ -133,7 +133,7 @@ describe("cli/memory/docker-manager", () => {
         })
 
         test("runs raw startup natively via vanilla container string limit missing compose file mappings", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (cmd === "docker" && args.includes("--version")) return { stdout: Buffer.from("") }
                 if (cmd === "docker" && args.includes("inspect")) return { stdout: "false" }
                 if (cmd === "docker" && args.includes("version")) throw new Error("no compose")
@@ -148,7 +148,7 @@ describe("cli/memory/docker-manager", () => {
         })
 
         test("throws boundary timeout logic parsing nested limit sets missing health loops gracefully", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (cmd === "docker" && args.includes("inspect")) return { stdout: "false" }
                 return { stdout: Buffer.from("") }
             })
@@ -157,7 +157,7 @@ describe("cli/memory/docker-manager", () => {
 
             // Fast forward time loops mock wrapper
             const _origSetTimeout = globalThis.setTimeout;
-            spyOn(globalThis, "setTimeout").mockImplementation((cb: () => void, _ms: number) => cb() as never);
+            spyOn(globalThis, "setTimeout").mockImplementation(((cb: () => void, _ms: number) => cb() as any) as any);
 
             await expect(dockerManager.ensureSurrealDBRunning()).rejects.toThrow(/did not become healthy/)
 
@@ -174,7 +174,7 @@ describe("cli/memory/docker-manager", () => {
 
         test("stops container raw docker mappings natively missing compose file limit bound map", async () => {
             // Mock docker installed but no compose
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("--version")) return { stdout: Buffer.from("") }
                 if (args.includes("version")) throw new Error("no compose map loop checks bounds param limits")
                 return { stdout: Buffer.from("") }
@@ -186,7 +186,7 @@ describe("cli/memory/docker-manager", () => {
         })
 
         test("stops bounding target maps invoking compose down loops naturally", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("--version")) return { stdout: Buffer.from("") }
                 if (args.includes("version")) return { stdout: Buffer.from("") }
                 return { stdout: Buffer.from("") }
@@ -200,7 +200,7 @@ describe("cli/memory/docker-manager", () => {
 
     describe("resetSurrealDB", () => {
         test("triggers map wipe limits bounding stop execution loops strings check strings correctly", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("--version")) return { stdout: Buffer.from("") }
                 if (args.includes("inspect")) return { stdout: "true" } // ensure we pass immediately on start
                 return { stdout: Buffer.from("") }
@@ -214,7 +214,7 @@ describe("cli/memory/docker-manager", () => {
         })
 
         test("warns if data clear throws mapped limit string bounds graceful error loop", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("--version")) return { stdout: Buffer.from("") }
                 if (args.includes("inspect")) return { stdout: "true" }
                 return { stdout: Buffer.from("") }
@@ -231,21 +231,21 @@ describe("cli/memory/docker-manager", () => {
 
     describe("getSurrealDBStatus (external mode)", () => {
         test("returns running if external health check passes", async () => {
-            const res = await dockerManager.getSurrealDBStatus(extConfig)
+            const res = await dockerManager.getSurrealDBStatus((extConfig as any))
             expect(res).toBe("running")
             expect(mockSpawnSync).not.toHaveBeenCalled()
         })
 
         test("returns stopped if external health check fails", async () => {
             globalFetchSpy.mockRejectedValueOnce(new Error("conn refused"))
-            const res = await dockerManager.getSurrealDBStatus(extConfig)
+            const res = await dockerManager.getSurrealDBStatus((extConfig as any))
             expect(res).toBe("stopped")
         })
     })
 
     describe("ensureSurrealDBRunning (external mode)", () => {
         test("exits early without spawning docker", async () => {
-            await dockerManager.ensureSurrealDBRunning(extConfig)
+            await dockerManager.ensureSurrealDBRunning((extConfig as any))
             expect(mockSpawnSync).not.toHaveBeenCalled()
             expect(mockLog).toHaveBeenCalledWith("[docker-manager] External mode — skipping Docker management")
         })
@@ -253,7 +253,7 @@ describe("cli/memory/docker-manager", () => {
 
     describe("detectExistingSurrealDB", () => {
         test("detects docker containers correctly", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("--version")) return { stdout: "Docker version 20.10.x\n" }
                 if (args.includes("ancestor=surrealdb/surrealdb")) {
                     return { stdout: "abc12345\texisting-surreal\t0.0.0.0:8001->8000/tcp\n" }
@@ -271,7 +271,7 @@ describe("cli/memory/docker-manager", () => {
         })
 
         test("filters out managed container", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("--version")) return { stdout: "Docker version 20.10.x\n" }
                 if (args.includes("ancestor=surrealdb/surrealdb")) {
                     return { stdout: "def6789\tomo-surrealdb\t0.0.0.0:18000->8000/tcp\n" }
@@ -286,7 +286,7 @@ describe("cli/memory/docker-manager", () => {
         })
 
         test("detects network service on standard ports", async () => {
-            mockSpawnSync.mockImplementation((cmd, args: string[]) => {
+            mockSpawnSync.mockImplementation((cmd: string, args: string[]) => {
                 if (args.includes("--version")) return { stdout: "Docker version 20.10.x\n" }
                 return { stdout: "" } // no docker containers
             })

@@ -268,7 +268,7 @@ describe("getConnectedProviders", () => {
 			}
 		}
 
-		const result = await getConnectedProviders(mockClient)
+		const result = await getConnectedProviders((mockClient as any))
 
 		expect(result).toEqual(["anthropic", "opencode", "google"])
 	})
@@ -283,7 +283,7 @@ describe("getConnectedProviders", () => {
 			}
 		}
 
-		const result = await getConnectedProviders(mockClient)
+		const result = await getConnectedProviders((mockClient as any))
 
 		expect(result).toEqual([])
 	})
@@ -298,7 +298,7 @@ describe("getConnectedProviders", () => {
 			}
 		}
 
-		const result = await getConnectedProviders(mockClient)
+		const result = await getConnectedProviders((mockClient as any))
 
 		expect(result).toEqual([])
 	})
@@ -309,7 +309,7 @@ describe("getConnectedProviders", () => {
 	it("should return empty array when client.provider.list not available", async () => {
 		const mockClient = {}
 
-		const result = await getConnectedProviders(mockClient)
+		const result = await getConnectedProviders((mockClient as any))
 
 		expect(result).toEqual([])
 	})
@@ -318,7 +318,7 @@ describe("getConnectedProviders", () => {
 	//#when getConnectedProviders called
 	//#then returns empty array
 	it("should return empty array for null client", async () => {
-		const result = await getConnectedProviders(null)
+		const result = await getConnectedProviders((null as any))
 
 		expect(result).toEqual([])
 	})
@@ -333,7 +333,7 @@ describe("getConnectedProviders", () => {
 			}
 		}
 
-		const result = await getConnectedProviders(mockClient)
+		const result = await getConnectedProviders((mockClient as any))
 
 		expect(result).toEqual([])
 	})

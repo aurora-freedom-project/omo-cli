@@ -1,10 +1,10 @@
 import { describe, test, expect, mock, beforeEach, spyOn } from "bun:test"
 
-const mockExistsSync = mock(() => false)
-const mockMkdirSync = mock(() => { })
-const mockReadFileSync = mock(() => "{}")
-const mockWriteFileSync = mock(() => { })
-const mockStatSync = mock(() => ({ size: 100 }))
+const mockExistsSync = mock((_path: string) => false)
+const mockMkdirSync = mock((_path: string, _opts?: unknown) => { })
+const mockReadFileSync = mock((_path: string, _enc?: string) => "{}")
+const mockWriteFileSync = mock((_path: string, _data: string) => { })
+const mockStatSync = mock((_path: string) => ({ size: 100 }))
 
 mock.module("node:fs", () => ({
     existsSync: mockExistsSync,

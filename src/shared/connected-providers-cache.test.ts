@@ -109,7 +109,7 @@ describe("shared/connected-providers-cache", () => {
 
     describe("updateConnectedProvidersCache", () => {
         test("returns early if list method missing", async () => {
-            await cache.updateConnectedProvidersCache({} as never)
+            await cache.updateConnectedProvidersCache({} as any)
             expect(mockLog).toHaveBeenCalledWith("[connected-providers-cache] client.provider.list not available")
         })
 

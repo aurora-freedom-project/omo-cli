@@ -58,7 +58,7 @@ describe("transcript", () => {
 
     describe("appendTranscriptEntry", () => {
         test("creates directory if missing and appends entry array", () => {
-            const entry = { type: "test", content: "data" } as never
+            const entry = { type: "test", content: "data" } as any
             mockedExistsState[expectedTranscriptsDir] = false
 
             appendTranscriptEntry("sess1", entry)
@@ -69,7 +69,7 @@ describe("transcript", () => {
         })
 
         test("does not attempt directory creation if true", () => {
-            const entry = { type: "test", content: "data" } as never
+            const entry = { type: "test", content: "data" } as any
             mockedExistsState[expectedTranscriptsDir] = true
 
                 // clear mock counts

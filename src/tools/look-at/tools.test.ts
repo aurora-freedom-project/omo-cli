@@ -18,12 +18,12 @@ describe("tools/look-at", () => {
     })
 
     test("falls back mapping string checks string to path loops arrays maps limits missing loops logic boundaries map", () => {
-      const res = normalizeArgs({ path: "f2", goal: "g1" })
+      const res = normalizeArgs(({ path: "f2", goal: "g1" } as any))
       expect(res.file_path).toBe("f2")
     })
 
     test("defaults to empty string bounds logic limiting fallback variables mapping limits targets maps loops logic bounded limits checks tracking array", () => {
-      const res = normalizeArgs({} as never)
+      const res = normalizeArgs({} as any)
       expect(res.file_path).toBe("")
       expect(res.goal).toBe("")
     })
@@ -65,14 +65,14 @@ describe("tools/look-at", () => {
               messages: mockSessionMessages
             }
           }
-        } as never,
+        } as any,
         mocks: { mockSessionGet, mockSessionCreate, mockSessionPrompt, mockSessionMessages }
       }
     }
 
     test("returns validation error strings bounds tracking limits looping", async () => {
-      const lookAt = createLookAt({} as never)
-      const res = await lookAt.execute({ file_path: "", goal: "g1" } as never, { sessionID: "s1" } as never)
+      const lookAt = createLookAt({} as any)
+      const res = await lookAt.execute({ file_path: "", goal: "g1" } as any, { sessionID: "s1" } as any)
       expect(res).toContain("Missing required parameter")
     })
 
@@ -80,7 +80,7 @@ describe("tools/look-at", () => {
       const { ctx, mocks } = createMockCtx()
       const lookAt = createLookAt(ctx)
 
-      const res = await lookAt.execute({ file_path: "test.jpg", goal: "extract" } as never, { sessionID: "s1" } as never)
+      const res = await lookAt.execute({ file_path: "test.jpg", goal: "extract" } as any, { sessionID: "s1" } as any)
       expect(res).toBe("extracted info")
 
       // verify mime mapping targets bounds variables bounds loops limits mapping checks map limit
@@ -98,7 +98,7 @@ describe("tools/look-at", () => {
       mocks.mockSessionGet.mockImplementation(() => Promise.reject(new Error("err check string bounds strings missing map targets maps strings check strings boundaries targets bounded checking")))
       const lookAt = createLookAt(ctx)
 
-      await lookAt.execute({ file_path: "test.md", goal: "g1" } as never, { sessionID: "s1" } as never)
+      await lookAt.execute({ file_path: "test.md", goal: "g1" } as any, { sessionID: "s1" } as any)
       expect(mocks.mockSessionCreate).toHaveBeenCalledWith(expect.objectContaining({ query: { directory: "/root" } }))
 
       // mime mapping markdown fallback
@@ -113,19 +113,19 @@ describe("tools/look-at", () => {
 
     test("handles session create failing mapped strings limiting limit string strings limits checking loops limits limits logic values checks natively loops mapping bounds tracking loops arrays targets", async () => {
       const { ctx, mocks } = createMockCtx()
-      mocks.mockSessionCreate.mockImplementation(() => Promise.resolve({ error: "Unauthorized" } as never))
+      mocks.mockSessionCreate.mockImplementation(() => Promise.resolve({ error: "Unauthorized" } as any))
       const lookAt = createLookAt(ctx)
 
-      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as never, { sessionID: "s1" } as never)
+      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as any, { sessionID: "s1" } as any)
       expect(res).toContain("Unauthorized")
     })
 
     test("handles session create other error check string mapping arrays limits bounds array strings array natively bounds bounds parsing targets loops bounds arrays strings checks logic limits targeting loops variables loop limit", async () => {
       const { ctx, mocks } = createMockCtx()
-      mocks.mockSessionCreate.mockImplementation(() => Promise.resolve({ error: "Forbidden limits mapping errors boundaries limits check array" } as never))
+      mocks.mockSessionCreate.mockImplementation(() => Promise.resolve({ error: "Forbidden limits mapping errors boundaries limits check array" } as any))
       const lookAt = createLookAt(ctx)
 
-      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as never, { sessionID: "s1" } as never)
+      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as any, { sessionID: "s1" } as any)
       expect(res).toContain("Failed to create session")
     })
 
@@ -134,7 +134,7 @@ describe("tools/look-at", () => {
       mocks.mockSessionPrompt.mockImplementation(() => Promise.reject(new Error("JSON parse map EOF loops limits mappings limit limit loops checks bounding targets logic boundaries limits check string mappings")))
       const lookAt = createLookAt(ctx)
 
-      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as never, { sessionID: "s1" } as never)
+      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as any, { sessionID: "s1" } as any)
       expect(res).toContain("malformed response")
     })
 
@@ -143,16 +143,16 @@ describe("tools/look-at", () => {
       mocks.mockSessionPrompt.mockImplementation(() => Promise.reject("stringerr mapped bounds loops string map mapping bounds arrays check targets logic parsing strings logic targets strings limits check mapping limit strings loop mapping tracking"))
       const lookAt = createLookAt(ctx)
 
-      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as never, { sessionID: "s1" } as never)
+      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as any, { sessionID: "s1" } as any)
       expect(res).toContain("stringerr")
     })
 
     test("handles messages error array string mapping loops targets targeted variables check mapping map bounds variables targeted arrays checking bounds mapped values target limit checking loops checking limits bounding logic mapping strings tracking string limit arrays bounding tracking map", async () => {
       const { ctx, mocks } = createMockCtx()
-      mocks.mockSessionMessages.mockImplementation(() => Promise.resolve({ error: "fetch error mapped testing missing bounds array boundary checks variables targets limits array schema values variables" } as never))
+      mocks.mockSessionMessages.mockImplementation(() => Promise.resolve({ error: "fetch error mapped testing missing bounds array boundary checks variables targets limits array schema values variables" } as any))
       const lookAt = createLookAt(ctx)
 
-      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as never, { sessionID: "s1" } as never)
+      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as any, { sessionID: "s1" } as any)
       expect(res).toContain("Failed to get messages:")
     })
 
@@ -161,7 +161,7 @@ describe("tools/look-at", () => {
       mocks.mockSessionMessages.mockImplementation(() => Promise.resolve({ data: [] }))
       const lookAt = createLookAt(ctx)
 
-      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as never, { sessionID: "s1" } as never)
+      const res = await lookAt.execute({ file_path: "f1.pdf", goal: "g1" } as any, { sessionID: "s1" } as any)
       expect(res).toContain("No response from vision agent")
     })
 
@@ -176,7 +176,7 @@ describe("tools/look-at", () => {
       }))
 
       const lookAt = createLookAt(ctx)
-      const res = await lookAt.execute({ file_path: "f1.bin", goal: "g1" } as never, { sessionID: "s1" } as never)
+      const res = await lookAt.execute({ file_path: "f1.bin", goal: "g1" } as any, { sessionID: "s1" } as any)
 
       expect(res).toBe("new logical loops variable map bounds logic checking limits")
     })

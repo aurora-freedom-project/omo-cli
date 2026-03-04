@@ -48,7 +48,7 @@ describe("todo-continuation-enforcer", () => {
         },
       },
       directory: "/tmp/test",
-    } as never
+    } as any
   }
 
   function createMockBackgroundManager(runningTasks: boolean = false): BackgroundManager {
@@ -56,7 +56,7 @@ describe("todo-continuation-enforcer", () => {
       getTasksByParentSession: () => runningTasks
         ? [{ status: "running" }]
         : [],
-    } as never
+    } as any
   }
 
   beforeEach(() => {
@@ -859,7 +859,7 @@ describe("todo-continuation-enforcer", () => {
         tui: { showToast: async () => ({}) },
       },
       directory: "/tmp/test",
-    } as never
+    } as any
 
     const hook = createTodoContinuationEnforcer(mockInput, {
       backgroundManager: createMockBackgroundManager(false),
@@ -911,7 +911,7 @@ describe("todo-continuation-enforcer", () => {
         tui: { showToast: async () => ({}) },
       },
       directory: "/tmp/test",
-    } as never
+    } as any
 
     const hook = createTodoContinuationEnforcer(mockInput, {
       backgroundManager: createMockBackgroundManager(false),
@@ -955,7 +955,7 @@ describe("todo-continuation-enforcer", () => {
         tui: { showToast: async () => ({}) },
       },
       directory: "/tmp/test",
-    } as never
+    } as any
 
     const hook = createTodoContinuationEnforcer(mockInput, {})
 
@@ -1001,7 +1001,7 @@ describe("todo-continuation-enforcer", () => {
         tui: { showToast: async () => ({}) },
       },
       directory: "/tmp/test",
-    } as never
+    } as any
 
     const hook = createTodoContinuationEnforcer(mockInput, {})
 
@@ -1046,7 +1046,7 @@ describe("todo-continuation-enforcer", () => {
         tui: { showToast: async () => ({}) },
       },
       directory: "/tmp/test",
-    } as never
+    } as any
 
     const hook = createTodoContinuationEnforcer(mockInput, {
       skipAgents: [],

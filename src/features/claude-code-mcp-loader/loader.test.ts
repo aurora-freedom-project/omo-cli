@@ -51,7 +51,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
     test("parses files and collects non-disabled server names", () => {
       const configObj = { mcpServers: { "srv1": {}, "srv2": { disabled: true }, "srv3": {} } }
       // return true for first file, false for others to limit parsing
-      mockExistsSync.mockImplementation((path: string) => path.includes("claude"))
+      mockExistsSync.mockImplementation(((path: string) => path.includes("claude")) as any)
       mockReadFileSync.mockReturnValue(JSON.stringify(configObj))
 
       const names = loader.getSystemMcpServerNames()
@@ -82,7 +82,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
       const userConfig = { mcpServers: { srv1: { a: 1 }, srv2: { b: 2 } } }
       const projConfig = { mcpServers: { srv1: { disabled: true } } }
 
-      mockExistsSync.mockImplementation((p: string) => true)
+      mockExistsSync.mockImplementation(((p: string) => true) as any)
 
       bunFileSpy.mockImplementation((path: string) => ({
         text: async () => {
@@ -123,7 +123,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
     })
 
     test("handles transform throwing gracefully", async () => {
-      mockExistsSync.mockImplementation((p: string) => p === "/test/claude/config/.mcp.json") // STRICTLY ONE MATCH
+      mockExistsSync.mockImplementation(((p: string) => p === "/test/claude/config/.mcp.json") as any) // STRICTLY ONE MATCH
       const userConfig = { mcpServers: { srv1: { a: 1 } } }
 
       bunFileSpy.mockImplementation((path: string) => ({
@@ -165,7 +165,7 @@ describe("features/claude-code-mcp-loader/loader", () => {
         { name: "srvA", scope: "user" },
         { name: "srvB", scope: "project" }
       ]
-      expect(loader.formatLoadedServersForToast(servers)).toBe("srvA (user), srvB (project)")
+      expect(loader.formatLoadedServersForToast((servers as any))).toBe("srvA (user), srvB (project)")
     })
   })
 })

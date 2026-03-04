@@ -294,7 +294,7 @@ describe("Effect.try pipeline concurrency", () => {
                         .reduce((a, b) => a + b, 0)
                     return { index: i, sum: result }
                 },
-                catch: () => ({ index: i, sum: -1 }) as never,
+                catch: () => ({ index: i, sum: -1 }) as any,
             }).pipe(Effect.catchAll((e) => Effect.succeed(e)))
         )
 
@@ -319,7 +319,7 @@ describe("Effect.try pipeline concurrency", () => {
                         if (i % 3 === 0) throw new Error(`fail-${i}`)
                         return { index: i, ok: true }
                     },
-                    catch: (e) => ({ index: i, ok: false, error: (e as Error).message }) as never,
+                    catch: (e) => ({ index: i, ok: false, error: (e as Error).message }) as any,
                 }),
                 Effect.catchAll((err) => Effect.succeed(err))
             )

@@ -52,25 +52,25 @@ describe("pattern-matcher", () => {
         })
 
         test("returns all event hooks if toolName is not provided", () => {
-            const results = findMatchingHooks(mockConfig, "preToolUse")
+            const results = findMatchingHooks(mockConfig, ("preToolUse" as any))
             expect(results.length).toBe(2)
             expect(results[0].matcher).toBe("Read*")
             expect(results[1].matcher).toBe("Write*")
         })
 
         test("filters hooks matching the provided toolName", () => {
-            const results = findMatchingHooks(mockConfig, "preToolUse", "ReadDataTool")
+            const results = findMatchingHooks(mockConfig, ("preToolUse" as any), "ReadDataTool")
             expect(results.length).toBe(1)
             expect(results[0].matcher).toBe("Read*")
         })
 
         test("returns empty array if toolName matches no hooks", () => {
-            const results = findMatchingHooks(mockConfig, "preToolUse", "DeleteTool")
+            const results = findMatchingHooks(mockConfig, ("preToolUse" as any), "DeleteTool")
             expect(results.length).toBe(0)
         })
 
         test("returns all matching hooks for heavily wildcarded event", () => {
-            const results = findMatchingHooks(mockConfig, "postToolUse", "AnyRandomTool")
+            const results = findMatchingHooks(mockConfig, ("postToolUse" as any), "AnyRandomTool")
             expect(results.length).toBe(1)
             expect(results[0].matcher).toBe("*")
         })

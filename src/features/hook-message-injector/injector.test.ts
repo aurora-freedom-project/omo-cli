@@ -41,7 +41,7 @@ describe("features/hook-message-injector/injector", () => {
 
         test("returns perfect match containing all fields", () => {
             mockReaddirSync.mockReturnValueOnce(["1.json", "2.json"])
-            mockReadFileSync.mockImplementation((path) => {
+            mockReadFileSync.mockImplementation((path: string) => {
                 if (String(path).includes("2.json")) {
                     return JSON.stringify({ agent: "a1", model: { providerID: "p", modelID: "m" } })
                 }
@@ -53,7 +53,7 @@ describe("features/hook-message-injector/injector", () => {
 
         test("returns partial match containing ANY fields if perfect match fails", () => {
             mockReaddirSync.mockReturnValue(["1.json", "2.json"])
-            mockReadFileSync.mockImplementation((path) => {
+            mockReadFileSync.mockImplementation((path: string) => {
                 return JSON.stringify({ agent: "a2" })
             })
             const res = injector.findNearestMessageWithFields("/dir")
@@ -75,7 +75,7 @@ describe("features/hook-message-injector/injector", () => {
 
         test("returns first string mapping loops resolving JSON", () => {
             mockReaddirSync.mockReturnValue(["1.json", "2.json"])
-            mockReadFileSync.mockImplementation((path) => {
+            mockReadFileSync.mockImplementation((path: string) => {
                 if (String(path).includes("1.json")) return "invalid"
                 if (String(path).includes("2.json")) return JSON.stringify({ agent: "target" })
                 return "{}"
@@ -93,7 +93,7 @@ describe("features/hook-message-injector/injector", () => {
 
     describe("injectHookMessage", () => {
         test("early returns false string logic block if hook message is empty", () => {
-            const res = injector.injectHookMessage("sess1", "   ", {} as never)
+            const res = injector.injectHookMessage("sess1", "   ", {} as any)
             expect(res).toBe(false)
         })
 
@@ -115,14 +115,14 @@ describe("features/hook-message-injector/injector", () => {
         test("resolves map searching subdirs if direct session path mapping boundaries limits array strings error fail limit maps", () => {
             // Mock existSync to fail direct path check, but succeed deep path
             // LINE 106 MATCH CHECK
-            mockExistsSync.mockImplementation((path) => {
+            mockExistsSync.mockImplementation((path: string) => {
                 if (path === MESSAGE_STORAGE) return true
                 if (path === join(MESSAGE_STORAGE, "sess1")) return false
                 if (path === join(MESSAGE_STORAGE, "subdir", "sess1")) return true
                 return true // for partDir limits
             })
 
-            mockReaddirSync.mockImplementation((path) => {
+            mockReaddirSync.mockImplementation((path: string) => {
                 if (path === MESSAGE_STORAGE) return ["subdir", "other"]
                 return []
             })
@@ -156,12 +156,12 @@ describe("features/hook-message-injector/injector", () => {
 
             mockExistsSync.mockReturnValue(true)
 
-            mockReaddirSync.mockImplementation((path) => {
+            mockReaddirSync.mockImplementation((path: string) => {
                 if (String(path).endsWith("sess3")) return ["fallback.json"]
                 return []
             })
 
-            mockReadFileSync.mockImplementation((path) => {
+            mockReadFileSync.mockImplementation((path: string) => {
                 if (String(path).includes("fallback.json")) {
                     return JSON.stringify({
                         agent: "fbAgent",
