@@ -38,7 +38,7 @@ import * as configManager from "./config-manager"
 
 let mockFetchRes = { ok: true, json: async () => ({ version: "1.0.0" }) }
 const globalFetchSpy = mock(async () => mockFetchRes)
-globalThis.fetch = globalFetchSpy as any
+globalThis.fetch = globalFetchSpy as never
 
 const mockExited = mock()
 const mockStdoutText = mock(() => "1.0.0")
@@ -53,11 +53,11 @@ const mockBunSpawn = mock(() => ({
 }))
 
 mock.module("bun", () => ({ spawn: mockBunSpawn }))
-spyOn(Bun, "spawn").mockImplementation(mockBunSpawn as any)
+spyOn(Bun, "spawn").mockImplementation(mockBunSpawn as never)
 
 globalThis.Response = mock((body: unknown) => ({
     text: async () => body === "mock_stdout" ? mockStdoutText() : mockStderrText()
-})) as any
+})) as never
 
 describe("cli/config-manager", () => {
     beforeEach(() => {
@@ -185,7 +185,7 @@ describe("cli/config-manager", () => {
         test("timeout map loops variable target logical mapping strings map checks map tracking strings array bounds loops variables value targets strings schemas limits limit string checks loop mapping string bounds parameters string", async () => {
             mockExited.mockReturnValue(new Promise(() => { }))
             const orig = globalThis.setTimeout
-            globalThis.setTimeout = ((cb: (...args: unknown[]) => void) => { cb(); return 1 }) as any
+            globalThis.setTimeout = ((cb: (...args: unknown[]) => void) => { cb(); return 1 }) as never
             const res = await configManager.runBunInstallWithDetails()
             globalThis.setTimeout = orig
             expect(res.timedOut).toBe(true)

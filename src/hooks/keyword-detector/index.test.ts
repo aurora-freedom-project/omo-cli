@@ -118,7 +118,7 @@ describe("keyword-detector session filtering", () => {
     return {
       client: {
         tui: {
-          showToast: async (opts: any) => {
+          showToast: async (opts: Record<string, Record<string, string>>) => {
             toastCalls.push(opts.body.title)
           },
         },
@@ -263,7 +263,7 @@ describe("keyword-detector word boundary", () => {
     return {
       client: {
         tui: {
-          showToast: async (opts: any) => {
+          showToast: async (opts: Record<string, Record<string, string>>) => {
             toastCalls.push(opts.body.title)
           },
         },

@@ -5,7 +5,10 @@ import * as storage from "./storage"
 
 describe("executeCompact lock management", () => {
   let autoCompactState: AutoCompactState
-  let mockClient: any
+  let mockClient: {
+    session: { messages: ReturnType<typeof mock>; summarize: ReturnType<typeof mock>; revert: ReturnType<typeof mock>; prompt_async: ReturnType<typeof mock> }
+    tui: { showToast: ReturnType<typeof mock> }
+  }
   const sessionID = "test-session-123"
   const directory = "/test/dir"
   const msg = { providerID: "anthropic", modelID: "claude-opus-4-5" }
@@ -143,7 +146,7 @@ describe("executeCompact lock management", () => {
     // #then: Toast should be shown
     const toastCalls = (mockClient.tui.showToast).mock.calls
     const blockedToast = toastCalls.find(
-      (call: any) => call[0]?.body?.title === "Compact In Progress",
+      (call: unknown[]) => (call[0] as Record<string, Record<string, string>>)?.body?.title === "Compact In Progress",
     )
     expect(blockedToast).toBeDefined()
 
@@ -175,7 +178,7 @@ describe("executeCompact lock management", () => {
     // #then: Should show failure toast
     const toastCalls = (mockClient.tui.showToast).mock.calls
     const failureToast = toastCalls.find(
-      (call: any) => call[0]?.body?.title === "Auto Compact Failed",
+      (call: unknown[]) => (call[0] as Record<string, Record<string, string>>)?.body?.title === "Auto Compact Failed",
     )
     expect(failureToast).toBeDefined()
 

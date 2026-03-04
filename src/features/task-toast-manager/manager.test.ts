@@ -20,8 +20,7 @@ describe("TaskToastManager", () => {
     mockConcurrencyManager = {
       getConcurrencyLimit: mock(() => 5),
     } as unknown as ConcurrencyManager
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    toastManager = new TaskToastManager(mockClient as any, mockConcurrencyManager)
+    toastManager = new TaskToastManager(mockClient as never, mockConcurrencyManager)
   })
 
   describe("skills in toast message", () => {
@@ -103,8 +102,7 @@ describe("TaskToastManager", () => {
         getQueuedCount: mock(() => 1),
       } as unknown as ConcurrencyManager
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const managerWithConcurrency = new TaskToastManager(mockClient as any, mockConcurrencyWithCounts)
+      const managerWithConcurrency = new TaskToastManager(mockClient as never, mockConcurrencyWithCounts)
 
       // #when - a task is added
       managerWithConcurrency.addTask({

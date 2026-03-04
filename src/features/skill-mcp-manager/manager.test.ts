@@ -543,7 +543,7 @@ describe("SkillMcpManager", () => {
         close: mock(() => Promise.resolve()),
       }
 
-      const getOrCreateSpy = spyOn(manager as any, "getOrCreateClientWithRetry")
+      const getOrCreateSpy = spyOn(manager as never, "getOrCreateClientWithRetry")
       getOrCreateSpy.mockResolvedValue(mockClient)
 
       // #when
@@ -576,7 +576,7 @@ describe("SkillMcpManager", () => {
         close: mock(() => Promise.resolve()),
       }
 
-      const getOrCreateSpy = spyOn(manager as any, "getOrCreateClientWithRetry")
+      const getOrCreateSpy = spyOn(manager as never, "getOrCreateClientWithRetry")
       getOrCreateSpy.mockResolvedValue(mockClient)
 
       // #when / #then
@@ -607,7 +607,7 @@ describe("SkillMcpManager", () => {
         close: mock(() => Promise.resolve()),
       }
 
-      const getOrCreateSpy = spyOn(manager as any, "getOrCreateClientWithRetry")
+      const getOrCreateSpy = spyOn(manager as never, "getOrCreateClientWithRetry")
       getOrCreateSpy.mockResolvedValue(mockClient)
 
       // #when / #then
@@ -764,7 +764,7 @@ describe("SkillMcpManager", () => {
         close: mock(() => Promise.resolve()),
       }
 
-      const getOrCreateSpy = spyOn(manager as any, "getOrCreateClientWithRetry")
+      const getOrCreateSpy = spyOn(manager as never, "getOrCreateClientWithRetry")
       getOrCreateSpy.mockResolvedValue(mockClient)
 
       // #when
@@ -796,7 +796,7 @@ describe("SkillMcpManager", () => {
         close: mock(() => Promise.resolve()),
       }
 
-      const getOrCreateSpy = spyOn(manager as any, "getOrCreateClientWithRetry")
+      const getOrCreateSpy = spyOn(manager as never, "getOrCreateClientWithRetry")
       getOrCreateSpy.mockResolvedValue(mockClient)
 
       // #when / #then

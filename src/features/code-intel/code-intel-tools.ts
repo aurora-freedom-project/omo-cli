@@ -22,11 +22,9 @@ interface Tool {
     parameters: {
         type: string
         required?: string[]
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        properties: Record<string, any>
+        properties: Record<string, unknown>
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    execute: (args: Record<string, any>) => Promise<string>
+    execute: (args: Record<string, unknown>) => Promise<string>
 }
 
 // ---------------------------------------------------------------------------
@@ -109,9 +107,9 @@ export function createCodeIntelTools(
             return Effect.runPromise(
                 Effect.tryPromise({
                     try: async () => {
-                        const results = await searchCode(args.query, {
-                            kind: args.kind,
-                            limit: args.limit ?? 10,
+                        const results = await searchCode(args.query as string, {
+                            kind: args.kind as string | undefined,
+                            limit: (args.limit ?? 10) as number,
                             project,
                         })
 
@@ -151,7 +149,7 @@ export function createCodeIntelTools(
             return Effect.runPromise(
                 Effect.tryPromise({
                     try: async () => {
-                        const results = await findCallers(args.name, project)
+                        const results = await findCallers(args.name as string, project)
 
                         if (results.length === 0) {
                             return `No callers found for "${args.name}". Note: call relationships are best-effort based on AST analysis.`
@@ -190,7 +188,7 @@ export function createCodeIntelTools(
             return Effect.runPromise(
                 Effect.tryPromise({
                     try: async () => {
-                        const deps = await findDependencies(args.file, project)
+                        const deps = await findDependencies(args.file as string, project)
 
                         const lines = [`File: ${args.file}\n`]
                         lines.push(`Imports (${deps.imports.length}):`)

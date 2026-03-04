@@ -2286,7 +2286,7 @@ describe("orchestrator-task", () => {
       )
 
       // #then - planner should have delegate_task permission
-      expect((promptBody.tools as any).delegate_task).toBe(true)
+      expect((promptBody.tools as Record<string, boolean>).delegate_task).toBe(true)
     }, { timeout: 20000 })
 
     test("non-planner subagent should NOT have delegate_task permission", async () => {
@@ -2337,7 +2337,7 @@ describe("orchestrator-task", () => {
       )
 
       // #then - architect should NOT have delegate_task permission
-      expect((promptBody.tools as any).delegate_task).toBe(false)
+      expect((promptBody.tools as Record<string, boolean>).delegate_task).toBe(false)
     }, { timeout: 20000 })
   })
 })

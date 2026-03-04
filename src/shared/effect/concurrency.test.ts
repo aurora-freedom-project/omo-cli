@@ -49,7 +49,7 @@ describe("StorageService concurrency", () => {
         const results = await run(program)
         expect(results).toHaveLength(10)
         for (let i = 0; i < 10; i++) {
-            expect((results as any)[i]).toEqual({ key: i, value: `value-${i}` })
+            expect((results as Array<Record<string, unknown>>)[i]).toEqual({ key: i, value: `value-${i}` })
         }
     })
 
@@ -294,7 +294,7 @@ describe("Effect.try pipeline concurrency", () => {
                         .reduce((a, b) => a + b, 0)
                     return { index: i, sum: result }
                 },
-                catch: () => ({ index: i, sum: -1 }) as any,
+                catch: () => ({ index: i, sum: -1 }) as never,
             }).pipe(Effect.catchAll((e) => Effect.succeed(e)))
         )
 
@@ -319,7 +319,7 @@ describe("Effect.try pipeline concurrency", () => {
                         if (i % 3 === 0) throw new Error(`fail-${i}`)
                         return { index: i, ok: true }
                     },
-                    catch: (e) => ({ index: i, ok: false, error: (e as Error).message }) as any,
+                    catch: (e) => ({ index: i, ok: false, error: (e as Error).message }) as never,
                 }),
                 Effect.catchAll((err) => Effect.succeed(err))
             )
@@ -333,7 +333,7 @@ describe("Effect.try pipeline concurrency", () => {
         // Indices 0, 3, 6, 9 should fail
         for (let i = 0; i < 10; i++) {
             if (i % 3 === 0) {
-                expect(results[i]).toEqual({ index: i, ok: false, error: `fail-${i}` })
+                expect(results[i]).toEqual({ index: i, ok: false, error: `fail-${i}` } as typeof results[number])
             } else {
                 expect(results[i]).toEqual({ index: i, ok: true })
             }

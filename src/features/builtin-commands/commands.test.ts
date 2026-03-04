@@ -31,7 +31,7 @@ describe("builtin-commands", () => {
         })
 
         test("returns empty-like object when all commands disabled", () => {
-            const allNames = Object.keys(loadBuiltinCommands()) as any[]
+            const allNames = Object.keys(loadBuiltinCommands()) as never[]
             const commands = loadBuiltinCommands(allNames)
 
             expect(Object.keys(commands).length).toBe(0)
@@ -41,8 +41,8 @@ describe("builtin-commands", () => {
             const commands = loadBuiltinCommands()
 
             for (const cmd of Object.values(commands)) {
-                expect((cmd as any).template).toBeDefined()
-                expect((cmd as any).template.length).toBeGreaterThan(10)
+                expect((cmd as unknown as { template: string }).template).toBeDefined()
+                expect((cmd as unknown as { template: string }).template.length).toBeGreaterThan(10)
             }
         })
     })

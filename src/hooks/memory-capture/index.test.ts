@@ -257,7 +257,7 @@ describe("createMemoryCaptureHook", () => {
         it("skips insight when similar concept exists (score >= 0.92)", async () => {
             mockSearchSimilar.mockResolvedValue([
                 { content: "existing", tags: [], embedding: [], source: "auto", score: 0.95 },
-            ] as any)
+            ] as never)
 
             const hook = createMemoryCaptureHook(makeConfig(), "/test/dir")!
             const insight = "We decided to use the repository pattern for data access"
@@ -271,7 +271,7 @@ describe("createMemoryCaptureHook", () => {
         it("captures insight when similar concept score < 0.92", async () => {
             mockSearchSimilar.mockResolvedValue([
                 { content: "somewhat related", tags: [], embedding: [], source: "auto", score: 0.80 },
-            ] as any)
+            ] as never)
 
             const hook = createMemoryCaptureHook(makeConfig(), "/test/dir")!
             const insight = "We decided to use the repository pattern for data access"

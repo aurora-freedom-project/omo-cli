@@ -93,7 +93,7 @@ describe("shared/connected-providers-cache", () => {
             mockExistsSync.mockImplementation(((path: string) => {
                 if (String(path) === "/test/cache") return false
                 return true
-            }) as any)
+            }) as never)
             cache.writeProviderModelsCache({ models: { p1: ["m1"] }, connected: ["p1"] })
             expect(mockMkdirSync).toHaveBeenCalledWith("/test/cache", { recursive: true })
             expect(mockWriteFileSync).toHaveBeenCalled()
@@ -109,7 +109,7 @@ describe("shared/connected-providers-cache", () => {
 
     describe("updateConnectedProvidersCache", () => {
         test("returns early if list method missing", async () => {
-            await cache.updateConnectedProvidersCache({} as any)
+            await cache.updateConnectedProvidersCache({} as never)
             expect(mockLog).toHaveBeenCalledWith("[connected-providers-cache] client.provider.list not available")
         })
 
@@ -119,7 +119,7 @@ describe("shared/connected-providers-cache", () => {
             const mockClient = {
                 provider: { list: mock(async () => ({ data: { connected: ["p1"] } })) }
             }
-            await cache.updateConnectedProvidersCache(mockClient as any)
+            await cache.updateConnectedProvidersCache(mockClient as never)
             expect(mockWriteFileSync).toHaveBeenCalled() // for writeConnectedProvidersCache
         })
 
@@ -137,7 +137,7 @@ describe("shared/connected-providers-cache", () => {
                     }))
                 }
             }
-            await cache.updateConnectedProvidersCache(mockClient as any)
+            await cache.updateConnectedProvidersCache(mockClient as never)
             // Should write provider cache AND provider models cache
             expect(mockWriteFileSync).toHaveBeenCalledTimes(2)
         })
@@ -148,7 +148,7 @@ describe("shared/connected-providers-cache", () => {
                 provider: { list: mock(async () => ({ data: { connected: ["p1"] } })) },
                 model: { list: mock(async () => { throw new Error("fetch fail") }) }
             }
-            await cache.updateConnectedProvidersCache(mockClient as any)
+            await cache.updateConnectedProvidersCache(mockClient as never)
             expect(mockWriteFileSync).toHaveBeenCalledTimes(1) // only first write works
             expect(mockLog).toHaveBeenCalledWith("[connected-providers-cache] Error fetching models", expect.any(Object))
         })
@@ -157,7 +157,7 @@ describe("shared/connected-providers-cache", () => {
             const mockClient = {
                 provider: { list: mock(async () => { throw new Error("master fetch fail") }) }
             }
-            await cache.updateConnectedProvidersCache(mockClient as any)
+            await cache.updateConnectedProvidersCache(mockClient as never)
             expect(mockWriteFileSync).not.toHaveBeenCalled()
             expect(mockLog).toHaveBeenCalledWith("[connected-providers-cache] Error updating cache", expect.any(Object))
         })
@@ -168,7 +168,7 @@ describe("shared/connected-providers-cache", () => {
             const mockClient = {
                 provider: { list: mock(async () => ({ data: { connected: ["p1"] } })) }
             }
-            await cache.updateConnectedProvidersCache(mockClient as any)
+            await cache.updateConnectedProvidersCache(mockClient as never)
             expect(mockLog).toHaveBeenCalledWith("[connected-providers-cache] Error writing cache", expect.any(Object))
         })
     })

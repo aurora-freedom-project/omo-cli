@@ -39,12 +39,12 @@ describe("install CLI - binary check behavior", () => {
 
     // Mock spawn to avoid running sync-skills which takes >5s
     const mockChild = {
-      on: (event: string, cb: (...args: any[]) => void) => {
+      on: (event: string, cb: (...args: unknown[]) => void) => {
         if (event === "close") cb(0) // immediately return success
         return mockChild
       }
     }
-    spyOn(childProcess, "spawn").mockReturnValue(mockChild as any)
+    spyOn(childProcess, "spawn").mockReturnValue(mockChild as never)
   })
 
   afterEach(() => {

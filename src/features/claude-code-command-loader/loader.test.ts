@@ -29,14 +29,14 @@ describe("claude-code-command-loader", () => {
     describe("loadUserCommands", () => {
         test("returns empty object when commands dir does not exist", () => {
             const result = loadUserCommands()
-            expect(result).toEqual({} as any)
+            expect(result).toEqual({} as never)
         })
     })
 
     describe("loadProjectCommands", () => {
         test("returns empty object when commands dir does not exist", () => {
             const result = loadProjectCommands()
-            expect(result).toEqual({} as any)
+            expect(result).toEqual({} as never)
         })
     })
 })

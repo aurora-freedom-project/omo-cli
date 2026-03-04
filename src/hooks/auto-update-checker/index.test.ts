@@ -1,4 +1,5 @@
-import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test"
+import { mock, describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test"
+import type { PluginInput } from "@opencode-ai/plugin"
 import * as index from "./index"
 
 // Mock dependencies
@@ -106,15 +107,16 @@ describe("hooks/auto-update-checker/index", () => {
   describe("createAutoUpdateCheckerHook", () => {
     const createMockCtx = () => {
       const showToast = mock(async () => { })
-      return {
+      const ctx = {
         directory: "/test",
         client: {
           tui: { showToast }
         }
-      } as any
+      }
+      return ctx as unknown as PluginInput & { client: { tui: { showToast: typeof showToast } } }
     }
 
-    const runHook = async (hook: any, ctx: any, props?: any) => {
+    const runHook = async (hook: ReturnType<typeof index.createAutoUpdateCheckerHook>, ctx: PluginInput, props?: Record<string, unknown>) => {
       hook.event({ event: { type: "session.created", properties: props } })
       await new Promise(r => setTimeout(r, 10)) // wait for background setTimeout
     }

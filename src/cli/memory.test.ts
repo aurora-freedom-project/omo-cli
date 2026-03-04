@@ -61,8 +61,9 @@ describe("cli/memory", () => {
     async function runCmd(cmd: Command, args: string[]) {
         try {
             await cmd.parseAsync(["node", "test", ...args])
-        } catch (e: any) {
-            if (!e.message.startsWith("EXIT_") && e.code !== "commander.helpDisplayed" && e.code !== "commander.help") {
+        } catch (e: unknown) {
+            const err = e as Error & { code?: string }
+            if (!err.message.startsWith("EXIT_") && err.code !== "commander.helpDisplayed" && err.code !== "commander.help") {
                 throw e
             }
         }

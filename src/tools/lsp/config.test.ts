@@ -34,7 +34,7 @@ import {
 } from "./config"
 
 describe("lsp/config", () => {
-  let mockCwd: any;
+  let mockCwd: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
     mockFiles = {}
@@ -70,7 +70,7 @@ describe("lsp/config", () => {
     test("ignores unconfigured extensions without defaulting to null failures", () => {
       const res = findServerForExtension("unknownext")
       expect(res.status).toBe("not_configured")
-      expect((res as any).availableServers).toBeDefined()
+      expect((res as Record<string, unknown>).availableServers).toBeDefined()
     })
 
     test("loads valid user configurations overrides and returns them found when installed", () => {

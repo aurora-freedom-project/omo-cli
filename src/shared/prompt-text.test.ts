@@ -35,7 +35,7 @@ describe("prompt-text", () => {
 
     it("handles non-array input gracefully", () => {
         expect(extractPromptText(null as never)).toBe("")
-        expect(extractPromptText(undefined as any)).toBe("")
+        expect(extractPromptText(undefined as never)).toBe("")
     })
 
     it("handles parts with missing text field", () => {

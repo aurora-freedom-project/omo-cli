@@ -907,7 +907,7 @@ Original task: Build something`
           },
         },
       }
-      const hook = createRalphLoopHook(errorMock as any, {
+      const hook = createRalphLoopHook(errorMock as never, {
         getTranscriptPath: () => join(TEST_DIR, "nonexistent.jsonl"),
         apiTimeout: 100,
       })

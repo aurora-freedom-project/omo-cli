@@ -3,7 +3,7 @@ import { describe, test, expect, mock, beforeEach } from "bun:test"
 const mockLog = mock(() => { })
 mock.module("../../shared/logger", () => ({ log: mockLog }))
 
-const mockP = mock(async (text: any) => {
+const mockP = mock(async (text: string) => {
     if (text === "error_dims") {
         return [{ data: new Float32Array(10).fill(1) }]
     }

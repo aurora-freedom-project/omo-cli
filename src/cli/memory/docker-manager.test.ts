@@ -32,7 +32,7 @@ describe("cli/memory/docker-manager", () => {
         mockHomedir.mockClear()
         mockLog.mockClear()
 
-        globalFetchSpy = spyOn(globalThis, "fetch").mockImplementation((async () => ({ ok: true }) as any) as any)
+        globalFetchSpy = spyOn(globalThis, "fetch").mockImplementation((async () => ({ ok: true }) as never) as never)
     })
 
     afterEach(() => {
@@ -157,7 +157,7 @@ describe("cli/memory/docker-manager", () => {
 
             // Fast forward time loops mock wrapper
             const _origSetTimeout = globalThis.setTimeout;
-            spyOn(globalThis, "setTimeout").mockImplementation(((cb: () => void, _ms: number) => cb() as any) as any);
+            spyOn(globalThis, "setTimeout").mockImplementation(((cb: () => void, _ms: number) => cb() as never) as never);
 
             await expect(dockerManager.ensureSurrealDBRunning()).rejects.toThrow(/did not become healthy/)
 
@@ -231,21 +231,21 @@ describe("cli/memory/docker-manager", () => {
 
     describe("getSurrealDBStatus (external mode)", () => {
         test("returns running if external health check passes", async () => {
-            const res = await dockerManager.getSurrealDBStatus((extConfig as any))
+            const res = await dockerManager.getSurrealDBStatus((extConfig as never))
             expect(res).toBe("running")
             expect(mockSpawnSync).not.toHaveBeenCalled()
         })
 
         test("returns stopped if external health check fails", async () => {
             globalFetchSpy.mockRejectedValueOnce(new Error("conn refused"))
-            const res = await dockerManager.getSurrealDBStatus((extConfig as any))
+            const res = await dockerManager.getSurrealDBStatus((extConfig as never))
             expect(res).toBe("stopped")
         })
     })
 
     describe("ensureSurrealDBRunning (external mode)", () => {
         test("exits early without spawning docker", async () => {
-            await dockerManager.ensureSurrealDBRunning((extConfig as any))
+            await dockerManager.ensureSurrealDBRunning((extConfig as never))
             expect(mockSpawnSync).not.toHaveBeenCalled()
             expect(mockLog).toHaveBeenCalledWith("[docker-manager] External mode — skipping Docker management")
         })

@@ -25,8 +25,8 @@ const mockContext = {
   abort: new AbortController().signal,
   directory: "/tmp/test",
   worktree: "/tmp/test",
-  metadata: {} as any,
-  ask: (() => Promise.resolve("")) as any,
+  metadata: (() => ({})) as () => Record<string, unknown>,
+  ask: (() => Promise.resolve("")) as () => Promise<string>,
 }
 
 describe("skill_mcp tool", () => {
@@ -51,7 +51,7 @@ describe("skill_mcp tool", () => {
 
       // #when / #then
       await expect(
-        tool.execute({ mcp_name: "test-server" }, mockContext)
+        tool.execute({ mcp_name: "test-server" }, (mockContext as never))
       ).rejects.toThrow(/Missing operation/)
     })
 
@@ -69,7 +69,7 @@ describe("skill_mcp tool", () => {
           mcp_name: "test-server",
           tool_name: "some-tool",
           resource_name: "some://resource",
-        }, mockContext)
+        }, (mockContext as never))
       ).rejects.toThrow(/Multiple operations/)
     })
 
@@ -88,7 +88,7 @@ describe("skill_mcp tool", () => {
 
       // #when / #then
       await expect(
-        tool.execute({ mcp_name: "unknown-server", tool_name: "some-tool" }, mockContext)
+        tool.execute({ mcp_name: "unknown-server", tool_name: "some-tool" }, (mockContext as never))
       ).rejects.toThrow(/not found/)
     })
 
@@ -110,7 +110,7 @@ describe("skill_mcp tool", () => {
 
       // #when / #then
       await expect(
-        tool.execute({ mcp_name: "missing", tool_name: "test" }, mockContext)
+        tool.execute({ mcp_name: "missing", tool_name: "test" }, (mockContext as never))
       ).rejects.toThrow(/sqlite.*db-skill|rest-api.*api-skill/s)
     })
 
@@ -133,7 +133,7 @@ describe("skill_mcp tool", () => {
           mcp_name: "test-server",
           tool_name: "some-tool",
           arguments: "not valid json",
-        }, mockContext)
+        }, (mockContext as never))
       ).rejects.toThrow(/Invalid arguments JSON/)
     })
   })

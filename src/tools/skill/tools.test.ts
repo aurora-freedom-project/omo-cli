@@ -57,8 +57,8 @@ const mockContext = {
   abort: new AbortController().signal,
   directory: "/tmp/test",
   worktree: "/tmp/test",
-  metadata: {} as any,
-  ask: (() => Promise.resolve("")) as any,
+  metadata: (() => ({})) as () => Record<string, unknown>,
+  ask: (() => Promise.resolve("")) as () => Promise<string>,
 }
 
 describe("skill tool - synchronous description", () => {
@@ -108,7 +108,7 @@ describe("skill tool - agent restriction", () => {
     const context = { ...mockContext, agent: "any-agent" }
 
     // #when
-    const result = await tool.execute({ name: "public-skill" }, context)
+    const result = await tool.execute({ name: "public-skill" }, (context as never))
 
     // #then
     expect(result).toContain("public-skill")
@@ -121,7 +121,7 @@ describe("skill tool - agent restriction", () => {
     const context = { ...mockContext, agent: "orchestrator" }
 
     // #when
-    const result = await tool.execute({ name: "restricted-skill" }, context)
+    const result = await tool.execute({ name: "restricted-skill" }, (context as never))
 
     // #then
     expect(result).toContain("restricted-skill")
@@ -134,7 +134,7 @@ describe("skill tool - agent restriction", () => {
     const context = { ...mockContext, agent: "architect" }
 
     // #when / #then
-    await expect(tool.execute({ name: "orchestrator-only-skill" }, context)).rejects.toThrow(
+    await expect(tool.execute({ name: "orchestrator-only-skill" }, (context as never))).rejects.toThrow(
       'Skill "orchestrator-only-skill" is restricted to agent "orchestrator"'
     )
   })
@@ -146,7 +146,7 @@ describe("skill tool - agent restriction", () => {
     const contextWithoutAgent = { ...mockContext, agent: undefined as unknown as string }
 
     // #when / #then
-    await expect(tool.execute({ name: "orchestrator-only-skill" }, contextWithoutAgent)).rejects.toThrow(
+    await expect(tool.execute({ name: "orchestrator-only-skill" }, (contextWithoutAgent as never))).rejects.toThrow(
       'Skill "orchestrator-only-skill" is restricted to agent "orchestrator"'
     )
   })
@@ -202,7 +202,7 @@ describe("skill tool - MCP schema display", () => {
       })
 
       // #when
-      const result = await tool.execute({ name: "test-skill" }, mockContext)
+      const result = await tool.execute({ name: "test-skill" }, (mockContext as never))
 
       // #then
       // Should include inputSchema details
@@ -260,7 +260,7 @@ describe("skill tool - MCP schema display", () => {
       })
 
       // #when
-      const result = await tool.execute({ name: "playwright-skill" }, mockContext)
+      const result = await tool.execute({ name: "playwright-skill" }, (mockContext as never))
 
       // #then
       expect(result).toContain("browser_navigate")
@@ -295,7 +295,7 @@ describe("skill tool - MCP schema display", () => {
       })
 
       // #when
-      const result = await tool.execute({ name: "simple-skill" }, mockContext)
+      const result = await tool.execute({ name: "simple-skill" }, (mockContext as never))
 
       // #then
       expect(result).toContain("simple_tool")
@@ -336,7 +336,7 @@ describe("skill tool - MCP schema display", () => {
       })
 
       // #when
-      const result = await tool.execute({ name: "db-skill" }, mockContext)
+      const result = await tool.execute({ name: "db-skill" }, (mockContext as never))
 
       // #then
       // Should provide enough info for LLM to construct valid skill_mcp call

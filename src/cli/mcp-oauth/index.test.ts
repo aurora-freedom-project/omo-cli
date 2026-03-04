@@ -19,8 +19,7 @@ describe("cli/mcp-oauth/index", () => {
     mockLogout.mockClear()
     mockStatus.mockClear()
     originalExit = process.exit
-    // @ts-ignore
-    process.exit = mock(() => { throw new Error("process.exit") })
+    process.exit = mock(() => { throw new Error("process.exit") }) as never
   })
 
   afterEach(() => {

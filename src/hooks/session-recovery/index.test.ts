@@ -34,7 +34,7 @@ describe("session-recovery/index", () => {
       expect(detectErrorType(null)).toBeNull()
       expect(detectErrorType({ some: "garbage" })).toBeNull()
       // cyclical objects for getErrorMessage's stringify catch
-      const obj: any = {}; obj.a = obj;
+      const obj: Record<string, unknown> = {}; obj.a = obj;
       expect(detectErrorType(obj)).toBeNull()
     })
 
@@ -58,7 +58,7 @@ describe("session-recovery/index", () => {
   })
 
   describe("createSessionRecoveryHook", () => {
-    const createMockClient = (msgsMock: any, abortMock: any, promptMock: any, toastMock: any) => ({
+    const createMockClient = (msgsMock: (...args: unknown[]) => unknown, abortMock: (...args: unknown[]) => unknown, promptMock: (...args: unknown[]) => unknown, toastMock: (...args: unknown[]) => unknown) => ({
       session: {
         messages: msgsMock,
         abort: abortMock,
@@ -74,8 +74,8 @@ describe("session-recovery/index", () => {
     const DUMMY_ERR_THINK = { message: "thinking must start with messages.5" }
     const DUMMY_ERR_THINK_DIS = { message: "thinking is disabled cannot contain" }
 
-    const makeInput = (client: unknown) => ({ client, directory: mockDirectory } as any)
-    const makeInputWithConfig = (client: unknown, config: Record<string, unknown>) => [makeInput(client), config as any] as const
+    const makeInput = (client: unknown) => ({ client, directory: mockDirectory } as never)
+    const makeInputWithConfig = (client: unknown, config: Record<string, unknown>) => [makeInput(client), config as never] as const
 
     test("isRecoverableError aliases detectErrorType properly", () => {
       const hook = createSessionRecoveryHook(makeInput({}))

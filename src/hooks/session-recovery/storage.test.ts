@@ -112,20 +112,20 @@ describe("session-recovery/storage", () => {
                 if (p.endsWith("c.json")) return "CORRUPTED"
                 return ""
             })
-            expect(storage.readParts("m1")).toEqual([{ id: "p1" }] as any)
+            expect(storage.readParts("m1")).toEqual([{ id: "p1" }] as never)
         })
     })
 
     describe("hasContent", () => {
         test("handles boundary boundaries gracefully", () => {
-            expect(storage.hasContent({ type: "thinking" } as any)).toBe(false)
-            expect(storage.hasContent({ type: "system" } as any)).toBe(false)
-            expect(storage.hasContent({ type: "tool" } as any)).toBe(true)
-            expect(storage.hasContent({ type: "tool_use" } as any)).toBe(true)
-            expect(storage.hasContent({ type: "tool_result" } as any)).toBe(true)
-            expect(storage.hasContent({ type: "text", text: "  " } as any)).toBe(false)
-            expect(storage.hasContent({ type: "text", text: "hi!" } as any)).toBe(true)
-            expect(storage.hasContent({ type: "unknown" } as any)).toBe(false)
+            expect(storage.hasContent({ type: "thinking" } as never)).toBe(false)
+            expect(storage.hasContent({ type: "system" } as never)).toBe(false)
+            expect(storage.hasContent({ type: "tool" } as never)).toBe(true)
+            expect(storage.hasContent({ type: "tool_use" } as never)).toBe(true)
+            expect(storage.hasContent({ type: "tool_result" } as never)).toBe(true)
+            expect(storage.hasContent({ type: "text", text: "  " } as never)).toBe(false)
+            expect(storage.hasContent({ type: "text", text: "hi!" } as never)).toBe(true)
+            expect(storage.hasContent({ type: "unknown" } as never)).toBe(false)
         })
     })
 

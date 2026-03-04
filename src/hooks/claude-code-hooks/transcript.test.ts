@@ -58,7 +58,7 @@ describe("transcript", () => {
 
     describe("appendTranscriptEntry", () => {
         test("creates directory if missing and appends entry array", () => {
-            const entry = { type: "test", content: "data" } as any
+            const entry = { type: "test", content: "data" } as never
             mockedExistsState[expectedTranscriptsDir] = false
 
             appendTranscriptEntry("sess1", entry)
@@ -69,11 +69,11 @@ describe("transcript", () => {
         })
 
         test("does not attempt directory creation if true", () => {
-            const entry = { type: "test", content: "data" } as any
+            const entry = { type: "test", content: "data" } as never
             mockedExistsState[expectedTranscriptsDir] = true
 
                 // clear mock counts
-                ; (fs.mkdirSync as any).mockClear()
+                ; (fs.mkdirSync as unknown as { mockClear: () => void }).mockClear()
 
             appendTranscriptEntry("sess1", entry)
             expect(fs.mkdirSync).not.toHaveBeenCalled()
@@ -84,7 +84,7 @@ describe("transcript", () => {
         test("recordToolUse adds timestamp and types", () => {
             // Need a deterministic timestamp
             const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation((() => mockDate) as any)
+            spyOn(global, "Date").mockImplementation((() => mockDate) as never)
 
             recordToolUse("sess1", "Bash", { command: "ls" })
             const writtenPath = getTranscriptPath("sess1")
@@ -99,7 +99,7 @@ describe("transcript", () => {
 
         test("recordToolResult adds timestamp and types", () => {
             const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation((() => mockDate) as any)
+            spyOn(global, "Date").mockImplementation((() => mockDate) as never)
 
             recordToolResult("sess1", "Bash", { command: "ls" }, { out: "list" })
             const writtenPath = getTranscriptPath("sess1")
@@ -115,7 +115,7 @@ describe("transcript", () => {
 
         test("recordUserMessage adds content", () => {
             const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation((() => mockDate) as any)
+            spyOn(global, "Date").mockImplementation((() => mockDate) as never)
 
             recordUserMessage("sess1", "hello")
             const writtenPath = getTranscriptPath("sess1")
@@ -129,7 +129,7 @@ describe("transcript", () => {
 
         test("recordAssistantMessage adds content", () => {
             const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation((() => mockDate) as any)
+            spyOn(global, "Date").mockImplementation((() => mockDate) as never)
 
             recordAssistantMessage("sess1", "hello back")
             const writtenPath = getTranscriptPath("sess1")

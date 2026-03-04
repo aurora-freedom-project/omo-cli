@@ -24,7 +24,7 @@ describe("fetchAvailableModels", () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  function writeModelsCache(data: Record<string, any>) {
+  function writeModelsCache(data: Record<string, unknown>) {
     const cacheDir = join(tempDir, "opencode")
     require("fs").mkdirSync(cacheDir, { recursive: true })
     writeFileSync(join(cacheDir, "models.json"), JSON.stringify(data))
@@ -268,7 +268,7 @@ describe("getConnectedProviders", () => {
 			}
 		}
 
-		const result = await getConnectedProviders((mockClient as any))
+		const result = await getConnectedProviders((mockClient as never))
 
 		expect(result).toEqual(["anthropic", "opencode", "google"])
 	})
@@ -283,7 +283,7 @@ describe("getConnectedProviders", () => {
 			}
 		}
 
-		const result = await getConnectedProviders((mockClient as any))
+		const result = await getConnectedProviders((mockClient as never))
 
 		expect(result).toEqual([])
 	})
@@ -298,7 +298,7 @@ describe("getConnectedProviders", () => {
 			}
 		}
 
-		const result = await getConnectedProviders((mockClient as any))
+		const result = await getConnectedProviders((mockClient as never))
 
 		expect(result).toEqual([])
 	})
@@ -309,7 +309,7 @@ describe("getConnectedProviders", () => {
 	it("should return empty array when client.provider.list not available", async () => {
 		const mockClient = {}
 
-		const result = await getConnectedProviders((mockClient as any))
+		const result = await getConnectedProviders((mockClient as never))
 
 		expect(result).toEqual([])
 	})
@@ -333,7 +333,7 @@ describe("getConnectedProviders", () => {
 			}
 		}
 
-		const result = await getConnectedProviders((mockClient as any))
+		const result = await getConnectedProviders((mockClient as never))
 
 		expect(result).toEqual([])
 	})
@@ -359,7 +359,7 @@ describe("fetchAvailableModels with connected providers filtering", () => {
 		rmSync(tempDir, { recursive: true, force: true })
 	})
 
-	function writeModelsCache(data: Record<string, any>) {
+	function writeModelsCache(data: Record<string, unknown>) {
 		const cacheDir = join(tempDir, "opencode")
 		require("fs").mkdirSync(cacheDir, { recursive: true })
 		writeFileSync(join(cacheDir, "models.json"), JSON.stringify(data))
@@ -535,7 +535,7 @@ describe("fetchAvailableModels with provider-models cache (whitelist-filtered)",
 		}))
 	}
 
-	function writeModelsCache(data: Record<string, any>) {
+	function writeModelsCache(data: Record<string, unknown>) {
 		const cacheDir = join(tempDir, "opencode")
 		require("fs").mkdirSync(cacheDir, { recursive: true })
 		writeFileSync(join(cacheDir, "models.json"), JSON.stringify(data))

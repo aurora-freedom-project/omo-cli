@@ -756,7 +756,7 @@ describe("conductor hook", () => {
       const mockInput = createMockPluginInput()
       const hook = createConductorHook(mockInput, {
         directory: TEST_DIR,
-        backgroundManager: mockBackgroundManager as any,
+        backgroundManager: mockBackgroundManager as never,
       })
 
       // #when

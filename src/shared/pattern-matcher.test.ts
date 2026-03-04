@@ -6,7 +6,7 @@ describe("pattern-matcher", () => {
     describe("matchesToolMatcher", () => {
         test("returns true if matcher is empty or undefined", () => {
             expect(matchesToolMatcher("anyTool", "")).toBe(true)
-            expect(matchesToolMatcher("anyTool", undefined as any)).toBe(true)
+            expect(matchesToolMatcher("anyTool", undefined as never)).toBe(true)
         })
 
         test("returns true for exact case-insensitive match", () => {
@@ -48,29 +48,29 @@ describe("pattern-matcher", () => {
         } as unknown as ClaudeHooksConfig
 
         test("returns empty array if eventName does not exist in config", () => {
-            expect(findMatchingHooks(mockConfig, "missingEvent" as any, "ReadTool")).toEqual([])
+            expect(findMatchingHooks(mockConfig, "missingEvent" as never, "ReadTool")).toEqual([])
         })
 
         test("returns all event hooks if toolName is not provided", () => {
-            const results = findMatchingHooks(mockConfig, ("preToolUse" as any))
+            const results = findMatchingHooks(mockConfig, ("preToolUse" as never))
             expect(results.length).toBe(2)
             expect(results[0].matcher).toBe("Read*")
             expect(results[1].matcher).toBe("Write*")
         })
 
         test("filters hooks matching the provided toolName", () => {
-            const results = findMatchingHooks(mockConfig, ("preToolUse" as any), "ReadDataTool")
+            const results = findMatchingHooks(mockConfig, ("preToolUse" as never), "ReadDataTool")
             expect(results.length).toBe(1)
             expect(results[0].matcher).toBe("Read*")
         })
 
         test("returns empty array if toolName matches no hooks", () => {
-            const results = findMatchingHooks(mockConfig, ("preToolUse" as any), "DeleteTool")
+            const results = findMatchingHooks(mockConfig, ("preToolUse" as never), "DeleteTool")
             expect(results.length).toBe(0)
         })
 
         test("returns all matching hooks for heavily wildcarded event", () => {
-            const results = findMatchingHooks(mockConfig, ("postToolUse" as any), "AnyRandomTool")
+            const results = findMatchingHooks(mockConfig, ("postToolUse" as never), "AnyRandomTool")
             expect(results.length).toBe(1)
             expect(results[0].matcher).toBe("*")
         })

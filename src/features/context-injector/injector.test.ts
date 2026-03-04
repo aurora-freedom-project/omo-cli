@@ -50,18 +50,17 @@ describe("createContextInjectorMessagesTransformHook", () => {
       createMockMessage("assistant", "Response", sessionID),
       createMockMessage("user", "Second message", sessionID),
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output = { messages } as any
+    const output = { messages } as never
 
     // #when
     await hook["experimental.chat.messages.transform"]!({}, output)
 
     // #then - synthetic part inserted before original text part
-    expect(output.messages.length).toBe(3)
-    expect(output.messages[2].parts.length).toBe(2)
-    expect(output.messages[2].parts[0].text).toBe("Ultrawork context")
-    expect(output.messages[2].parts[0].synthetic).toBe(true)
-    expect(output.messages[2].parts[1].text).toBe("Second message")
+    expect(messages.length).toBe(3)
+    expect(messages[2].parts.length).toBe(2)
+    expect((messages[2].parts[0] as Record<string, unknown>).text).toBe("Ultrawork context")
+    expect((messages[2].parts[0] as Record<string, unknown>).synthetic).toBe(true)
+    expect(messages[2].parts[1].text).toBe("Second message")
   })
 
   it("does nothing when no pending context", async () => {
@@ -69,14 +68,13 @@ describe("createContextInjectorMessagesTransformHook", () => {
     const hook = createContextInjectorMessagesTransformHook(collector)
     const sessionID = "ses_transform2"
     const messages = [createMockMessage("user", "Hello world", sessionID)]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output = { messages } as any
+    const output = { messages } as never
 
     // #when
     await hook["experimental.chat.messages.transform"]!({}, output)
 
     // #then
-    expect(output.messages.length).toBe(1)
+    expect(messages.length).toBe(1)
   })
 
   it("does nothing when no user messages", async () => {
@@ -89,14 +87,13 @@ describe("createContextInjectorMessagesTransformHook", () => {
       content: "Context",
     })
     const messages = [createMockMessage("assistant", "Response", sessionID)]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output = { messages } as any
+    const output = { messages } as never
 
     // #when
     await hook["experimental.chat.messages.transform"]!({}, output)
 
     // #then
-    expect(output.messages.length).toBe(1)
+    expect(messages.length).toBe(1)
     expect(collector.hasPending(sessionID)).toBe(true)
   })
 
@@ -110,8 +107,7 @@ describe("createContextInjectorMessagesTransformHook", () => {
       content: "Context",
     })
     const messages = [createMockMessage("user", "Message", sessionID)]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output = { messages } as any
+    const output = { messages } as never
 
     // #when
     await hook["experimental.chat.messages.transform"]!({}, output)

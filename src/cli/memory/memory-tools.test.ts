@@ -14,7 +14,7 @@ describe("memory-tools", () => {
         const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
-        const tools = createMemoryTools(ctx, (config as any))
+        const tools = createMemoryTools(ctx, (config as never))
 
         expect(Object.keys(tools).sort()).toEqual(["memory_add", "memory_graph", "memory_link", "memory_search"])
     })
@@ -25,7 +25,7 @@ describe("memory-tools", () => {
         const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
-        const tools = createMemoryTools(ctx, (config as any))
+        const tools = createMemoryTools(ctx, (config as never))
 
         for (const [name, tool] of Object.entries(tools)) {
             expect(tool.description).toBeTruthy()
@@ -43,7 +43,7 @@ describe("memory-tools", () => {
         const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
-        const tools = createMemoryTools(ctx, (config as any))
+        const tools = createMemoryTools(ctx, (config as never))
 
         const addResult = await tools.memory_add.execute({
             content: "test",
@@ -68,7 +68,7 @@ describe("memory-tools", () => {
         const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
-        const tools = createMemoryTools(ctx, (config as any))
+        const tools = createMemoryTools(ctx, (config as never))
         const { required } = tools.memory_add.parameters
 
         expect(required).toContain("content")
@@ -81,7 +81,7 @@ describe("memory-tools", () => {
         const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
-        const tools = createMemoryTools(ctx, (config as any))
+        const tools = createMemoryTools(ctx, (config as never))
         const { required } = tools.memory_search.parameters
 
         expect(required).toContain("query")
@@ -93,7 +93,7 @@ describe("memory-tools", () => {
         const ctx = { directory: "/tmp/test-project" } as never
         const config = { enabled: false, port: 18000, auto_capture: false }
 
-        const tools = createMemoryTools(ctx, (config as any))
+        const tools = createMemoryTools(ctx, (config as never))
         const { required } = tools.memory_graph.parameters
 
         expect(required).toContain("concept_id")

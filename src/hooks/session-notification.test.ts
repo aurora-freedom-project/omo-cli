@@ -9,7 +9,7 @@ describe("session-notification", () => {
 
   function createMockPluginInput() {
     return {
-      $: async (cmd: TemplateStringsArray | string, ...values: any[]) => {
+      $: async (cmd: TemplateStringsArray | string, ...values: unknown[]) => {
         // #given - track notification commands (osascript, notify-send, powershell)
         const cmdStr = typeof cmd === "string" 
           ? cmd 

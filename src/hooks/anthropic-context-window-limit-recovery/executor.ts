@@ -121,8 +121,7 @@ function formatBytes(bytes: number): string {
 
 export async function getLastAssistant(
   sessionID: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any,
+  client: unknown,
   directory: string,
 ): Promise<Record<string, unknown> | null> {
   try {
@@ -171,7 +170,7 @@ function getOrCreateEmptyContentAttempt(
 async function fixEmptyMessages(
   sessionID: string,
   autoCompactState: AutoCompactState,
-  client: Client,
+  client: unknown,
   messageIndex?: number,
 ): Promise<boolean> {
   const attempt = getOrCreateEmptyContentAttempt(autoCompactState, sessionID);
@@ -207,7 +206,7 @@ async function fixEmptyMessages(
   if (!fixed) {
     const emptyMessageIds = findEmptyMessages(sessionID);
     if (emptyMessageIds.length === 0) {
-      await client.tui
+      await (client as Client).tui
         .showToast({
           body: {
             title: "Empty Content Error",
@@ -216,7 +215,7 @@ async function fixEmptyMessages(
             duration: 5000,
           },
         })
-        .catch(() => {});
+        .catch(() => { });
       return false;
     }
 
@@ -240,7 +239,7 @@ async function fixEmptyMessages(
   }
 
   if (fixed) {
-    await client.tui
+    await (client as Client).tui
       .showToast({
         body: {
           title: "Session Recovery",
@@ -249,7 +248,7 @@ async function fixEmptyMessages(
           duration: 3000,
         },
       })
-      .catch(() => {});
+      .catch(() => { });
   }
 
   return fixed;
@@ -259,8 +258,7 @@ export async function executeCompact(
   sessionID: string,
   msg: Record<string, unknown>,
   autoCompactState: AutoCompactState,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any,
+  client: unknown,
   directory: string,
   experimental?: ExperimentalConfig,
 ): Promise<void> {
@@ -275,7 +273,7 @@ export async function executeCompact(
           duration: 5000,
         },
       })
-      .catch(() => {});
+      .catch(() => { });
     return;
   }
   autoCompactState.compactionInProgress.add(sessionID);
@@ -329,7 +327,7 @@ export async function executeCompact(
               duration: 4000,
             },
           })
-          .catch(() => {});
+          .catch(() => { });
 
         log("[auto-compact] aggressive truncation completed", aggressiveResult);
 
@@ -344,7 +342,7 @@ export async function executeCompact(
                 body: { auto: true } as never,
                 query: { directory },
               });
-            } catch {}
+            } catch { }
           }, 500);
           return;
         }
@@ -369,7 +367,7 @@ export async function executeCompact(
         const fixed = await fixEmptyMessages(
           sessionID,
           autoCompactState,
-          client as Client,
+          client,
           errorData.messageIndex,
         );
         if (fixed) {
@@ -396,7 +394,7 @@ export async function executeCompact(
               duration: 10000,
             },
           })
-          .catch(() => {});
+          .catch(() => { });
         return;
       }
     }
@@ -426,7 +424,7 @@ export async function executeCompact(
                 duration: 3000,
               },
             })
-            .catch(() => {});
+            .catch(() => { });
 
           const summarizeBody = { providerID, modelID, auto: true }
           await (client as Client).session.summarize({
@@ -463,7 +461,7 @@ export async function executeCompact(
               duration: 3000,
             },
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
 
@@ -478,7 +476,7 @@ export async function executeCompact(
           duration: 5000,
         },
       })
-      .catch(() => {});
+      .catch(() => { });
   } finally {
     autoCompactState.compactionInProgress.delete(sessionID);
   }

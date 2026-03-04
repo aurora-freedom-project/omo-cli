@@ -37,7 +37,7 @@ describe("E2E: memory install → start → add/search/graph", () => {
 
         expect(cmd.name()).toBe("memory")
 
-        const subNames = cmd.commands.map((c: any) => c.name())
+        const subNames = cmd.commands.map((c: { name: () => string }) => c.name())
         expect(subNames).toContain("start")
         expect(subNames).toContain("stop")
         expect(subNames).toContain("status")
