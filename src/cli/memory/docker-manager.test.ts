@@ -1,8 +1,8 @@
 import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test"
 
 // Mock child_process
-const mockSpawnSync = mock(() => ({ stdout: Buffer.from("true") }))
-const mockExecSync = mock(() => Buffer.from(""))
+const mockSpawnSync = mock((_cmd: string, _args: string[], _opts?: unknown) => ({ stdout: Buffer.from("true") as string | Buffer }))
+const mockExecSync = mock((_cmd: string, _opts?: unknown) => Buffer.from(""))
 mock.module("child_process", () => ({
     spawnSync: mockSpawnSync,
     execSync: mockExecSync

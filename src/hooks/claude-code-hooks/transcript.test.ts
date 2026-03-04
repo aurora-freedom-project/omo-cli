@@ -84,7 +84,7 @@ describe("transcript", () => {
         test("recordToolUse adds timestamp and types", () => {
             // Need a deterministic timestamp
             const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation(() => mockDate as any)
+            spyOn(global, "Date").mockImplementation((() => mockDate) as any)
 
             recordToolUse("sess1", "Bash", { command: "ls" })
             const writtenPath = getTranscriptPath("sess1")
@@ -99,7 +99,7 @@ describe("transcript", () => {
 
         test("recordToolResult adds timestamp and types", () => {
             const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation(() => mockDate as any)
+            spyOn(global, "Date").mockImplementation((() => mockDate) as any)
 
             recordToolResult("sess1", "Bash", { command: "ls" }, { out: "list" })
             const writtenPath = getTranscriptPath("sess1")
@@ -115,7 +115,7 @@ describe("transcript", () => {
 
         test("recordUserMessage adds content", () => {
             const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation(() => mockDate as any)
+            spyOn(global, "Date").mockImplementation((() => mockDate) as any)
 
             recordUserMessage("sess1", "hello")
             const writtenPath = getTranscriptPath("sess1")
@@ -129,7 +129,7 @@ describe("transcript", () => {
 
         test("recordAssistantMessage adds content", () => {
             const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation(() => mockDate as any)
+            spyOn(global, "Date").mockImplementation((() => mockDate) as any)
 
             recordAssistantMessage("sess1", "hello back")
             const writtenPath = getTranscriptPath("sess1")

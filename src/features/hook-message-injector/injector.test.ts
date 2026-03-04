@@ -1,10 +1,10 @@
 import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test"
 
-const mockExistsSync = mock(() => false)
-const mockMkdirSync = mock(() => { })
-const mockReadFileSync = mock(() => "{}")
-const mockReaddirSync = mock(() => [])
-const mockWriteFileSync = mock(() => { })
+const mockExistsSync = mock((_path: string) => false)
+const mockMkdirSync = mock((_path: string, _opts?: unknown) => { })
+const mockReadFileSync = mock((_path: string, _enc?: string) => "{}")
+const mockReaddirSync = mock((_path: string) => [] as string[])
+const mockWriteFileSync = mock((_path: string, _data: string) => { })
 
 mock.module("node:fs", () => ({
     existsSync: mockExistsSync,

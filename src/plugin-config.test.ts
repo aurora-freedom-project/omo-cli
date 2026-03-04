@@ -1,7 +1,7 @@
 import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test"
 
-const mockExistsSync = mock(() => false)
-const mockReadFileSync = mock(() => "")
+const mockExistsSync = mock((_path: string) => false)
+const mockReadFileSync = mock((_path: string, _enc?: string) => "")
 mock.module("fs", () => ({ existsSync: mockExistsSync, readFileSync: mockReadFileSync }))
 
 const mockSafeParse = mock(() => ({ success: true, data: {} }))
@@ -10,7 +10,7 @@ mock.module("./config", () => ({
 }))
 
 const mockLog = mock(() => { })
-const mockDeepMerge = mock((a, b) => ({ ...a, ...b }))
+const mockDeepMerge = mock((a: Record<string, unknown>, b: Record<string, unknown>) => ({ ...a, ...b }))
 const mockGetOpenCodeConfigDir = mock(() => "/user/.config")
 const mockAddConfigLoadError = mock(() => { })
 const mockParseJsonc = mock(() => ({}))
@@ -103,11 +103,11 @@ describe("plugin-config", () => {
 
       const res = mergeConfigs(base, override)
 
-      expect(res.disabled_agents).toEqual(["a", "b", "c"])
-      expect(res.disabled_mcps).toEqual(["x", "y"])
-      expect(res.disabled_hooks).toEqual(["hook1", "hook2"])
-      expect(res.disabled_commands).toEqual(["cmd1"])
-      expect(res.disabled_skills).toEqual(["skill1", "skill2"])
+      expect((res as any).disabled_agents).toEqual(["a", "b", "c"])
+      expect((res as any).disabled_mcps).toEqual(["x", "y"])
+      expect((res as any).disabled_hooks).toEqual(["hook1", "hook2"])
+      expect((res as any).disabled_commands).toEqual(["cmd1"])
+      expect((res as any).disabled_skills).toEqual(["skill1", "skill2"])
     })
   })
 
@@ -176,7 +176,7 @@ describe("plugin-config", () => {
       mockSafeParse.mockReturnValue({ success: true, data: { userOnly: true } } as any)
 
       const res = loadPluginConfig("/proj/dir", {})
-      expect(res).toEqual({ userOnly: true })
+      expect(res).toEqual({ userOnly: true } as any)
     })
   })
 })
