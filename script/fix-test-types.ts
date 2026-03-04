@@ -9,8 +9,12 @@
  * What it fixes:
  *   - TS7006: Parameter 'x' implicitly has an 'any' type → adds `: string`
  *   - TS2345: Argument type mismatch in mockImplementation → wraps with `as any`
+ *   - TS2345: spyOn on mock.module target (`never`) → `(spyOn(...) as any).mock...`
  *   - TS2454: Variable used before assigned → adds `!` to declaration
  *   - TS2322: Type 'unknown' → adds `as Record<string, unknown>`
+ *   - TS2322: Type '{...}' not assignable to 'never' (mock arrays) → `[...] as any`
+ *   - TS18046: 'expr' is of type 'unknown' → `(expr as any)`
+ *   - TS18048: 'expr' is possibly 'undefined' → `expr!`
  *   - `as never` → `as any` in test files with tsc errors
  *
  * Safe to run repeatedly — idempotent (won't double-fix).
@@ -237,6 +241,88 @@ for (const [relFile, fileErrs] of fileErrors2) {
                 lines[lineIdx] = line.replace(/(\s*=\s*.+?)(\s*$)/, "$1 as Record<string, unknown>$2")
                 fixes++
                 modifiedLines.add(lineIdx)
+            }
+            continue
+        }
+
+        // TS2322: Type '{...}' is not assignable to type 'never' (mock.module returning never[])
+        // Fix: wrap array argument with `as any` — e.g. mockFn.mockResolvedValue([{...}]) → mockFn.mockResolvedValue([{...}] as any)
+        if (err.code === "TS2322" && err.message.includes("is not assignable to type 'never'")) {
+            if (!line.includes("as any") && !line.includes("as never")) {
+                // Look for array literal context: find `]` followed by `)` on same or next line
+                const closeBracketIdx = line.lastIndexOf("]")
+                if (closeBracketIdx >= 0 && !line.substring(closeBracketIdx).includes("as any")) {
+                    lines[lineIdx] = line.substring(0, closeBracketIdx + 1) + " as any" + line.substring(closeBracketIdx + 1)
+                    fixes++
+                    modifiedLines.add(lineIdx)
+                }
+            }
+            continue
+        }
+
+        // TS18046: 'expr' is of type 'unknown' — cast to any for property access
+        if (err.code === "TS18046" && err.message.includes("is of type 'unknown'")) {
+            const col = err.col - 1
+            // Find the expression being accessed (e.g. `results[i]` or `promptBody.tools`)
+            // Wrap it in `(expr as any)`
+            const dotOrBracket = line.indexOf(".", col)
+            const bracket = line.indexOf("[", col)
+            let end = dotOrBracket >= 0 ? dotOrBracket : bracket
+            if (end < 0) end = line.length
+
+            const expr = line.substring(col, end)
+            if (expr.length > 0 && !line.includes("as any") && !expr.includes("as any")) {
+                lines[lineIdx] = line.substring(0, col) + "(" + expr + " as any)" + line.substring(end)
+                fixes++
+                modifiedLines.add(lineIdx)
+            }
+            continue
+        }
+
+        // TS18048: 'expr' is possibly 'undefined' — add non-null assertion
+        if (err.code === "TS18048" && err.message.includes("is possibly 'undefined'")) {
+            // Extract the variable/property name from error message
+            const nameMatch = err.message.match(/'([^']+)' is possibly 'undefined'/)
+            if (nameMatch) {
+                const name = nameMatch[1]
+                const col = err.col - 1
+                // Add `!` after the expression at col position
+                const exprEnd = col + name.length
+                if (exprEnd <= line.length && line.substring(col, exprEnd) === name && line[exprEnd] !== "!") {
+                    lines[lineIdx] = line.substring(0, exprEnd) + "!" + line.substring(exprEnd)
+                    fixes++
+                    modifiedLines.add(lineIdx)
+                }
+            }
+            continue
+        }
+
+        // TS2345: spyOn on mock.module target becomes `never` — cast spyOn result
+        // When mock.module overwrites a module, spyOn(target, "method") returns Mock<never, never>
+        // Fix: (spyOn(x, "y") as any).mockImplementation(...)
+        if (err.code === "TS2345" && err.message.includes("not assignable to parameter of type 'never'")) {
+            if (line.includes("spyOn(") && line.includes(".mockImplementation(")) {
+                const spyOnStart = line.indexOf("spyOn(")
+                // Find matching closing paren for spyOn()
+                let depth = 0
+                let spyOnEnd = spyOnStart + 6
+                for (; spyOnEnd < line.length; spyOnEnd++) {
+                    if (line[spyOnEnd] === "(") depth++
+                    if (line[spyOnEnd] === ")") {
+                        if (depth === 0) { spyOnEnd++; break }
+                        depth--
+                    }
+                }
+                if (!line.substring(0, spyOnStart).includes("(spyOn(")) {
+                    const before = line.substring(0, spyOnStart)
+                    const spyOnExpr = line.substring(spyOnStart, spyOnEnd)
+                    const after = line.substring(spyOnEnd)
+                    // Need semicolon prefix if at start of line
+                    const prefix = before.trim() === "" ? ";" : ""
+                    lines[lineIdx] = before + prefix + "(" + spyOnExpr + " as any)" + after
+                    fixes++
+                    modifiedLines.add(lineIdx)
+                }
             }
             continue
         }
