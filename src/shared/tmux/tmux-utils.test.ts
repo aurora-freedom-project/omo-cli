@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test"
+import { createMockTmuxConfig } from "../../test-helpers"
 
 const mockExited = mock(() => Promise.resolve(0))
 const mockStdoutText = mock(() => Promise.resolve(""))
@@ -91,7 +92,7 @@ describe("shared/tmux/tmux-utils", () => {
 
   describe("getPaneDimensions", () => {
     test("returns null if no tmux path", async () => {
-      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      mockGetTmuxPath.mockResolvedValueOnce(null as never)
       const res = await tmux.getPaneDimensions("%1")
       expect(res).toBeNull()
     })
@@ -119,20 +120,20 @@ describe("shared/tmux/tmux-utils", () => {
 
   describe("spawnTmuxPane", () => {
     test("skips if config not enabled", async () => {
-      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: false } as any, "http://localhost:1234")
+      const res = await tmux.spawnTmuxPane("s1", "desc", createMockTmuxConfig({ enabled: false }), "http://localhost:1234")
       expect(res.success).toBe(false)
     })
 
     test("skips if not inside tmux", async () => {
       delete process.env.TMUX
-      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: true } as any, "http://localhost:1234")
+      const res = await tmux.spawnTmuxPane("s1", "desc", createMockTmuxConfig(), "http://localhost:1234")
       expect(res.success).toBe(false)
     })
 
     test("skips if server not running", async () => {
       process.env.TMUX = "1"
       globalFetchSpy.mockImplementation(async () => ({ ok: false }))
-      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: true } as any, "http://localhost:1234")
+      const res = await tmux.spawnTmuxPane("s1", "desc", createMockTmuxConfig(), "http://localhost:1234")
       expect(res.success).toBe(false)
     })
 
@@ -140,7 +141,7 @@ describe("shared/tmux/tmux-utils", () => {
       process.env.TMUX = "1"
       await tmux.isServerRunning("http://localhost:1234")
       mockGetTmuxPath.mockResolvedValueOnce(null as any)
-      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: true } as any, "http://localhost:1234")
+      const res = await tmux.spawnTmuxPane("s1", "desc", createMockTmuxConfig(), "http://localhost:1234")
       expect(res.success).toBe(false)
     })
 
@@ -151,7 +152,7 @@ describe("shared/tmux/tmux-utils", () => {
       mockExited.mockResolvedValueOnce(1)
       mockStdoutText.mockResolvedValueOnce("")
 
-      const res = await tmux.spawnTmuxPane("s1", "desc", { enabled: true } as any, "http://localhost:1234")
+      const res = await tmux.spawnTmuxPane("s1", "desc", createMockTmuxConfig(), "http://localhost:1234")
       expect(res.success).toBe(false)
     })
 
@@ -162,7 +163,7 @@ describe("shared/tmux/tmux-utils", () => {
       mockExited.mockResolvedValue(0)
       mockStdoutText.mockResolvedValueOnce("%2")
 
-      const res = await tmux.spawnTmuxPane("s1", "verylongdescriptionherexyz", { enabled: true } as any, "http://localhost:1234", "%0")
+      const res = await tmux.spawnTmuxPane("s1", "verylongdescriptionherexyz", createMockTmuxConfig(), "http://localhost:1234", "%0")
       expect(res.success).toBe(true)
       expect(res.paneId).toBe("%2")
       expect(spawnSpy).toHaveBeenCalledTimes(2)
@@ -199,20 +200,20 @@ describe("shared/tmux/tmux-utils", () => {
 
   describe("replaceTmuxPane", () => {
     test("skips enabled", async () => {
-      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: false } as any, "h")
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", createMockTmuxConfig({ enabled: false }), "h")
       expect(res.success).toBe(false)
     })
 
     test("skips outside tmux", async () => {
       delete process.env.TMUX
-      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: true } as any, "h")
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", createMockTmuxConfig(), "h")
       expect(res.success).toBe(false)
     })
 
     test("skips if no binary path found mapped limit", async () => {
       process.env.TMUX = "1"
       mockGetTmuxPath.mockResolvedValueOnce(null as any)
-      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: true } as any, "h")
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", createMockTmuxConfig(), "h")
       expect(res.success).toBe(false)
     })
 
@@ -220,14 +221,14 @@ describe("shared/tmux/tmux-utils", () => {
       process.env.TMUX = "1"
       mockExited.mockResolvedValueOnce(1)
       mockStderrText.mockResolvedValueOnce("err block")
-      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: true } as any, "h")
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", createMockTmuxConfig(), "h")
       expect(res.success).toBe(false)
     })
 
     test("spawns map to specific id and returns", async () => {
       process.env.TMUX = "1"
       mockExited.mockResolvedValue(0)
-      const res = await tmux.replaceTmuxPane("%1", "s1", "d", { enabled: true } as any, "h")
+      const res = await tmux.replaceTmuxPane("%1", "s1", "d", createMockTmuxConfig(), "h")
       expect(res.success).toBe(true)
       expect(res.paneId).toBe("%1")
     })

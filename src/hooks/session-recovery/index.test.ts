@@ -74,14 +74,17 @@ describe("session-recovery/index", () => {
     const DUMMY_ERR_THINK = { message: "thinking must start with messages.5" }
     const DUMMY_ERR_THINK_DIS = { message: "thinking is disabled cannot contain" }
 
+    const makeInput = (client: unknown) => ({ client, directory: mockDirectory } as any)
+    const makeInputWithConfig = (client: unknown, config: Record<string, unknown>) => [makeInput(client), config as any] as const
+
     test("isRecoverableError aliases detectErrorType properly", () => {
-      const hook = createSessionRecoveryHook(({ client: {} as any, directory: mockDirectory } as any))
+      const hook = createSessionRecoveryHook(makeInput({}))
       expect(hook.isRecoverableError("missing tool_use for tool_result")).toBe(true)
       expect(hook.isRecoverableError("random parsing issue")).toBe(false)
     })
 
     test("handleSessionRecovery returns false on invalid info states", async () => {
-      const hook = createSessionRecoveryHook(({ client: {} as any, directory: mockDirectory } as any))
+      const hook = createSessionRecoveryHook(makeInput({}))
       // Non-assistant or missing error states
       expect(await hook.handleSessionRecovery(null as any)).toBe(false)
       expect(await hook.handleSessionRecovery({ role: "user", error: DUMMY_ERR_TOOL })).toBe(false)
@@ -96,7 +99,7 @@ describe("session-recovery/index", () => {
       const abortMock = mock().mockResolvedValue({})
       const msgsMock = mock().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50)))
       const client = createMockClient(msgsMock, abortMock, mock(), mock().mockResolvedValue({}))
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any)
+      const hook = createSessionRecoveryHook(makeInput(client))
 
       const p1 = hook.handleSessionRecovery({ role: "assistant", sessionID: "s1", id: "msg1", error: DUMMY_ERR_TOOL })
       const p2 = hook.handleSessionRecovery({ role: "assistant", sessionID: "s1", id: "msg1", error: DUMMY_ERR_TOOL })
@@ -112,7 +115,7 @@ describe("session-recovery/index", () => {
       const client = createMockClient(
         mock().mockResolvedValue({ data: [] }),
         mock().mockResolvedValue({}), mock(), mock().mockResolvedValue({}))
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any)
+      const hook = createSessionRecoveryHook(makeInput(client))
 
       let abortCalled = false
       let completeCalled = false
@@ -128,7 +131,7 @@ describe("session-recovery/index", () => {
       const promptMock = mock().mockResolvedValue({})
       const msgs = [{ info: { id: "msg1", role: "assistant" }, parts: [{ type: "tool_use", id: "tu-1" }, { type: "text" }] }]
       const client = createMockClient(mock().mockResolvedValue({ data: msgs }), mock().mockResolvedValue({}), promptMock, mock().mockResolvedValue({}))
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any)
+      const hook = createSessionRecoveryHook(makeInput(client))
 
       const result = await hook.handleSessionRecovery({ role: "assistant", sessionID: DUMMY_SESSION, id: "msg1", error: DUMMY_ERR_TOOL })
 
@@ -145,7 +148,7 @@ describe("session-recovery/index", () => {
       const msgs = [{ info: { id: "msg1", role: "assistant" } }] // empty parts natively
       const client = createMockClient(mock().mockResolvedValue({ data: msgs }), mock().mockResolvedValue({}), promptMock, mock().mockResolvedValue({}))
 
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any)
+      const hook = createSessionRecoveryHook(makeInput(client))
       const result = await hook.handleSessionRecovery({ role: "assistant", sessionID: DUMMY_SESSION, id: "msg1", error: DUMMY_ERR_TOOL })
 
       expect(result).toBe(true)
@@ -160,7 +163,7 @@ describe("session-recovery/index", () => {
       const msgs = [{ info: { id: "msg-last", role: "user", agent: "agentX", model: "modelY" } }, { info: { id: "msg1", role: "assistant" } }]
       const client = createMockClient(mock().mockResolvedValue({ data: msgs }), mock().mockResolvedValue({}), promptMock, mock().mockResolvedValue({}))
 
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any, { experimental: { auto_resume: true } } as any)
+      const hook = createSessionRecoveryHook(...makeInputWithConfig(client, { experimental: { auto_resume: true } }))
       // messages.5 extracted index
       const result = await hook.handleSessionRecovery({ role: "assistant", sessionID: DUMMY_SESSION, id: "msg1", error: DUMMY_ERR_THINK })
 
@@ -181,7 +184,7 @@ describe("session-recovery/index", () => {
 
       const msgs = [{ info: { id: "msg1", role: "assistant" } }]
       const client = createMockClient(mock().mockResolvedValue({ data: msgs }), mock().mockResolvedValue({}), mock(), mock().mockResolvedValue({}))
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any)
+      const hook = createSessionRecoveryHook(makeInput(client))
 
       const result = await hook.handleSessionRecovery({ role: "assistant", sessionID: DUMMY_SESSION, id: "msg1", error: DUMMY_ERR_THINK })
       expect(result).toBe(true)
@@ -196,7 +199,7 @@ describe("session-recovery/index", () => {
       const promptMock = mock().mockResolvedValue({})
       const msgs = [{ info: { id: "msglast", role: "user" } }, { info: { id: "msg1", role: "assistant" } }]
       const client = createMockClient(mock().mockResolvedValue({ data: msgs }), mock().mockResolvedValue({}), promptMock, mock().mockResolvedValue({}))
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any, { experimental: { auto_resume: true } } as any)
+      const hook = createSessionRecoveryHook(...makeInputWithConfig(client, { experimental: { auto_resume: true } }))
 
       const result = await hook.handleSessionRecovery({ role: "assistant", sessionID: DUMMY_SESSION, id: "msg1", error: DUMMY_ERR_THINK_DIS })
 
@@ -208,7 +211,7 @@ describe("session-recovery/index", () => {
 
     test("recoverToolResultMissing failure conditions", async () => {
       const client = createMockClient(mock().mockResolvedValue({ data: [{ info: { id: "msg1", role: "assistant" } }] }), mock().mockResolvedValue({}), mock().mockRejectedValue(new Error("fail")), mock().mockResolvedValue({}))
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any)
+      const hook = createSessionRecoveryHook(makeInput(client))
 
       // 1. no tool ids -> false
       mockStorage.readParts.mockReturnValue([])
@@ -223,7 +226,7 @@ describe("session-recovery/index", () => {
       mockStorage.findMessageByIndexNeedingThinking.mockReturnValue(null)
       mockStorage.findMessagesWithOrphanThinking.mockReturnValue([])
       const client = createMockClient(mock().mockResolvedValue({ data: [{ info: { id: "msg1", role: "assistant" } }] }), mock().mockResolvedValue({}), mock(), mock().mockResolvedValue({}))
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any)
+      const hook = createSessionRecoveryHook(makeInput(client))
 
       expect(await hook.handleSessionRecovery({ role: "assistant", sessionID: DUMMY_SESSION, id: "msg1", error: DUMMY_ERR_THINK })).toBe(false)
     })
@@ -231,7 +234,7 @@ describe("session-recovery/index", () => {
     test("thinking_disabled failure and empty searches", async () => {
       mockStorage.findMessagesWithThinkingBlocks.mockReturnValue([])
       const client = createMockClient(mock().mockResolvedValue({ data: [{ info: { id: "msg1", role: "assistant" } }] }), mock().mockResolvedValue({}), mock(), mock().mockResolvedValue({}))
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any)
+      const hook = createSessionRecoveryHook(makeInput(client))
 
       expect(await hook.handleSessionRecovery({ role: "assistant", sessionID: DUMMY_SESSION, id: "msg1", error: DUMMY_ERR_THINK_DIS })).toBe(false)
     })
@@ -242,7 +245,7 @@ describe("session-recovery/index", () => {
       const promptMock = mock().mockRejectedValue("fail")
       const client = createMockClient(mock().mockResolvedValue({ data: [{ info: { id: "msg1", role: "assistant" } }] }), mock().mockResolvedValue({}), promptMock, mock().mockResolvedValue({}))
 
-      const hook = createSessionRecoveryHook({ client: client as any, directory: mockDirectory } as any, { experimental: { auto_resume: true } } as any)
+      const hook = createSessionRecoveryHook(...makeInputWithConfig(client, { experimental: { auto_resume: true } }))
       expect(await hook.handleSessionRecovery({ role: "assistant", sessionID: DUMMY_SESSION, id: "msg1", error: DUMMY_ERR_THINK_DIS })).toBe(true) // success is true despite resume failing
     })
   })

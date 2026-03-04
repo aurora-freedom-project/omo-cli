@@ -19,17 +19,9 @@ afterEach(() => {
   try { rmSync(TEST_DATA_HOME, { recursive: true, force: true }) } catch { }
 })
 import type { ToolContext } from "@opencode-ai/plugin/tool"
+import { createMockToolContext } from "../../test-helpers"
 
-const mockContext: ToolContext = {
-  sessionID: "test-session",
-  messageID: "test-message",
-  agent: "test-agent",
-  abort: new AbortController().signal,
-  directory: "/test",
-  worktree: "/test",
-  metadata: (() => { }) as any,
-  ask: (async () => { }) as any,
-}
+const mockContext = createMockToolContext()
 
 describe("session-manager tools", () => {
   test("session_list executes without error", async () => {
