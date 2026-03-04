@@ -172,7 +172,7 @@ describe("tools/look-at", () => {
           { info: { role: "assistant", time: { created: 10 } }, parts: [{ type: "text", text: "old string arrays natively logic arrays loop testing mappings loops boundary testing" }] },
           { info: { role: "assistant", time: { created: 20 } }, parts: [{ type: "text", text: "new logical loops variable map bounds logic checking limits" }] },
           { info: { role: "user" }, parts: [{ type: "text", text: "user bounds target missing map limits boundaries constraint value check logic maps mapping check arrays limiting arrays mapped arrays mapping array arrays schemas bound bounds map array limit schemas loops logic" }] }
-        ]
+        ] as any[]
       }))
 
       const lookAt = createLookAt(ctx)

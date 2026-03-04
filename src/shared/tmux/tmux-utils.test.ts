@@ -28,7 +28,7 @@ describe("shared/tmux/tmux-utils", () => {
 
     originalEnv = { ...process.env }
 
-    globalFetchSpy = spyOn(globalThis, "fetch").mockImplementation(async () => ({ ok: true }) as any)
+    globalFetchSpy = spyOn(globalThis, "fetch").mockImplementation((async () => ({ ok: true })) as any)
 
     spawnSpy = spyOn(Bun, "spawn").mockImplementation(() => ({
       exited: mockExited(),
@@ -36,10 +36,10 @@ describe("shared/tmux/tmux-utils", () => {
       stderr: "mock_stderr"
     }) as any)
 
-    // Mock Response to handle our mocked stream
-    spyOn(globalThis, "Response").mockImplementation((body: unknown) => ({
-      text: body === "mock_stdout" ? mockStdoutText : mockStderrText
-    }) as any)
+      // Mock Response to handle our mocked stream
+      ; (spyOn(globalThis, "Response") as any).mockImplementation((body: unknown) => ({
+        text: body === "mock_stdout" ? mockStdoutText : mockStderrText
+      }))
   })
 
   afterEach(() => {

@@ -33,9 +33,9 @@ describe("features/claude-code-mcp-loader/loader", () => {
     mockLog.mockClear()
     mockTransformMcpServer.mockClear()
 
-    bunFileSpy = spyOn(Bun, "file").mockImplementation((path: string) => ({
+    bunFileSpy = spyOn(Bun, "file").mockImplementation(((path: string) => ({
       text: async () => ""
-    }) as any)
+    })) as any)
   })
 
   afterEach(() => {

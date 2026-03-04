@@ -112,7 +112,7 @@ describe("session-recovery/storage", () => {
                 if (p.endsWith("c.json")) return "CORRUPTED"
                 return ""
             })
-            expect(storage.readParts("m1")).toEqual([{ id: "p1" }])
+            expect(storage.readParts("m1")).toEqual([{ id: "p1" }] as any)
         })
     })
 

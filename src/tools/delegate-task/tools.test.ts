@@ -445,7 +445,7 @@ describe("orchestrator-task", () => {
     test("passes variant to background model payload", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-            let launchInput!: Record<string, unknown>
+      let launchInput!: Record<string, unknown>
 
       const mockManager = {
         launch: async (input: Record<string, unknown>) => {
@@ -508,7 +508,7 @@ describe("orchestrator-task", () => {
     test("DEFAULT_CATEGORIES variant passes to background WITHOUT userCategories", async () => {
       // #given - NO userCategories, testing DEFAULT_CATEGORIES only
       const { createDelegateTask } = require("./tools")
-            let launchInput!: Record<string, unknown>
+      let launchInput!: Record<string, unknown>
 
       const mockManager = {
         launch: async (input: Record<string, unknown>) => {
@@ -570,7 +570,7 @@ describe("orchestrator-task", () => {
     test("DEFAULT_CATEGORIES variant passes to sync session.prompt WITHOUT userCategories", async () => {
       // #given - NO userCategories, testing DEFAULT_CATEGORIES for sync mode
       const { createDelegateTask } = require("./tools")
-            let promptBody!: Record<string, unknown>
+      let promptBody!: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
 
@@ -711,7 +711,7 @@ describe("orchestrator-task", () => {
     test("empty array [] is allowed and proceeds without skill content", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-            let promptBody!: Record<string, unknown>
+      let promptBody!: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -1052,7 +1052,7 @@ describe("orchestrator-task", () => {
     test("sync mode passes category model to prompt", async () => {
       // #given
       const { createDelegateTask } = require("./tools")
-            let promptBody!: Record<string, unknown>
+      let promptBody!: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -1494,7 +1494,7 @@ describe("orchestrator-task", () => {
     test("should resolve agent-browser skill when browserProvider is passed", async () => {
       // #given - delegate_task configured with browserProvider: "agent-browser"
       const { createDelegateTask } = require("./tools")
-            let promptBody!: Record<string, unknown>
+      let promptBody!: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -2055,7 +2055,7 @@ describe("orchestrator-task", () => {
     test("background mode passes matched agent model to manager.launch", async () => {
       // #given - agent with model registered, using subagent_type with run_in_background=true
       const { createDelegateTask } = require("./tools")
-            let launchInput!: Record<string, unknown>
+      let launchInput!: Record<string, unknown>
 
       const mockManager = {
         launch: async (input: Record<string, unknown>) => {
@@ -2120,7 +2120,7 @@ describe("orchestrator-task", () => {
     test("sync mode passes matched agent model to session.prompt", async () => {
       // #given - agent with model registered, using subagent_type with run_in_background=false
       const { createDelegateTask } = require("./tools")
-            let promptBody!: Record<string, unknown>
+      let promptBody!: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
 
@@ -2181,7 +2181,7 @@ describe("orchestrator-task", () => {
     test("agent without model does not override categoryModel", async () => {
       // #given - agent registered without model field
       const { createDelegateTask } = require("./tools")
-            let promptBody!: Record<string, unknown>
+      let promptBody!: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
 
@@ -2241,7 +2241,7 @@ describe("orchestrator-task", () => {
     test("planner subagent should have delegate_task permission enabled", async () => {
       // #given - orchestrator delegates to planner
       const { createDelegateTask } = require("./tools")
-            let promptBody!: Record<string, unknown>
+      let promptBody!: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -2286,13 +2286,13 @@ describe("orchestrator-task", () => {
       )
 
       // #then - planner should have delegate_task permission
-      expect(promptBody.tools.delegate_task).toBe(true)
+      expect((promptBody.tools as any).delegate_task).toBe(true)
     }, { timeout: 20000 })
 
     test("non-planner subagent should NOT have delegate_task permission", async () => {
       // #given - orchestrator delegates to architect (non-planner)
       const { createDelegateTask } = require("./tools")
-            let promptBody!: Record<string, unknown>
+      let promptBody!: Record<string, unknown>
 
       const mockManager = { launch: async () => ({}) }
       const mockClient = {
@@ -2337,7 +2337,7 @@ describe("orchestrator-task", () => {
       )
 
       // #then - architect should NOT have delegate_task permission
-      expect(promptBody.tools.delegate_task).toBe(false)
+      expect((promptBody.tools as any).delegate_task).toBe(false)
     }, { timeout: 20000 })
   })
 })

@@ -90,10 +90,10 @@ describe("shared/connected-providers-cache", () => {
 
     describe("writeProviderModelsCache", () => {
         test("creates directory if not exists and writes file successfully", () => {
-            mockExistsSync.mockImplementation((path: string) => {
+            mockExistsSync.mockImplementation(((path: string) => {
                 if (String(path) === "/test/cache") return false
                 return true
-            })
+            }) as any)
             cache.writeProviderModelsCache({ models: { p1: ["m1"] }, connected: ["p1"] })
             expect(mockMkdirSync).toHaveBeenCalledWith("/test/cache", { recursive: true })
             expect(mockWriteFileSync).toHaveBeenCalled()

@@ -137,7 +137,7 @@ describe("code-intel/indexer", () => {
     test("skips unchanged files in incremental mode", async () => {
         mockGetIndexedFiles.mockResolvedValueOnce([
             { file: "src/test.ts", fileHash: "new-hash-123" },
-        ])
+        ] as any)
 
         mockSpawnSync.mockReturnValue({
             stdout: "src/test.ts\n",

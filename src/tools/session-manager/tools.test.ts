@@ -25,6 +25,10 @@ const mockContext: ToolContext = {
   messageID: "test-message",
   agent: "test-agent",
   abort: new AbortController().signal,
+  directory: "/test",
+  worktree: "/test",
+  metadata: (() => { }) as any,
+  ask: (async () => { }) as any,
 }
 
 describe("session-manager tools", () => {

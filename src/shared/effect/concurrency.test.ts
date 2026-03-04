@@ -49,7 +49,7 @@ describe("StorageService concurrency", () => {
         const results = await run(program)
         expect(results).toHaveLength(10)
         for (let i = 0; i < 10; i++) {
-            expect(results[i]).toEqual({ key: i, value: `value-${i}` })
+            expect((results as any)[i]).toEqual({ key: i, value: `value-${i}` })
         }
     })
 
