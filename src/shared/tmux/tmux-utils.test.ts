@@ -140,7 +140,7 @@ describe("shared/tmux/tmux-utils", () => {
     test("skips if tmux not found", async () => {
       process.env.TMUX = "1"
       await tmux.isServerRunning("http://localhost:1234")
-      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      mockGetTmuxPath.mockResolvedValueOnce(null as never)
       const res = await tmux.spawnTmuxPane("s1", "desc", createMockTmuxConfig(), "http://localhost:1234")
       expect(res.success).toBe(false)
     })
@@ -179,7 +179,7 @@ describe("shared/tmux/tmux-utils", () => {
 
     test("returns false skip tmux not found", async () => {
       process.env.TMUX = "1"
-      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      mockGetTmuxPath.mockResolvedValueOnce(null as never)
       const res = await tmux.closeTmuxPane("%1")
       expect(res).toBe(false)
     })
@@ -212,7 +212,7 @@ describe("shared/tmux/tmux-utils", () => {
 
     test("skips if no binary path found mapped limit", async () => {
       process.env.TMUX = "1"
-      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      mockGetTmuxPath.mockResolvedValueOnce(null as never)
       const res = await tmux.replaceTmuxPane("%1", "s1", "d", createMockTmuxConfig(), "h")
       expect(res.success).toBe(false)
     })
@@ -249,7 +249,7 @@ describe("shared/tmux/tmux-utils", () => {
 
   describe("enforceMainPaneWidth", () => {
     test("early returns if no binary limits matched", async () => {
-      mockGetTmuxPath.mockResolvedValueOnce(null as any)
+      mockGetTmuxPath.mockResolvedValueOnce(null as never)
       await tmux.enforceMainPaneWidth("%1", 100)
       expect(spawnSpy).not.toHaveBeenCalled()
     })

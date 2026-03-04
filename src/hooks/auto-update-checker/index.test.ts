@@ -2,9 +2,10 @@ import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test"
 import * as index from "./index"
 
 // Mock dependencies
+type PluginEntryInfo = { isPinned?: boolean; configPath?: string; entry?: string; pinnedVersion: string | null }
 const mockGetCachedVersion = mock(() => null as string | null)
 const mockGetLocalDevVersion = mock(() => null as string | null)
-const mockFindPluginEntry = mock(() => null as any)
+const mockFindPluginEntry = mock((): PluginEntryInfo | null => null)
 const mockGetLatestVersion = mock(async () => null as string | null)
 const mockUpdatePinnedVersion = mock(() => false)
 
@@ -22,7 +23,7 @@ mock.module("./cache", () => ({ invalidatePackage: mockInvalidatePackage }))
 const mockLog = mock(() => { })
 mock.module("../../shared/logger", () => ({ log: mockLog }))
 
-const mockGetConfigLoadErrors = mock(() => [] as any[])
+const mockGetConfigLoadErrors = mock((): Array<{ path: string; error: string }> => [])
 const mockClearConfigLoadErrors = mock(() => { })
 mock.module("../../shared/config-errors", () => ({
   getConfigLoadErrors: mockGetConfigLoadErrors,
@@ -176,7 +177,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check aborts if no plugin info", async () => {
-      mockFindPluginEntry.mockReturnValueOnce((null as any))
+      mockFindPluginEntry.mockReturnValueOnce((null as never))
       const ctx = createMockCtx()
       const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false })
       await runHook(hook, ctx)
@@ -184,7 +185,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check aborts if no version found", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: null } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: null }))
       mockGetCachedVersion.mockReturnValueOnce(null)
       const ctx = createMockCtx()
       const hook = index.createAutoUpdateCheckerHook(ctx, { showStartupToast: false })
@@ -193,7 +194,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check aborts if getLatestVersion returns null", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: "1.0.0" } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: "1.0.0" }))
       mockGetCachedVersion.mockReturnValueOnce("1.0.0")
       mockGetLatestVersion.mockResolvedValueOnce(null)
       const ctx = createMockCtx()
@@ -203,7 +204,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check aborts if already latest version", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: "1.0.0" } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: "1.0.0" }))
       mockGetCachedVersion.mockReturnValueOnce("1.0.0")
       mockGetLatestVersion.mockResolvedValueOnce("1.0.0")
       const ctx = createMockCtx()
@@ -213,7 +214,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check issues notification only if autoUpdate disabled", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: "1.0.0" } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: "1.0.0" }))
       mockGetCachedVersion.mockReturnValueOnce("1.0.0")
       mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
       const ctx = createMockCtx()
@@ -224,7 +225,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check installs update", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ isPinned: true, configPath: "foo", entry: "bar", pinnedVersion: "1.0.0" } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ isPinned: true, configPath: "foo", entry: "bar", pinnedVersion: "1.0.0" }))
       mockGetCachedVersion.mockReturnValueOnce("1.0.0")
       mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
       mockUpdatePinnedVersion.mockReturnValueOnce(true)
@@ -241,7 +242,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check handles pinned update failure", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ isPinned: true, configPath: "foo", entry: "bar", pinnedVersion: "1.0.0" } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ isPinned: true, configPath: "foo", entry: "bar", pinnedVersion: "1.0.0" }))
       mockGetCachedVersion.mockReturnValueOnce("1.0.0")
       mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
       mockUpdatePinnedVersion.mockReturnValueOnce(false)
@@ -254,7 +255,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check handles runBunInstall failure", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ isPinned: false, pinnedVersion: "1.0.0" } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ isPinned: false, pinnedVersion: "1.0.0" }))
       mockGetCachedVersion.mockReturnValueOnce("1.0.0")
       mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
       mockRunBunInstall.mockResolvedValueOnce(false)
@@ -267,7 +268,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("background check handles runBunInstall exception", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ isPinned: false, pinnedVersion: "1.0.0" } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ isPinned: false, pinnedVersion: "1.0.0" }))
       mockGetCachedVersion.mockReturnValueOnce("1.0.0")
       mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
       mockRunBunInstall.mockImplementationOnce(() => Promise.reject(new Error("Crash")))
@@ -280,7 +281,7 @@ describe("hooks/auto-update-checker/index", () => {
     })
 
     test("getToastMessage evaluates with sisyphus configurations accurately during startup", async () => {
-      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: "1.0.0" } as any))
+      mockFindPluginEntry.mockReturnValueOnce(({ pinnedVersion: "1.0.0" }))
       mockGetCachedVersion.mockReturnValueOnce("1.0.0")
       mockGetLatestVersion.mockResolvedValueOnce("1.1.0")
       const ctx = createMockCtx()

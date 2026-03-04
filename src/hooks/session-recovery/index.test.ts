@@ -86,7 +86,7 @@ describe("session-recovery/index", () => {
     test("handleSessionRecovery returns false on invalid info states", async () => {
       const hook = createSessionRecoveryHook(makeInput({}))
       // Non-assistant or missing error states
-      expect(await hook.handleSessionRecovery(null as any)).toBe(false)
+      expect(await hook.handleSessionRecovery(null as never)).toBe(false)
       expect(await hook.handleSessionRecovery({ role: "user", error: DUMMY_ERR_TOOL })).toBe(false)
       expect(await hook.handleSessionRecovery({ role: "assistant" })).toBe(false)
       expect(await hook.handleSessionRecovery({ role: "assistant", error: "not-handled" })).toBe(false)

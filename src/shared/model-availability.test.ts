@@ -318,7 +318,7 @@ describe("getConnectedProviders", () => {
 	//#when getConnectedProviders called
 	//#then returns empty array
 	it("should return empty array for null client", async () => {
-		const result = await getConnectedProviders((null as any))
+		const result = await getConnectedProviders((null as never))
 
 		expect(result).toEqual([])
 	})

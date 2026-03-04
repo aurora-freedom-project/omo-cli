@@ -2,6 +2,9 @@ import { describe, test, expect, beforeEach } from "bun:test"
 import { createSubagentQuestionBlockerHook } from "./index"
 import { subagentSessions, _resetForTesting } from "../../features/claude-code-session-state"
 
+type HookInput = { tool: string; sessionID: string; callID: string }
+type HookOutput = { args: Record<string, unknown> }
+
 describe("createSubagentQuestionBlockerHook", () => {
   const hook = createSubagentQuestionBlockerHook()
 
@@ -13,11 +16,11 @@ describe("createSubagentQuestionBlockerHook", () => {
     test("allows question tool for non-subagent sessions", async () => {
       //#given
       const sessionID = "ses_main"
-      const input = { tool: "question", sessionID, callID: "call_1" }
-      const output = { args: { questions: [] } }
+      const input: HookInput = { tool: "question", sessionID, callID: "call_1" }
+      const output: HookOutput = { args: { questions: [] } }
 
       //#when
-      const result = hook["tool.execute.before"]?.(input as any, output as any)
+      const result = hook["tool.execute.before"]?.(input, output)
 
       //#then
       await expect(result).resolves.toBeUndefined()
@@ -27,11 +30,11 @@ describe("createSubagentQuestionBlockerHook", () => {
       //#given
       const sessionID = "ses_subagent"
       subagentSessions.add(sessionID)
-      const input = { tool: "question", sessionID, callID: "call_1" }
-      const output = { args: { questions: [] } }
+      const input: HookInput = { tool: "question", sessionID, callID: "call_1" }
+      const output: HookOutput = { args: { questions: [] } }
 
       //#when
-      const result = hook["tool.execute.before"]?.(input as any, output as any)
+      const result = hook["tool.execute.before"]?.(input, output)
 
       //#then
       await expect(result).rejects.toThrow("Question tool is disabled for subagent sessions")
@@ -41,11 +44,11 @@ describe("createSubagentQuestionBlockerHook", () => {
       //#given
       const sessionID = "ses_subagent"
       subagentSessions.add(sessionID)
-      const input = { tool: "Question", sessionID, callID: "call_1" }
-      const output = { args: { questions: [] } }
+      const input: HookInput = { tool: "Question", sessionID, callID: "call_1" }
+      const output: HookOutput = { args: { questions: [] } }
 
       //#when
-      const result = hook["tool.execute.before"]?.(input as any, output as any)
+      const result = hook["tool.execute.before"]?.(input, output)
 
       //#then
       await expect(result).rejects.toThrow("Question tool is disabled for subagent sessions")
@@ -55,11 +58,11 @@ describe("createSubagentQuestionBlockerHook", () => {
       //#given
       const sessionID = "ses_subagent"
       subagentSessions.add(sessionID)
-      const input = { tool: "AskUserQuestion", sessionID, callID: "call_1" }
-      const output = { args: { questions: [] } }
+      const input: HookInput = { tool: "AskUserQuestion", sessionID, callID: "call_1" }
+      const output: HookOutput = { args: { questions: [] } }
 
       //#when
-      const result = hook["tool.execute.before"]?.(input as any, output as any)
+      const result = hook["tool.execute.before"]?.(input, output)
 
       //#then
       await expect(result).rejects.toThrow("Question tool is disabled for subagent sessions")
@@ -69,11 +72,11 @@ describe("createSubagentQuestionBlockerHook", () => {
       //#given
       const sessionID = "ses_subagent"
       subagentSessions.add(sessionID)
-      const input = { tool: "bash", sessionID, callID: "call_1" }
-      const output = { args: { command: "ls" } }
+      const input: HookInput = { tool: "bash", sessionID, callID: "call_1" }
+      const output: HookOutput = { args: { command: "ls" } }
 
       //#when
-      const result = hook["tool.execute.before"]?.(input as any, output as any)
+      const result = hook["tool.execute.before"]?.(input, output)
 
       //#then
       await expect(result).resolves.toBeUndefined()
