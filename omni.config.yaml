@@ -1,0 +1,33 @@
+project:
+  name: "oh-my-opencode"
+  description: "AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration"
+  version: "3.2.14"
+memory:
+  surreal_url: "http://127.0.0.1:18000/sql"
+  # ⚠️ WARNING: Change these credentials for production deployments! ⚠️
+  surreal_user: "root"
+  surreal_pass: "omo-secret"
+  surreal_ns: "omni"
+  surreal_db: "oh_my_opencode"
+  # Global namespace and database for shared data (skills, system metadata).
+  # All projects share these. Override only if running multiple Omni clusters.
+  global_ns: "omni"
+  global_db: "brain"
+  ollama_url: "http://127.0.0.1:11434"
+  embedding_model: "mxbai-embed-large:latest"
+  extraction_model: "glm-5:cloud"
+agents:
+  coder_model: "minimax-m2.5:cloud"
+  analyzer_model: "glm-5:cloud"
+  # Per-model context window overrides (tokens). Ollama supports up to 256K.
+  context_window:
+    "minimax-m2.5:cloud": 198000
+    "glm-5:cloud": 198000
+  # Resilience: drift detection, PAL routing, write-test cycle
+  # (Ouroboros + claude-code-tips integration)
+  resilience:
+    drift_threshold: 0.4        # 0.0-1.0, trigger refocus above this
+    drift_check_interval: 3     # check every N turns (0 = disabled)
+    max_refocus: 2              # refocus attempts before stopping
+    max_escalations: 2          # PAL router max tier jumps
+    verify_after_write: false   # auto write-test cycle
