@@ -2,6 +2,11 @@ import { injectHookMessage } from "../../features/hook-message-injector"
 import { Effect } from "effect"
 import { log } from "../../shared/logger"
 import { formatSystemDirective, SystemDirectiveTypes } from "../../shared/system-directive"
+import {
+  type ContextBudget,
+  InjectionPriority,
+  estimateTokens,
+} from "../../shared/context-budget"
 
 export interface SummarizeContext {
   sessionID: string
@@ -100,18 +105,34 @@ async function queryMemoryConcepts(project?: string): Promise<string | null> {
   )
 }
 
-export function createCompactionContextInjector() {
+export function createCompactionContextInjector(budget?: ContextBudget) {
   return async (ctx: SummarizeContext): Promise<void> => {
     log("[compaction-context-injector] injecting context", { sessionID: ctx.sessionID })
 
     let prompt = SUMMARIZE_CONTEXT_PROMPT
 
-    // Attempt to enrich with omo-memory concepts
-    const projectName = ctx.directory.split("/").pop() || undefined
-    const memorySummary = await queryMemoryConcepts(projectName)
-    if (memorySummary) {
-      prompt += memorySummary
-      log("[compaction-context-injector] memory concepts injected", { sessionID: ctx.sessionID })
+    // Attempt to enrich with omo-memory concepts only if budget allows
+    let skipMemory = false
+    if (budget) {
+      const promptTokens = estimateTokens(prompt)
+      const allocation = budget.requestAllocation(
+        "compaction-context-injector", InjectionPriority.OPTIONAL, promptTokens + 1000, ctx.sessionID
+      )
+      if (!allocation.allowed) {
+        log("[compaction-context-injector] skipped (budget exhausted)", { sessionID: ctx.sessionID })
+        return
+      }
+      // If budget tight, skip memory concepts to save tokens
+      skipMemory = budget.getUsageRatio(ctx.sessionID) > 0.50
+    }
+
+    if (!skipMemory) {
+      const projectName = ctx.directory.split("/").pop() || undefined
+      const memorySummary = await queryMemoryConcepts(projectName)
+      if (memorySummary) {
+        prompt += memorySummary
+        log("[compaction-context-injector] memory concepts injected", { sessionID: ctx.sessionID })
+      }
     }
 
     const success = injectHookMessage(ctx.sessionID, prompt, {
@@ -121,6 +142,9 @@ export function createCompactionContextInjector() {
     })
 
     if (success) {
+      if (budget) {
+        budget.recordInjection("compaction-context-injector", estimateTokens(prompt), ctx.sessionID)
+      }
       log("[compaction-context-injector] context injected", { sessionID: ctx.sessionID })
     } else {
       log("[compaction-context-injector] injection failed", { sessionID: ctx.sessionID })

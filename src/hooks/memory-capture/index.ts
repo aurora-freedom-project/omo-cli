@@ -113,6 +113,8 @@ export function createMemoryCaptureHook(config: MemoryConfig, directory: string)
                                 embedding,
                                 source: "auto",
                                 project: directory,
+                                trajectory_id: input.sessionID,
+                                outcome: "pending",
                             })
 
                             log("[memory-capture] Auto-captured insight", {

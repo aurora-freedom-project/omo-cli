@@ -20,11 +20,26 @@ function ensureTranscriptDir(): void {
   }
 }
 
+// ─── Runtime Configuration ──────────────────────────────────────────────────
+// Controlled via omo-cli.json → "logging.transcript_recording".
+// Default: false (disabled to prevent disk bloat).
+// Call configureTranscript() from plugin init to apply config values.
+
+let _transcriptRecordingEnabled = false
+
+/** Configure transcript recording at runtime from omo-cli.json values. */
+export function configureTranscript(options: {
+  transcriptRecording?: boolean
+}): void {
+  if (options.transcriptRecording !== undefined) _transcriptRecordingEnabled = options.transcriptRecording
+}
+
 /** Appends a transcript entry to a session's transcript file. */
 export function appendTranscriptEntry(
   sessionId: string,
   entry: TranscriptEntry
 ): void {
+  if (!_transcriptRecordingEnabled) return
   ensureTranscriptDir()
   const path = getTranscriptPath(sessionId)
   const line = JSON.stringify(entry) + "\n"
@@ -219,4 +234,45 @@ export function deleteTempTranscript(path: string | null): void {
       catch: () => undefined as never
     }).pipe(Effect.catchAll(() => Effect.void))
   )
+}
+
+/**
+ * Delete the transcript JSONL file for a specific session.
+ * Called on session.deleted to prevent unbounded disk growth.
+ */
+export function cleanupTranscriptForSession(sessionId: string): void {
+  const path = getTranscriptPath(sessionId)
+  try {
+    if (existsSync(path)) {
+      unlinkSync(path)
+    }
+  } catch { }
+}
+
+/**
+ * Delete stale transcript files older than maxAgeDays.
+ * Called once on plugin init to clean up orphaned transcripts.
+ */
+export function cleanupStaleTranscripts(maxAgeDays = 7): number {
+  let cleaned = 0
+  try {
+    if (!existsSync(TRANSCRIPT_DIR)) return 0
+    const { readdirSync, statSync } = require("fs") as typeof import("fs")
+    const files = readdirSync(TRANSCRIPT_DIR)
+    const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000
+    const now = Date.now()
+
+    for (const file of files) {
+      if (!file.endsWith(".jsonl")) continue
+      const filePath = join(TRANSCRIPT_DIR, file)
+      try {
+        const stats = statSync(filePath)
+        if (now - stats.mtimeMs > maxAgeMs) {
+          unlinkSync(filePath)
+          cleaned++
+        }
+      } catch { }
+    }
+  } catch { }
+  return cleaned
 }

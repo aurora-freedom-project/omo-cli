@@ -2,9 +2,9 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { Effect } from "effect"
 import { getOpenCodeStorageDir } from "../../shared/data-path"
+import { getMessageDir } from "../../shared/session-utils"
 
 const OPENCODE_STORAGE = getOpenCodeStorageDir()
-const MESSAGE_STORAGE = join(OPENCODE_STORAGE, "message")
 const PART_STORAGE = join(OPENCODE_STORAGE, "part")
 
 const TRUNCATION_MESSAGE =
@@ -39,24 +39,6 @@ export interface ToolResultInfo {
   messageID: string
   toolName: string
   outputSize: number
-}
-
-function getMessageDir(sessionID: string): string {
-  if (!existsSync(MESSAGE_STORAGE)) return ""
-
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) {
-    return directPath
-  }
-
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) {
-      return sessionPath
-    }
-  }
-
-  return ""
 }
 
 function getMessageIds(sessionID: string): string[] {

@@ -3,43 +3,43 @@ import * as opencode from "./opencode"
 import { MIN_OPENCODE_VERSION } from "../constants"
 
 describe("opencode check", () => {
-  describe("compareVersions", () => {
+  describe("isVersionAtLeast", () => {
     it("returns true when current >= minimum", () => {
       // #given versions where current is greater
       // #when comparing
       // #then should return true
-      expect(opencode.compareVersions("1.0.200", "1.0.150")).toBe(true)
-      expect(opencode.compareVersions("1.1.0", "1.0.150")).toBe(true)
-      expect(opencode.compareVersions("2.0.0", "1.0.150")).toBe(true)
+      expect(opencode.isVersionAtLeast("1.0.200", "1.0.150")).toBe(true)
+      expect(opencode.isVersionAtLeast("1.1.0", "1.0.150")).toBe(true)
+      expect(opencode.isVersionAtLeast("2.0.0", "1.0.150")).toBe(true)
     })
 
     it("returns true when versions are equal", () => {
       // #given equal versions
       // #when comparing
       // #then should return true
-      expect(opencode.compareVersions("1.0.150", "1.0.150")).toBe(true)
+      expect(opencode.isVersionAtLeast("1.0.150", "1.0.150")).toBe(true)
     })
 
     it("returns false when current < minimum", () => {
       // #given version below minimum
       // #when comparing
       // #then should return false
-      expect(opencode.compareVersions("1.0.100", "1.0.150")).toBe(false)
-      expect(opencode.compareVersions("0.9.0", "1.0.150")).toBe(false)
+      expect(opencode.isVersionAtLeast("1.0.100", "1.0.150")).toBe(false)
+      expect(opencode.isVersionAtLeast("0.9.0", "1.0.150")).toBe(false)
     })
 
     it("handles version prefixes", () => {
       // #given version with v prefix
       // #when comparing
       // #then should strip prefix and compare correctly
-      expect(opencode.compareVersions("v1.0.200", "1.0.150")).toBe(true)
+      expect(opencode.isVersionAtLeast("v1.0.200", "1.0.150")).toBe(true)
     })
 
     it("handles prerelease versions", () => {
       // #given prerelease version
       // #when comparing
       // #then should use base version
-      expect(opencode.compareVersions("1.0.200-beta.1", "1.0.150")).toBe(true)
+      expect(opencode.isVersionAtLeast("1.0.200-beta.1", "1.0.150")).toBe(true)
     })
   })
 

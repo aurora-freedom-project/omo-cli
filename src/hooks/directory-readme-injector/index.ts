@@ -8,6 +8,12 @@ import {
 } from "./storage";
 import { README_FILENAME } from "./constants";
 import { createDynamicTruncator } from "../../shared/dynamic-truncator";
+import {
+  type ContextBudget,
+  InjectionPriority,
+  estimateTokens,
+  truncateToTokenBudget,
+} from "../../shared/context-budget";
 
 interface ToolExecuteInput {
   tool: string;
@@ -37,7 +43,7 @@ interface EventInput {
   };
 }
 
-export function createDirectoryReadmeInjectorHook(ctx: PluginInput) {
+export function createDirectoryReadmeInjectorHook(ctx: PluginInput, budget?: ContextBudget) {
   const sessionCaches = new Map<string, Set<string>>();
   const pendingBatchReads = new Map<string, string[]>();
   const truncator = createDynamicTruncator(ctx);
@@ -94,12 +100,31 @@ export function createDirectoryReadmeInjectorHook(ctx: PluginInput) {
       try {
         const content = readFileSync(readmePath, "utf-8");
         const { result, truncated } = await truncator.truncate(sessionID, content);
-        const truncationNotice = truncated
-          ? `\n\n[Note: Content was truncated to save context window space. For full context, please read the file directly: ${readmePath}]`
-          : "";
-        output.output += `\n\n[Project README: ${readmePath}]\n${result}${truncationNotice}`;
+
+        // Budget check: README is LOW priority — skip when budget tight
+        if (budget) {
+          const tokens = estimateTokens(result);
+          const allocation = budget.requestAllocation(
+            "directory-readme-injector", InjectionPriority.LOW, tokens, sessionID
+          );
+          if (!allocation.allowed) continue;
+          const finalResult = allocation.maxTokens < tokens
+            ? truncateToTokenBudget(result, allocation.maxTokens)
+            : result;
+          const truncationNotice = truncated
+            ? `\n\n[Note: Content was truncated to save context window space. For full context, please read the file directly: ${readmePath}]`
+            : "";
+          output.output += `\n\n[Project README: ${readmePath}]\n${finalResult}${truncationNotice}`;
+          budget.recordInjection("directory-readme-injector", estimateTokens(finalResult), sessionID);
+        } else {
+          const truncationNotice = truncated
+            ? `\n\n[Note: Content was truncated to save context window space. For full context, please read the file directly: ${readmePath}]`
+            : "";
+          output.output += `\n\n[Project README: ${readmePath}]\n${result}${truncationNotice}`;
+        }
+
         cache.add(readmeDir);
-      } catch {}
+      } catch { }
     }
 
     saveInjectedPaths(sessionID, cache);

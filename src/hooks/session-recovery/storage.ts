@@ -1,33 +1,18 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { Effect } from "effect"
-import { MESSAGE_STORAGE, PART_STORAGE, THINKING_TYPES, META_TYPES } from "./constants"
+import { PART_STORAGE, THINKING_TYPES, META_TYPES } from "./constants"
 import type { StoredMessageMeta, StoredPart, StoredTextPart } from "./types"
+import { getMessageDir } from "../../shared/session-utils"
+
+// Re-export for consumers that import from this module
+export { getMessageDir }
 
 /** Generate a unique part ID with hex timestamp and random suffix. */
 export function generatePartId(): string {
   const timestamp = Date.now().toString(16)
   const random = Math.random().toString(36).substring(2, 10)
   return `prt_${timestamp}${random}`
-}
-
-/** Resolve the message storage directory for a session, checking nested layouts. */
-export function getMessageDir(sessionID: string): string {
-  if (!existsSync(MESSAGE_STORAGE)) return ""
-
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) {
-    return directPath
-  }
-
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) {
-      return sessionPath
-    }
-  }
-
-  return ""
 }
 
 /** Read all stored message metadata for a session, sorted by creation time. */

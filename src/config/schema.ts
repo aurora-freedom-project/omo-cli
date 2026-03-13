@@ -73,6 +73,8 @@ export const BuiltinSkillNameSchema = z.enum([
   "agent-browser",
   "frontend-ui-ux",
   "git-master",
+  "impeccable",
+  "pipeline",
 ])
 
 /** Agent names that can have overrides in the `agents` config section. */
@@ -156,12 +158,23 @@ export const HookNameSchema = z.enum([
   "sisyphus-junior-notepad",
   "atlas",
   "start-work",
+  "input-guard",
 ])
 
 /** Built-in slash command names that can be disabled. */
 export const BuiltinCommandNameSchema = z.enum([
   "init-deep",
   "start-work",
+  "design-audit",
+  "design-polish",
+  "design-critique",
+  "design-normalize",
+  "design-animate",
+  "design-colorize",
+  "design-distill",
+  "design-bolder",
+  "design-quieter",
+  "design-harden",
 ])
 
 /** Per-agent configuration overrides (model, tools, prompt, etc.). */
@@ -576,6 +589,48 @@ export const SafetyConfigSchema = z.object({
   circuit_breaker_backoff_base_ms: z.number().min(1000).max(30000).default(5000),
   /** Circuit breaker max backoff in ms (default: 120000 = 2min) */
   circuit_breaker_backoff_max_ms: z.number().min(10000).max(600000).default(120000),
+  /** Stall timeout: kill sub-agent if no activity for this duration (default: 120000ms = 2min) */
+  stall_timeout_ms: z.number().min(10000).max(600000).default(120000),
+  /** Completion gate: require sub-agent output to contain at least one of these signals */
+  completion_signals: z.array(z.string()).default(["RESULT", "COMPLETED", "DONE", "✅"]),
+  /** Max concurrent sub-agents running simultaneously (default: 5). Symphony-inspired per-state slots. */
+  max_concurrent_agents: z.number().min(1).max(20).default(5),
+  /** Workspace isolation: restrict sub-agents to per-task directories under this root.
+   *  When set, each delegate_task creates a subdirectory and agents cannot write outside it.
+   *  Uses Symphony's 3 safety invariants: (1) agent runs ONLY in workspace, (2) workspace MUST be under root, (3) workspace key is sanitized. */
+  workspace_root: z.string().optional(),
+  /** Lifecycle hooks: shell commands to run before/after delegate_task execution.
+   *  Inspired by Symphony's 4-hook model (after_create, before_run, after_run, before_remove). */
+  lifecycle_hooks: z.object({
+    /** Shell command to run BEFORE sub-agent starts (e.g., "npm install", "git pull origin main") */
+    before_run: z.string().optional(),
+    /** Shell command to run AFTER sub-agent completes (e.g., "npm test", cleanup scripts) */
+    after_run: z.string().optional(),
+    /** Timeout for hook execution in ms (default: 30000 = 30s) */
+    hook_timeout_ms: z.number().min(5000).max(120000).default(30000),
+  }).optional(),
+})
+
+/** Logging configuration — controls disk I/O from log files and transcripts.
+ *  All writing is DISABLED by default to prevent disk bloat.
+ *  Enable via omo-cli.json when debugging is needed. */
+export const LoggingConfigSchema = z.object({
+  /** Write log entries to /tmp/omo-cli.log (default: false) */
+  file_logging: z.boolean().default(false),
+  /** Record transcript JSONL to ~/.claude/transcripts/ (default: false) */
+  transcript_recording: z.boolean().default(false),
+  /** Max log file size in MB before rotation (default: 10) */
+  max_log_size_mb: z.number().min(1).max(100).default(10),
+})
+
+/** Input guard: prompt injection detection configuration. */
+export const InputGuardConfigSchema = z.object({
+  /** Enable or disable the input guard hook (default: true) */
+  enabled: z.boolean().default(true),
+  /** "warn" = inject warning text, "block" = reserved for future use */
+  mode: z.enum(["warn", "block"]).default("warn"),
+  /** Whether to include PII detection patterns (default: true) */
+  pii_detection: z.boolean().default(true),
 })
 
 /** Root omo-cli configuration schema — validates omo-cli.json files. */
@@ -611,6 +666,10 @@ export const OmoCliConfigSchema = z.object({
   cost_metering: CostMeteringConfigSchema.optional(),
   /** Safety guards: loop limits, delegation depth, circuit breaker */
   safety: SafetyConfigSchema.optional(),
+  /** Input guard: prompt injection detection */
+  input_guard: InputGuardConfigSchema.optional(),
+  /** Logging: control file logging and transcript recording (default: all off) */
+  logging: LoggingConfigSchema.optional(),
 })
 
 // ─── Inferred Types ─────────────────────────────────────────────────────────
@@ -680,5 +739,7 @@ export type MemoryConfig = z.infer<typeof MemoryConfigSchema>
 export type CostMeteringConfig = z.infer<typeof CostMeteringConfigSchema>
 /** Safety guard limits and circuit breaker configuration. */
 export type SafetyConfig = z.infer<typeof SafetyConfigSchema>
+/** Input guard: prompt injection detection configuration. */
+export type InputGuardConfig = z.infer<typeof InputGuardConfigSchema>
 
 export { AnyMcpNameSchema, type AnyMcpName, McpNameSchema, type McpName } from "../mcp/types"

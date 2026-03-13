@@ -12,6 +12,10 @@ const getCategoryDescription = (name: string, userCategories?: Record<string, Ca
 /**
  * Conductor - Master Orchestrator Agent
  *
+ * NOTE: File is named `navigator.ts` for historical reasons (navigates complex task plans).
+ * The agent itself is called "Conductor" in the UI and routing system.
+ * See also: `conductor.ts` which houses the "Consultant" agent (pre-plan analysis).
+ *
  * Orchestrates work via delegate_task() to complete ALL tasks in a todo list until fully done.
  * You are the conductor of a symphony of specialized agents.
  */

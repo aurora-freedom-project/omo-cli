@@ -7,6 +7,7 @@ import { getAllSkills, extractSkillTemplate } from "../../features/opencode-skil
 import { injectGitMasterConfig } from "../../features/opencode-skill-loader/skill-content"
 import type { SkillMcpManager, SkillMcpClientInfo, SkillMcpServerContext } from "../../features/skill-mcp-manager"
 import type { Tool, Resource, Prompt } from "@modelcontextprotocol/sdk/types.js"
+import { isBrainReachable, hybridSkillSearch, type SkillSearchResult } from "../../shared/skills-brain-query"
 
 function loadedSkillToInfo(skill: LoadedSkill): SkillInfo {
   return {
@@ -25,8 +26,8 @@ function formatSkillsXml(skills: SkillInfo[]): string {
   if (skills.length === 0) return ""
 
   // Limit skills in description to prevent context overflow
-  // (620 bundled skills = way too long for model context)
-  const MAX_SKILLS_IN_DESCRIPTION = 50
+  // 10 representative examples + <total_skills> tag is sufficient for pattern recognition
+  const MAX_SKILLS_IN_DESCRIPTION = 10
   const displaySkills = skills.slice(0, MAX_SKILLS_IN_DESCRIPTION)
   const hasMore = skills.length > MAX_SKILLS_IN_DESCRIPTION
 
@@ -136,6 +137,25 @@ async function formatMcpCapabilities(
   return sections.join("\n")
 }
 
+/**
+ * Try brain DB hybrid search as fallback when skill not found in filesystem.
+ * Returns null on any error — never blocks the filesystem flow.
+ */
+async function searchBrainFallback(skillName: string): Promise<SkillSearchResult | null> {
+  try {
+    const reachable = await isBrainReachable()
+    if (!reachable) return null
+
+    const results = await hybridSkillSearch(skillName, undefined, 1)
+    if (results.length > 0 && results[0].name === skillName) {
+      return results[0]
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function createSkillTool(options: SkillLoadOptions = {}): ToolDefinition {
   let cachedSkills: LoadedSkill[] | null = null
   let cachedDescription: string | null = null
@@ -178,6 +198,18 @@ export function createSkillTool(options: SkillLoadOptions = {}): ToolDefinition 
       const skill = skills.find(s => s.name === args.name)
 
       if (!skill) {
+        // Fallback: try brain DB hybrid search before failing
+        const brainResult = await searchBrainFallback(args.name)
+        if (brainResult) {
+          return [
+            `## Skill: ${brainResult.name} (from SurrealDB)`,
+            "",
+            `**Description**: ${brainResult.description}`,
+            `**Source**: ${brainResult.file_path}`,
+            "",
+            brainResult.content ?? "*No content available — run omni sync-skills or check skill file*",
+          ].join("\n")
+        }
         const available = skills.map(s => s.name).join(", ")
         throw new Error(`Skill "${args.name}" not found. Available skills: ${available || "none"}`)
       }

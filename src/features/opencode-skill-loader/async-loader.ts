@@ -2,13 +2,13 @@ import { readFile, readdir } from "fs/promises"
 import type { Dirent } from "fs"
 import { join, basename } from "path"
 import { Effect } from "effect"
-import yaml from "js-yaml"
 import { parseFrontmatter } from "../../shared/frontmatter"
 import { sanitizeModelField } from "../../shared/model-sanitizer"
 import { resolveSymlink, isMarkdownFile } from "../../shared/file-utils"
 import type { CommandDefinition } from "../claude-code-command-loader/types"
 import type { SkillScope, SkillMetadata, LoadedSkill } from "./types"
 import type { SkillMcpConfig } from "../skill-mcp-manager/types"
+import { parseSkillMcpConfigFromFrontmatter, parseAllowedTools } from "./loader"
 
 export async function mapWithConcurrency<T, R>(
   items: T[],
@@ -31,23 +31,7 @@ export async function mapWithConcurrency<T, R>(
   return results
 }
 
-function parseSkillMcpConfigFromFrontmatter(content: string): SkillMcpConfig | undefined {
-  const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)
-  if (!frontmatterMatch) return undefined
 
-  return Effect.runSync(
-    Effect.try({
-      try: () => {
-        const parsed = yaml.load(frontmatterMatch[1]) as Record<string, unknown>
-        if (parsed && typeof parsed === "object" && "mcp" in parsed && parsed.mcp) {
-          return parsed.mcp as SkillMcpConfig
-        }
-        return undefined
-      },
-      catch: () => "fail" as const,
-    }).pipe(Effect.catchAll(() => Effect.succeed(undefined)))
-  )
-}
 
 export async function loadMcpJsonFromDirAsync(skillDir: string): Promise<SkillMcpConfig | undefined> {
   const mcpJsonPath = join(skillDir, "mcp.json")
@@ -138,17 +122,7 @@ $ARGUMENTS
   )
 }
 
-function parseAllowedTools(allowedTools: string | string[] | undefined): string[] | undefined {
-  if (!allowedTools) return undefined
 
-  // Handle YAML array format: already parsed as string[]
-  if (Array.isArray(allowedTools)) {
-    return allowedTools.map(t => t.trim()).filter(Boolean)
-  }
-
-  // Handle space-separated string format: "Read Write Edit Bash"
-  return allowedTools.split(/\s+/).filter(Boolean)
-}
 
 export async function discoverSkillsInDirAsync(skillsDir: string): Promise<LoadedSkill[]> {
   return Effect.runPromise(

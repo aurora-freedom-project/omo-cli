@@ -43,6 +43,7 @@ import {
 } from "./features/context-injector";
 import { applyAgentVariant, resolveAgentVariant, resolveVariantForModel } from "./shared/agent-variant";
 import { createFirstMessageVariantGate } from "./shared/first-message-variant";
+import { classifyTask } from "./shared/task-classifier";
 import {
   discoverOpencodeGlobalSkills,
   discoverOpencodeProjectSkills,
@@ -83,8 +84,12 @@ import { createModelCacheState, getModelLimit } from "./plugin-state";
 import { createConfigHandler } from "./plugin-handlers";
 import { createMemoryTools } from "./cli/memory/memory-tools";
 import { createMemoryCaptureHook } from "./hooks/memory-capture";
+import { createInputGuardHook } from "./hooks/input-guard";
 import { createCodeIntelTools } from "./features/code-intel/code-intel-tools";
 import { startAutoInit } from "./features/code-intel/auto-init";
+import { createContextBudget, type ContextBudget } from "./shared/context-budget";
+import { configureLogger } from "./shared/logger";
+import { configureTranscript } from "./hooks/claude-code-hooks/transcript";
 
 const OmoCliPlugin: Plugin = async (ctx) => {
   log("[OmoCliPlugin] ENTRY - plugin loading", { directory: ctx.directory })
@@ -92,6 +97,16 @@ const OmoCliPlugin: Plugin = async (ctx) => {
   startTmuxCheck();
 
   const pluginConfig = loadPluginConfig(ctx.directory, ctx);
+
+  // Apply logging config from omo-cli.json (defaults: all off)
+  configureLogger({
+    fileLogging: pluginConfig.logging?.file_logging,
+    maxLogSizeMb: pluginConfig.logging?.max_log_size_mb,
+  });
+  configureTranscript({
+    transcriptRecording: pluginConfig.logging?.transcript_recording,
+  });
+
   const disabledHooks = new Set(pluginConfig.disabled_hooks ?? []);
   const firstMessageVariantGate = createFirstMessageVariantGate();
 
@@ -105,9 +120,10 @@ const OmoCliPlugin: Plugin = async (ctx) => {
   const isHookEnabled = (hookName: HookName) => !disabledHooks.has(hookName);
 
   const modelCacheState = createModelCacheState();
+  const contextBudget = createContextBudget();
 
   const contextWindowMonitor = isHookEnabled("context-window-monitor")
-    ? createContextWindowMonitorHook(ctx)
+    ? createContextWindowMonitorHook(ctx, contextBudget)
     : null;
   const sessionRecovery = isHookEnabled("session-recovery")
     ? createSessionRecoveryHook(ctx, { experimental: pluginConfig.experimental })
@@ -137,7 +153,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
   const toolOutputTruncator = isHookEnabled("tool-output-truncator")
     ? createToolOutputTruncatorHook(ctx, {
       experimental: pluginConfig.experimental,
-    })
+    }, contextBudget)
     : null;
   // Check for native OpenCode AGENTS.md injection support before creating hook
   let directoryAgentsInjector = null;
@@ -152,11 +168,11 @@ const OmoCliPlugin: Plugin = async (ctx) => {
         nativeVersion: OPENCODE_NATIVE_AGENTS_INJECTION_VERSION,
       });
     } else {
-      directoryAgentsInjector = createDirectoryAgentsInjectorHook(ctx);
+      directoryAgentsInjector = createDirectoryAgentsInjectorHook(ctx, contextBudget);
     }
   }
   const directoryReadmeInjector = isHookEnabled("directory-readme-injector")
-    ? createDirectoryReadmeInjectorHook(ctx)
+    ? createDirectoryReadmeInjectorHook(ctx, contextBudget)
     : null;
   const emptyTaskResponseDetector = isHookEnabled("empty-task-response-detector")
     ? createEmptyTaskResponseDetectorHook(ctx)
@@ -178,10 +194,10 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     })
     : null;
   const compactionContextInjector = isHookEnabled("compaction-context-injector")
-    ? createCompactionContextInjector()
+    ? createCompactionContextInjector(contextBudget)
     : undefined;
   const rulesInjector = isHookEnabled("rules-injector")
-    ? createRulesInjectorHook(ctx)
+    ? createRulesInjectorHook(ctx, contextBudget)
     : null;
   const autoUpdateChecker = isHookEnabled("auto-update-checker")
     ? createAutoUpdateCheckerHook(ctx, {
@@ -196,7 +212,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
   const contextInjectorMessagesTransform =
     createContextInjectorMessagesTransformHook(contextCollector);
   const agentUsageReminder = isHookEnabled("agent-usage-reminder")
-    ? createAgentUsageReminderHook(ctx)
+    ? createAgentUsageReminderHook(ctx, contextBudget)
     : null;
   const costMetering = isHookEnabled("cost-metering") && pluginConfig.cost_metering?.enabled
     ? createCostMeteringHook(ctx, pluginConfig.cost_metering)
@@ -213,7 +229,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     : null;
 
   const categorySkillReminder = isHookEnabled("category-skill-reminder")
-    ? createCategorySkillReminderHook(ctx)
+    ? createCategorySkillReminderHook(ctx, undefined, contextBudget)
     : null;
 
   const ralphLoop = isHookEnabled("ralph-loop")
@@ -228,7 +244,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     : null;
 
   const delegateTaskRetry = isHookEnabled("delegate-task-retry")
-    ? createDelegateTaskRetryHook(ctx)
+    ? createDelegateTaskRetryHook(ctx, pluginConfig.safety?.completion_signals)
     : null;
 
   const startWork = isHookEnabled("start-work")
@@ -396,6 +412,10 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     ? createMemoryCaptureHook(pluginConfig.memory, ctx.directory)
     : null;
 
+  const inputGuard = isHookEnabled("input-guard")
+    ? createInputGuardHook(pluginConfig.input_guard)
+    : null;
+
   // Auto-start SurrealDB + incremental index in background (non-blocking)
   if (pluginConfig.memory?.enabled) {
     startAutoInit(ctx.directory, pluginConfig.memory);
@@ -410,9 +430,8 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       call_omo_agent: callOmoAgent,
       ...(lookAt ? { look_at: lookAt } : {}),
       delegate_task: delegateTask,
-      // Only register plugin skill tool if native is unavailable (< 1.0.190)
-      // Native OpenCode handles skill discovery; plugin keeps proactive hints via hooks
-      ...(isOpenCodeVersionAtLeast(OPENCODE_NATIVE_SKILLS_VERSION) ? {} : { skill: skillTool }),
+      // Always register plugin skill tool — omo-cli manages skill injection directly
+      skill: skillTool,
       skill_mcp: skillMcpTool,
       slashcommand: slashcommandTool,
       interactive_bash,
@@ -444,9 +463,21 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       }
 
       await keywordDetector?.["chat.message"]?.(input, output);
+
+      // Task-aware context: classify user prompt and set task type for hook filtering
+      const userText = (output as { parts?: Array<{ type: string; text?: string }> }).parts
+        ?.filter(p => p.type === "text" && p.text)
+        .map(p => p.text!)
+        .join(" ") ?? ""
+      if (userText && contextBudget) {
+        const taskType = classifyTask(userText)
+        contextBudget.setTaskType(taskType, input.sessionID)
+      }
+
       await claudeCodeHooks["chat.message"]?.(input, output);
       await autoSlashCommand?.["chat.message"]?.(input, output);
       await startWork?.["chat.message"]?.(input, output);
+      await inputGuard?.["chat.message"]?.(input, output);
       await memoryCapture?.["chat.message"]?.(input, output);
 
       if (!hasConnectedProvidersCache()) {
@@ -557,6 +588,14 @@ const OmoCliPlugin: Plugin = async (ctx) => {
         if (!sessionInfo?.parentID) {
           setMainSession(sessionInfo?.id);
         }
+        // Update context budget with model limit for this session
+        if (sessionInfo?.id) {
+          const currentModelKey = Array.from(modelCacheState.modelContextLimitsCache.keys())[0];
+          if (currentModelKey) {
+            const limit = modelCacheState.modelContextLimitsCache.get(currentModelKey);
+            if (limit) contextBudget.setContextLimit(limit);
+          }
+        }
         firstMessageVariantGate.markSessionCreated(sessionInfo);
         await tmuxSessionManager.onSessionCreated(
           event as { type: string; properties?: { info?: { id?: string; parentID?: string; title?: string } } }
@@ -572,6 +611,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
           clearSessionAgent(sessionInfo.id);
           resetMessageCursor(sessionInfo.id);
           firstMessageVariantGate.clear(sessionInfo.id);
+          contextBudget.resetSession(sessionInfo.id);
           await skillMcpManager.disconnectSession(sessionInfo.id);
           await lspManager.cleanupTempDirectoryClients();
           await tmuxSessionManager.onSessionDeleted({

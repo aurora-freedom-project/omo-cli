@@ -1,3 +1,6 @@
+/** Default context window for models not in the cache. */
+export const DEFAULT_CONTEXT_LIMIT = 128_000;
+
 export interface ModelCacheState {
   modelContextLimitsCache: Map<string, number>;
   anthropicContext1MEnabled: boolean;
@@ -10,11 +13,15 @@ export function createModelCacheState(): ModelCacheState {
   };
 }
 
+/**
+ * Get the context window limit for a model.
+ * Returns cached limit, Anthropic 1M if enabled, or DEFAULT_CONTEXT_LIMIT.
+ */
 export function getModelLimit(
   state: ModelCacheState,
   providerID: string,
   modelID: string
-): number | undefined {
+): number {
   const key = `${providerID}/${modelID}`;
   const cached = state.modelContextLimitsCache.get(key);
   if (cached) return cached;
@@ -26,5 +33,5 @@ export function getModelLimit(
   ) {
     return 1_000_000;
   }
-  return undefined;
+  return DEFAULT_CONTEXT_LIMIT;
 }

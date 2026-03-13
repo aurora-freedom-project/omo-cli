@@ -2,6 +2,11 @@ import type { PluginInput } from "@opencode-ai/plugin"
 import { getSessionAgent } from "../../features/claude-code-session-state"
 import type { LoadedSkill } from "../../features/opencode-skill-loader/types"
 import { log } from "../../shared"
+import {
+  type ContextBudget,
+  InjectionPriority,
+  estimateTokens,
+} from "../../shared/context-budget"
 
 /**
  * Target agents that should receive category+skill reminders.
@@ -82,7 +87,7 @@ interface SessionState {
   toolCallCount: number
 }
 
-export function createCategorySkillReminderHook(_ctx: PluginInput, loadedSkills?: LoadedSkill[]) {
+export function createCategorySkillReminderHook(_ctx: PluginInput, loadedSkills?: LoadedSkill[], budget?: ContextBudget) {
   const sessionStates = new Map<string, SessionState>()
   // Track accumulated tool outputs per session for BM25 analysis
   const sessionOutputCache = new Map<string, string>()
@@ -142,6 +147,16 @@ export function createCategorySkillReminderHook(_ctx: PluginInput, loadedSkills?
       // Generate context-specific routing suggestions if skills are available
       if (loadedSkills && loadedSkills.length > 0) {
         const recentContext = sessionOutputCache.get(sessionID) || ""
+      }
+
+      // Budget check: category reminder is LOW priority — skip when budget tight
+      if (budget) {
+        const tokens = estimateTokens(REMINDER_MESSAGE + routingHintSection)
+        const allocation = budget.requestAllocation(
+          "category-skill-reminder", InjectionPriority.LOW, tokens, sessionID
+        )
+        if (!allocation.allowed) return
+        budget.recordInjection("category-skill-reminder", tokens, sessionID)
       }
 
       output.output += REMINDER_MESSAGE + routingHintSection

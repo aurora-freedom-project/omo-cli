@@ -57,18 +57,18 @@ describe("transcript", () => {
     })
 
     describe("appendTranscriptEntry", () => {
-        test("creates directory if missing and appends entry array", () => {
+        test("does NOT write to disk when TRANSCRIPT_APPEND_ENABLED is false", () => {
             const entry = { type: "test", content: "data" } as never
             mockedExistsState[expectedTranscriptsDir] = false
 
             appendTranscriptEntry("sess1", entry)
 
-            expect(fs.mkdirSync).toHaveBeenCalledWith(expectedTranscriptsDir, { recursive: true })
+            // With TRANSCRIPT_APPEND_ENABLED = false, no file should be written
             const writtenPath = getTranscriptPath("sess1")
-            expect(mockedFsState[writtenPath]).toBe(JSON.stringify(entry) + "\n")
+            expect(mockedFsState[writtenPath]).toBeUndefined()
         })
 
-        test("does not attempt directory creation if true", () => {
+        test("does not attempt directory creation when disabled", () => {
             const entry = { type: "test", content: "data" } as never
             mockedExistsState[expectedTranscriptsDir] = true
 
@@ -80,65 +80,29 @@ describe("transcript", () => {
         })
     })
 
-    describe("record functions", () => {
-        test("recordToolUse adds timestamp and types", () => {
-            // Need a deterministic timestamp
-            const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation((() => mockDate) as never)
-
+    describe("record functions (disabled)", () => {
+        test("recordToolUse does not write when disabled", () => {
             recordToolUse("sess1", "Bash", { command: "ls" })
             const writtenPath = getTranscriptPath("sess1")
-            const lines = mockedFsState[writtenPath].trim().split("\n").map(l => JSON.parse(l))
-            expect(lines[0]).toEqual({
-                type: "tool_use",
-                timestamp: "2023-01-01T00:00:00.000Z",
-                tool_name: "Bash",
-                tool_input: { command: "ls" }
-            })
+            expect(mockedFsState[writtenPath]).toBeUndefined()
         })
 
-        test("recordToolResult adds timestamp and types", () => {
-            const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation((() => mockDate) as never)
-
+        test("recordToolResult does not write when disabled", () => {
             recordToolResult("sess1", "Bash", { command: "ls" }, { out: "list" })
             const writtenPath = getTranscriptPath("sess1")
-            const lines = mockedFsState[writtenPath].trim().split("\n").map(l => JSON.parse(l))
-            expect(lines[0]).toEqual({
-                type: "tool_result",
-                timestamp: "2023-01-01T00:00:00.000Z",
-                tool_name: "Bash",
-                tool_input: { command: "ls" },
-                tool_output: { out: "list" }
-            })
+            expect(mockedFsState[writtenPath]).toBeUndefined()
         })
 
-        test("recordUserMessage adds content", () => {
-            const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation((() => mockDate) as never)
-
+        test("recordUserMessage does not write when disabled", () => {
             recordUserMessage("sess1", "hello")
             const writtenPath = getTranscriptPath("sess1")
-            const lines = mockedFsState[writtenPath].trim().split("\n").map(l => JSON.parse(l))
-            expect(lines[0]).toEqual({
-                type: "user",
-                timestamp: "2023-01-01T00:00:00.000Z",
-                content: "hello"
-            })
+            expect(mockedFsState[writtenPath]).toBeUndefined()
         })
 
-        test("recordAssistantMessage adds content", () => {
-            const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            spyOn(global, "Date").mockImplementation((() => mockDate) as never)
-
+        test("recordAssistantMessage does not write when disabled", () => {
             recordAssistantMessage("sess1", "hello back")
             const writtenPath = getTranscriptPath("sess1")
-            const lines = mockedFsState[writtenPath].trim().split("\n").map(l => JSON.parse(l))
-            expect(lines[0]).toEqual({
-                type: "assistant",
-                timestamp: "2023-01-01T00:00:00.000Z",
-                content: "hello back"
-            })
+            expect(mockedFsState[writtenPath]).toBeUndefined()
         })
     })
 

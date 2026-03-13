@@ -14,6 +14,7 @@ import { isInsideTmux } from "../../shared/tmux"
 import { subagentSessions } from "../claude-code-session-state"
 import { getTaskToastManager } from "../task-toast-manager"
 import { findNearestMessageWithFields, MESSAGE_STORAGE } from "../hook-message-injector"
+import { getMessageDir } from "../../shared/session-utils"
 import { existsSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 
@@ -1460,16 +1461,3 @@ function registerProcessSignal(
   return listener
 }
 
-
-function getMessageDir(sessionID: string): string | null {
-  if (!existsSync(MESSAGE_STORAGE)) return null
-
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) return directPath
-
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) return sessionPath
-  }
-  return null
-}

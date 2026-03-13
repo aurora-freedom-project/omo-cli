@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { relative, resolve } from "node:path";
 import { findProjectRoot, findRuleFiles } from "./finder";
+import { log } from "../../shared/logger";
 import {
   createContentHash,
   isDuplicateByContentHash,
@@ -16,6 +17,11 @@ import {
   saveInjectedRules,
 } from "./storage";
 import { createDynamicTruncator } from "../../shared/dynamic-truncator";
+import {
+  type ContextBudget,
+  InjectionPriority,
+  estimateTokens,
+} from "../../shared/context-budget";
 
 interface ToolExecuteInput {
   tool: string;
@@ -54,7 +60,7 @@ interface RuleToInject {
 
 const TRACKED_TOOLS = ["read", "write", "edit", "multiedit"];
 
-export function createRulesInjectorHook(ctx: PluginInput) {
+export function createRulesInjectorHook(ctx: PluginInput, budget?: ContextBudget) {
   const sessionCaches = new Map<
     string,
     { contentHashes: Set<string>; realPaths: Set<string> }
@@ -125,7 +131,7 @@ export function createRulesInjectorHook(ctx: PluginInput) {
 
         cache.realPaths.add(candidate.realPath);
         cache.contentHashes.add(contentHash);
-      } catch {}
+      } catch { }
     }
 
     if (toInject.length === 0) return;
@@ -134,6 +140,20 @@ export function createRulesInjectorHook(ctx: PluginInput) {
 
     for (const rule of toInject) {
       const { result, truncated } = await truncator.truncate(sessionID, rule.content);
+
+      // Budget check: Rules are HIGH priority — skip farthest first when tight
+      if (budget) {
+        const tokens = estimateTokens(result);
+        const allocation = budget.requestAllocation(
+          "rules-injector", InjectionPriority.HIGH, tokens, sessionID
+        );
+        if (!allocation.allowed) {
+          log("[rules-injector] skipped rule (budget)", { rule: rule.relativePath });
+          continue;
+        }
+        budget.recordInjection("rules-injector", tokens, sessionID);
+      }
+
       const truncationNotice = truncated
         ? `\n\n[Note: Content was truncated to save context window space. For full context, please read the file directly: ${rule.relativePath}]`
         : "";

@@ -35,23 +35,16 @@ const MULTILINGUAL_KEYWORDS = [
 const MULTILINGUAL_PATTERNS = MULTILINGUAL_KEYWORDS.map((kw) => new RegExp(kw, "i"))
 const THINK_PATTERNS = [...ENGLISH_PATTERNS, ...MULTILINGUAL_PATTERNS]
 
-const CODE_BLOCK_PATTERN = /```[\s\S]*?```/g
-const INLINE_CODE_PATTERN = /`[^`]+`/g
-
-function removeCodeBlocks(text: string): string {
-  return text.replace(CODE_BLOCK_PATTERN, "").replace(INLINE_CODE_PATTERN, "")
-}
+import { removeCodeBlocks, extractPromptText as _extractPromptText } from "../../shared/prompt-text"
 
 export function detectThinkKeyword(text: string): boolean {
   const textWithoutCode = removeCodeBlocks(text)
   return THINK_PATTERNS.some((pattern) => pattern.test(textWithoutCode))
 }
 
+/** Re-export with empty separator for tight concatenation (think-mode behavior). */
 export function extractPromptText(
   parts: Array<{ type: string; text?: string }>
 ): string {
-  return parts
-    .filter((p) => p.type === "text")
-    .map((p) => p.text || "")
-    .join("")
+  return _extractPromptText(parts, "")
 }

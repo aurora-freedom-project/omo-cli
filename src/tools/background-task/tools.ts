@@ -10,31 +10,9 @@ import { getSessionAgent } from "../../features/claude-code-session-state"
 import { log } from "../../shared/logger"
 import { consumeNewMessages } from "../../shared/session-cursor"
 import { getMessageDir } from "../../shared/session-utils"
+import { formatDuration, type ToolContextWithMetadata, type OpencodeClient } from "../delegate-task/helpers"
 
-type OpencodeClient = PluginInput["client"]
 
-function formatDuration(start: Date, end?: Date): string {
-  const duration = (end ?? new Date()).getTime() - start.getTime()
-  const seconds = Math.floor(duration / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-
-  if (hours > 0) {
-    return `${hours}h ${minutes % 60}m ${seconds % 60}s`
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds % 60}s`
-  } else {
-    return `${seconds}s`
-  }
-}
-
-type ToolContextWithMetadata = {
-  sessionID: string
-  messageID: string
-  agent: string
-  abort: AbortSignal
-  metadata?: (input: { title?: string; metadata?: Record<string, unknown> }) => void
-}
 
 export function createBackgroundTask(manager: BackgroundManager): ToolDefinition {
   return tool({

@@ -382,6 +382,10 @@ export async function runSecurityScan(options: {
     repoPath?: string;
     outputPath?: string;
     showDetails?: boolean;
+    /** Minimum quality score 0-100 for CI/CD gate */
+    minScore?: number;
+    /** Exit with code 1 if any skill fails minScore (CI/CD mode) */
+    strict?: boolean;
 }): Promise<ScanReport> {
     const repoPath = options.repoPath || join(homedir(), ".antigravity-skills-cache");
     const outputPath = options.outputPath || join(process.cwd(), "skills_security_report.json");
@@ -417,6 +421,33 @@ export async function runSecurityScan(options: {
 
         if (sorted.length > 50) {
             p.log.info(`... and ${sorted.length - 50} more skills`);
+        }
+    }
+
+    // CI/CD Gate: check minScore threshold
+    if (options.minScore !== undefined && options.minScore > 0) {
+        const threshold = options.minScore;
+        const failing = report.skills.filter(s => s.qualityScore < threshold);
+
+        if (failing.length > 0) {
+            p.log.info(`\n🚨 CI/CD QUALITY GATE`);
+            p.log.info(`${'─'.repeat(60)}`);
+            p.log.info(`Threshold: ${threshold}% | Failing: ${failing.length}/${report.totalSkills} skills\n`);
+
+            // Show top 10 failing skills
+            for (const skill of failing.slice(0, 10)) {
+                p.log.info(`  ❌ ${skill.id.padEnd(30)} Q:${skill.qualityScore}% (< ${threshold}%)`);
+            }
+            if (failing.length > 10) {
+                p.log.info(`  ... and ${failing.length - 10} more failing skills`);
+            }
+
+            if (options.strict) {
+                p.log.error(`\n💀 STRICT MODE: ${failing.length} skills below ${threshold}% threshold. Exiting with code 1.`);
+                process.exit(1);
+            }
+        } else {
+            p.log.info(`\n✅ CI/CD QUALITY GATE PASSED — all skills ≥ ${threshold}%`);
         }
     }
 

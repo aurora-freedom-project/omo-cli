@@ -1,206 +1,42 @@
-import { tool, type PluginInput, type ToolDefinition } from "@opencode-ai/plugin"
-import { existsSync, readdirSync } from "node:fs"
-import { join } from "node:path"
+import { tool, type ToolDefinition } from "@opencode-ai/plugin"
+import { existsSync } from "node:fs"
 import type { BackgroundManager } from "../../features/background-agent"
 import type { DelegateTaskArgs } from "./types"
 import type { CategoryConfig, CategoriesConfig, GitMasterConfig, BrowserAutomationProvider } from "../../config/schema"
 import { DEFAULT_CATEGORIES, CATEGORY_PROMPT_APPENDS, CATEGORY_DESCRIPTIONS, PLAN_AGENT_SYSTEM_PREPEND, isPlanAgent } from "./constants"
-import { getTimingConfig } from "./timing"
-import { findNearestMessageWithFields, findFirstMessageWithAgent, MESSAGE_STORAGE } from "../../features/hook-message-injector"
+
+import { findNearestMessageWithFields, findFirstMessageWithAgent } from "../../features/hook-message-injector"
 import { resolveMultipleSkillsAsync } from "../../features/opencode-skill-loader/skill-content"
 import { discoverSkills } from "../../features/opencode-skill-loader"
 import { getTaskToastManager } from "../../features/task-toast-manager"
 import type { ModelFallbackInfo } from "../../features/task-toast-manager/types"
 import { subagentSessions, getSessionAgent } from "../../features/claude-code-session-state"
-import { log, getAgentToolRestrictions, resolveModel, getOpenCodeConfigPaths, findByNameCaseInsensitive, equalsIgnoreCase } from "../../shared"
+import { log, getAgentToolRestrictions, resolveModel, findByNameCaseInsensitive, equalsIgnoreCase } from "../../shared"
 import type { SessionCreateBody } from "../../shared/sdk-types"
 import { fetchAvailableModels } from "../../shared/model-availability"
 import { readConnectedProvidersCache } from "../../shared/connected-providers-cache"
 import { resolveModelWithFallback } from "../../shared/model-resolver"
 import { CATEGORY_MODEL_REQUIREMENTS } from "../../shared/model-requirements"
-
-type OpencodeClient = PluginInput["client"]
+import {
+  type OpencodeClient,
+  parseModelString,
+  formatDuration,
+  formatDetailedError,
+  type ToolContextWithMetadata,
+  resolveCategoryConfig,
+  type SyncSessionCreatedEvent,
+  type DelegateTaskToolOptions,
+  type BuildSystemContentInput,
+  buildSystemContent,
+} from "./helpers"
+import { pollForSessionCompletion, fetchLastAssistantMessage } from "./session-poller"
+import { resumeBackgroundSession, resumeSyncSession } from "./session-resume"
+import { getMessageDir } from "../../shared/session-utils"
 
 const WORKER_AGENT = "worker"
 
-function parseModelString(model: string): { providerID: string; modelID: string } | undefined {
-  const parts = model.split("/")
-  if (parts.length >= 2) {
-    return { providerID: parts[0], modelID: parts.slice(1).join("/") }
-  }
-  return undefined
-}
-
-function getMessageDir(sessionID: string): string | null {
-  if (!existsSync(MESSAGE_STORAGE)) return null
-
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) return directPath
-
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) return sessionPath
-  }
-
-  return null
-}
-
-function formatDuration(start: Date, end?: Date): string {
-  const duration = (end ?? new Date()).getTime() - start.getTime()
-  const seconds = Math.floor(duration / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-
-  if (hours > 0) return `${hours}h ${minutes % 60}m ${seconds % 60}s`
-  if (minutes > 0) return `${minutes}m ${seconds % 60}s`
-  return `${seconds}s`
-}
-
-interface ErrorContext {
-  operation: string
-  args?: DelegateTaskArgs
-  sessionID?: string
-  agent?: string
-  category?: string
-}
-
-function formatDetailedError(error: unknown, ctx: ErrorContext): string {
-  const message = error instanceof Error ? error.message : String(error)
-  const stack = error instanceof Error ? error.stack : undefined
-
-  const lines: string[] = [
-    `${ctx.operation} failed`,
-    "",
-    `**Error**: ${message}`,
-  ]
-
-  if (ctx.sessionID) {
-    lines.push(`**Session ID**: ${ctx.sessionID}`)
-  }
-
-  if (ctx.agent) {
-    lines.push(`**Agent**: ${ctx.agent}${ctx.category ? ` (category: ${ctx.category})` : ""}`)
-  }
-
-  if (ctx.args) {
-    lines.push("", "**Arguments**:")
-    lines.push(`- description: "${ctx.args.description}"`)
-    lines.push(`- category: ${ctx.args.category ?? "(none)"}`)
-    lines.push(`- subagent_type: ${ctx.args.subagent_type ?? "(none)"}`)
-    lines.push(`- run_in_background: ${ctx.args.run_in_background}`)
-    lines.push(`- load_skills: [${ctx.args.load_skills?.join(", ") ?? ""}]`)
-    if (ctx.args.session_id) {
-      lines.push(`- session_id: ${ctx.args.session_id}`)
-    }
-  }
-
-  if (stack) {
-    lines.push("", "**Stack Trace**:")
-    lines.push("```")
-    lines.push(stack.split("\n").slice(0, 10).join("\n"))
-    lines.push("```")
-  }
-
-  return lines.join("\n")
-}
-
-type ToolContextWithMetadata = {
-  sessionID: string
-  messageID: string
-  agent: string
-  abort: AbortSignal
-  metadata?: (input: { title?: string; metadata?: Record<string, unknown> }) => void
-}
-
-export function resolveCategoryConfig(
-  categoryName: string,
-  options: {
-    userCategories?: CategoriesConfig
-    inheritedModel?: string
-    systemDefaultModel?: string
-  }
-): { config: CategoryConfig; promptAppend: string; model: string | undefined } | null {
-  const { userCategories, inheritedModel, systemDefaultModel } = options
-  const defaultConfig = DEFAULT_CATEGORIES[categoryName]
-  const userConfig = userCategories?.[categoryName]
-  const defaultPromptAppend = CATEGORY_PROMPT_APPENDS[categoryName] ?? ""
-
-  if (!defaultConfig && !userConfig) {
-    return null
-  }
-
-  // Model priority for categories: user override > category default > system default
-  // Categories have explicit models - no inheritance from parent session
-  const model = resolveModel({
-    userModel: userConfig?.model,
-    inheritedModel: defaultConfig?.model, // Category's built-in model takes precedence over system default
-    systemDefault: systemDefaultModel,
-  })
-  const config: CategoryConfig = {
-    ...defaultConfig,
-    ...userConfig,
-    model,
-    variant: userConfig?.variant ?? defaultConfig?.variant,
-  }
-
-  let promptAppend = defaultPromptAppend
-  if (userConfig?.prompt_append) {
-    promptAppend = defaultPromptAppend
-      ? defaultPromptAppend + "\n\n" + userConfig.prompt_append
-      : userConfig.prompt_append
-  }
-
-  return { config, promptAppend, model }
-}
-
-export interface SyncSessionCreatedEvent {
-  sessionID: string
-  parentID: string
-  title: string
-}
-
-export interface DelegateTaskToolOptions {
-  manager: BackgroundManager
-  client: OpencodeClient
-  directory: string
-  userCategories?: CategoriesConfig
-  gitMasterConfig?: GitMasterConfig
-  workerModel?: string
-  browserProvider?: BrowserAutomationProvider
-  onSyncSessionCreated?: (event: SyncSessionCreatedEvent) => Promise<void>
-}
-
-export interface BuildSystemContentInput {
-  skillContent?: string
-  categoryPromptAppend?: string
-  agentName?: string
-}
-
-export function buildSystemContent(input: BuildSystemContentInput): string | undefined {
-  const { skillContent, categoryPromptAppend, agentName } = input
-
-  const planAgentPrepend = isPlanAgent(agentName) ? PLAN_AGENT_SYSTEM_PREPEND : ""
-
-  if (!skillContent && !categoryPromptAppend && !planAgentPrepend) {
-    return undefined
-  }
-
-  const parts: string[] = []
-
-  if (planAgentPrepend) {
-    parts.push(planAgentPrepend)
-  }
-
-  if (skillContent) {
-    parts.push(skillContent)
-  }
-
-  if (categoryPromptAppend) {
-    parts.push(categoryPromptAppend)
-  }
-
-  return parts.join("\n\n") || undefined
-}
+// Re-export for backward compatibility (tests and index.ts import from here)
+export { resolveCategoryConfig, type DelegateTaskToolOptions }
 
 export function createDelegateTask(options: DelegateTaskToolOptions): ToolDefinition {
   const { manager, client, directory, userCategories, gitMasterConfig, workerModel, browserProvider, onSyncSessionCreated } = options
@@ -296,197 +132,13 @@ Prompts MUST be in English.`
         : undefined
 
       if (args.session_id) {
+        const resumeContext = { args, ctx, client, manager, parentModel, parentAgent }
+
         if (runInBackground) {
-          try {
-            const task = await manager.resume({
-              sessionId: args.session_id,
-              prompt: args.prompt,
-              parentSessionID: ctx.sessionID,
-              parentMessageID: ctx.messageID,
-              parentModel,
-              parentAgent,
-            })
-
-            ctx.metadata?.({
-              title: `Continue: ${task.description}`,
-              metadata: {
-                prompt: args.prompt,
-                agent: task.agent,
-                load_skills: args.load_skills,
-                description: args.description,
-                run_in_background: args.run_in_background,
-                sessionId: task.sessionID,
-                command: args.command,
-              },
-            })
-
-            return `Background task continued.
-
-Task ID: ${task.id}
-Session ID: ${task.sessionID}
-Description: ${task.description}
-Agent: ${task.agent}
-Status: ${task.status}
-
-Agent continues with full previous context preserved.
-Use \`background_output\` with task_id="${task.id}" to check progress.`
-          } catch (error) {
-            return formatDetailedError(error, {
-              operation: "Continue background task",
-              args,
-              sessionID: args.session_id,
-            })
-          }
+          return resumeBackgroundSession(resumeContext)
         }
 
-        const toastManager = getTaskToastManager()
-        const taskId = `resume_sync_${args.session_id.slice(0, 8)}`
-        const startTime = new Date()
-
-        if (toastManager) {
-          toastManager.addTask({
-            id: taskId,
-            description: args.description,
-            agent: "continue",
-            isBackground: false,
-          })
-        }
-
-        ctx.metadata?.({
-          title: `Continue: ${args.description}`,
-          metadata: {
-            prompt: args.prompt,
-            load_skills: args.load_skills,
-            description: args.description,
-            run_in_background: args.run_in_background,
-            sessionId: args.session_id,
-            sync: true,
-            command: args.command,
-          },
-        })
-
-        try {
-          let resumeAgent: string | undefined
-          let resumeModel: { providerID: string; modelID: string } | undefined
-
-          try {
-            const messagesResp = await client.session.messages({ path: { id: args.session_id } })
-            const messages = (messagesResp.data ?? []) as Array<{
-              info?: { agent?: string; model?: { providerID: string; modelID: string }; modelID?: string; providerID?: string }
-            }>
-            for (let i = messages.length - 1; i >= 0; i--) {
-              const info = messages[i].info
-              if (info?.agent || info?.model || (info?.modelID && info?.providerID)) {
-                resumeAgent = info.agent
-                resumeModel = info.model ?? (info.providerID && info.modelID ? { providerID: info.providerID, modelID: info.modelID } : undefined)
-                break
-              }
-            }
-          } catch {
-            const resumeMessageDir = getMessageDir(args.session_id)
-            const resumeMessage = resumeMessageDir ? findNearestMessageWithFields(resumeMessageDir) : null
-            resumeAgent = resumeMessage?.agent
-            resumeModel = resumeMessage?.model?.providerID && resumeMessage?.model?.modelID
-              ? { providerID: resumeMessage.model.providerID, modelID: resumeMessage.model.modelID }
-              : undefined
-          }
-
-          await client.session.prompt({
-            path: { id: args.session_id },
-            body: {
-              ...(resumeAgent !== undefined ? { agent: resumeAgent } : {}),
-              ...(resumeModel !== undefined ? { model: resumeModel } : {}),
-              tools: {
-                ...(resumeAgent ? getAgentToolRestrictions(resumeAgent) : {}),
-                task: false,
-                delegate_task: false,
-                call_omo_agent: true,
-                question: false,
-              },
-              parts: [{ type: "text", text: args.prompt }],
-            },
-          })
-        } catch (promptError) {
-          if (toastManager) {
-            toastManager.removeTask(taskId)
-          }
-          const errorMessage = promptError instanceof Error ? promptError.message : String(promptError)
-          return `Failed to send continuation prompt: ${errorMessage}\n\nSession ID: ${args.session_id}`
-        }
-
-        // Wait for message stability after prompt completes
-        const timing = getTimingConfig()
-        const POLL_INTERVAL_MS = timing.POLL_INTERVAL_MS
-        const MIN_STABILITY_TIME_MS = timing.SESSION_CONTINUATION_STABILITY_MS
-        const STABILITY_POLLS_REQUIRED = timing.STABILITY_POLLS_REQUIRED
-        const pollStart = Date.now()
-        let lastMsgCount = 0
-        let stablePolls = 0
-
-        while (Date.now() - pollStart < 60000) {
-          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
-
-          const elapsed = Date.now() - pollStart
-          if (elapsed < MIN_STABILITY_TIME_MS) continue
-
-          const messagesCheck = await client.session.messages({ path: { id: args.session_id } })
-          const msgs = ((messagesCheck as { data?: unknown }).data ?? messagesCheck) as Array<unknown>
-          const currentMsgCount = msgs.length
-
-          if (currentMsgCount > 0 && currentMsgCount === lastMsgCount) {
-            stablePolls++
-            if (stablePolls >= STABILITY_POLLS_REQUIRED) break
-          } else {
-            stablePolls = 0
-            lastMsgCount = currentMsgCount
-          }
-        }
-
-        const messagesResult = await client.session.messages({
-          path: { id: args.session_id },
-        })
-
-        if (messagesResult.error) {
-          if (toastManager) {
-            toastManager.removeTask(taskId)
-          }
-          return `Error fetching result: ${messagesResult.error}\n\nSession ID: ${args.session_id}`
-        }
-
-        const messages = ((messagesResult as { data?: unknown }).data ?? messagesResult) as Array<{
-          info?: { role?: string; time?: { created?: number } }
-          parts?: Array<{ type?: string; text?: string }>
-        }>
-
-        const assistantMessages = messages
-          .filter((m) => m.info?.role === "assistant")
-          .sort((a, b) => (b.info?.time?.created ?? 0) - (a.info?.time?.created ?? 0))
-        const lastMessage = assistantMessages[0]
-
-        if (toastManager) {
-          toastManager.removeTask(taskId)
-        }
-
-        if (!lastMessage) {
-          return `No assistant response found.\n\nSession ID: ${args.session_id}`
-        }
-
-        // Extract text from both "text" and "reasoning" parts (thinking models use "reasoning")
-        const textParts = lastMessage?.parts?.filter((p) => p.type === "text" || p.type === "reasoning") ?? []
-        const textContent = textParts.map((p) => p.text ?? "").filter(Boolean).join("\n")
-
-        const duration = formatDuration(startTime)
-
-        return `Task continued and completed in ${duration}.
-
-Session ID: ${args.session_id}
-
----
-
-${textContent || "(No text output)"}
-
----
-To continue this session: session_id="${args.session_id}"`
+        return resumeSyncSession(resumeContext)
       }
 
       if (args.category && args.subagent_type) {
@@ -669,65 +321,31 @@ Available categories: ${categoryNames.join(", ")}`
 
             const startTime = new Date()
 
-            // Poll for completion (same logic as sync mode)
-            const timingCfg = getTimingConfig()
-            const POLL_INTERVAL_MS = timingCfg.POLL_INTERVAL_MS
-            const MAX_POLL_TIME_MS = timingCfg.MAX_POLL_TIME_MS
-            const MIN_STABILITY_TIME_MS = timingCfg.MIN_STABILITY_TIME_MS
-            const STABILITY_POLLS_REQUIRED = timingCfg.STABILITY_POLLS_REQUIRED
-            const pollStart = Date.now()
-            let lastMsgCount = 0
-            let stablePolls = 0
+            // Poll for completion using shared poller (with session status checking)
+            const pollResult = await pollForSessionCompletion({
+              client,
+              sessionID,
+              abort: ctx.abort,
+              checkSessionStatus: true,
+            })
 
-            while (Date.now() - pollStart < MAX_POLL_TIME_MS) {
-              if (ctx.abort?.aborted) {
-                return `Task aborted (was running in background mode).\n\nSession ID: ${sessionID}`
-              }
-
-              await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
-
-              const statusResult = await client.session.status()
-              const allStatuses = (statusResult.data ?? {}) as Record<string, { type: string }>
-              const sessionStatus = allStatuses[sessionID]
-
-              if (sessionStatus && sessionStatus.type !== "idle") {
-                stablePolls = 0
-                lastMsgCount = 0
-                continue
-              }
-
-              if (Date.now() - pollStart < MIN_STABILITY_TIME_MS) continue
-
-              const messagesCheck = await client.session.messages({ path: { id: sessionID } })
-              const msgs = ((messagesCheck as { data?: unknown }).data ?? messagesCheck) as Array<unknown>
-              const currentMsgCount = msgs.length
-
-              if (currentMsgCount === lastMsgCount) {
-                stablePolls++
-                if (stablePolls >= STABILITY_POLLS_REQUIRED) break
-              } else {
-                stablePolls = 0
-                lastMsgCount = currentMsgCount
-              }
+            if (pollResult.aborted) {
+              return `Task aborted (was running in background mode).\n\nSession ID: ${sessionID}`
             }
 
-            const messagesResult = await client.session.messages({ path: { id: sessionID } })
-            const messages = ((messagesResult as { data?: unknown }).data ?? messagesResult) as Array<{
-              info?: { role?: string; time?: { created?: number } }
-              parts?: Array<{ type?: string; text?: string }>
-            }>
+            if (pollResult.stalled) {
+              return `[STALL DETECTED] Task stalled — no activity detected within stall timeout.\n\nThe sub-agent became unresponsive. Consider retrying with session_id="${sessionID}" or adjusting the task prompt.\n\nSession ID: ${sessionID}`
+            }
 
-            const assistantMessages = messages
-              .filter((m) => m.info?.role === "assistant")
-              .sort((a, b) => (b.info?.time?.created ?? 0) - (a.info?.time?.created ?? 0))
-            const lastMessage = assistantMessages[0]
+            const { text: textContent, found } = await fetchLastAssistantMessage(client, sessionID)
 
-            if (!lastMessage) {
+            if (!found && !textContent.startsWith("Error")) {
               return `No assistant response found (task ran in background mode).\n\nSession ID: ${sessionID}`
             }
+            if (!found) {
+              return textContent // Error message from fetchLastAssistantMessage
+            }
 
-            const textParts = lastMessage?.parts?.filter((p) => p.type === "text" || p.type === "reasoning") ?? []
-            const textContent = textParts.map((p) => p.text ?? "").filter(Boolean).join("\n")
             const duration = formatDuration(startTime)
 
             return `SUPERVISED TASK COMPLETED SUCCESSFULLY
@@ -994,101 +612,37 @@ To continue this session: session_id="${task.sessionID}"`
           })
         }
 
-        // Poll for session completion with stability detection
-        // The session may show as "idle" before messages appear, so we also check message stability
-        const syncTiming = getTimingConfig()
-        const POLL_INTERVAL_MS = syncTiming.POLL_INTERVAL_MS
-        const MAX_POLL_TIME_MS = syncTiming.MAX_POLL_TIME_MS
-        const MIN_STABILITY_TIME_MS = syncTiming.MIN_STABILITY_TIME_MS
-        const STABILITY_POLLS_REQUIRED = syncTiming.STABILITY_POLLS_REQUIRED
-        const pollStart = Date.now()
-        let lastMsgCount = 0
-        let stablePolls = 0
-        let pollCount = 0
-
+        // Poll for session completion with stability detection and session status checking
         log("[delegate_task] Starting poll loop", { sessionID, agentToUse })
 
-        while (Date.now() - pollStart < MAX_POLL_TIME_MS) {
-          if (ctx.abort?.aborted) {
-            log("[delegate_task] Aborted by user", { sessionID })
-            if (toastManager && taskId) toastManager.removeTask(taskId)
-            return `Task aborted.\n\nSession ID: ${sessionID}`
-          }
-
-          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
-          pollCount++
-
-          const statusResult = await client.session.status()
-          const allStatuses = (statusResult.data ?? {}) as Record<string, { type: string }>
-          const sessionStatus = allStatuses[sessionID]
-
-          if (pollCount % 10 === 0) {
-            log("[delegate_task] Poll status", {
-              sessionID,
-              pollCount,
-              elapsed: Math.floor((Date.now() - pollStart) / 1000) + "s",
-              sessionStatus: sessionStatus?.type ?? "not_in_status",
-              stablePolls,
-              lastMsgCount,
-            })
-          }
-
-          if (sessionStatus && sessionStatus.type !== "idle") {
-            stablePolls = 0
-            lastMsgCount = 0
-            continue
-          }
-
-          const elapsed = Date.now() - pollStart
-          if (elapsed < MIN_STABILITY_TIME_MS) {
-            continue
-          }
-
-          const messagesCheck = await client.session.messages({ path: { id: sessionID } })
-          const msgs = ((messagesCheck as { data?: unknown }).data ?? messagesCheck) as Array<unknown>
-          const currentMsgCount = msgs.length
-
-          if (currentMsgCount === lastMsgCount) {
-            stablePolls++
-            if (stablePolls >= STABILITY_POLLS_REQUIRED) {
-              log("[delegate_task] Poll complete - messages stable", { sessionID, pollCount, currentMsgCount })
-              break
-            }
-          } else {
-            stablePolls = 0
-            lastMsgCount = currentMsgCount
-          }
-        }
-
-        if (Date.now() - pollStart >= MAX_POLL_TIME_MS) {
-          log("[delegate_task] Poll timeout reached", { sessionID, pollCount, lastMsgCount, stablePolls })
-        }
-
-        const messagesResult = await client.session.messages({
-          path: { id: sessionID },
+        const pollResult = await pollForSessionCompletion({
+          client,
+          sessionID,
+          abort: ctx.abort,
+          checkSessionStatus: true,
         })
 
-        if (messagesResult.error) {
-          return `Error fetching result: ${messagesResult.error}\n\nSession ID: ${sessionID}`
+        if (pollResult.aborted) {
+          log("[delegate_task] Aborted by user", { sessionID })
+          if (toastManager && taskId) toastManager.removeTask(taskId)
+          return `Task aborted.\n\nSession ID: ${sessionID}`
         }
 
-        const messages = ((messagesResult as { data?: unknown }).data ?? messagesResult) as Array<{
-          info?: { role?: string; time?: { created?: number } }
-          parts?: Array<{ type?: string; text?: string }>
-        }>
+        if (pollResult.stalled) {
+          log("[delegate_task] Stall detected", { sessionID })
+          if (toastManager && taskId) toastManager.removeTask(taskId)
+          subagentSessions.delete(sessionID)
+          return `[STALL DETECTED] Task stalled — no activity detected within stall timeout.\n\nThe sub-agent became unresponsive. Consider retrying with session_id="${sessionID}" or adjusting the task prompt.\n\nAgent: ${agentToUse}${args.category ? ` (category: ${args.category})` : ""}\nSession ID: ${sessionID}`
+        }
 
-        const assistantMessages = messages
-          .filter((m) => m.info?.role === "assistant")
-          .sort((a, b) => (b.info?.time?.created ?? 0) - (a.info?.time?.created ?? 0))
-        const lastMessage = assistantMessages[0]
+        const { text: textContent, found } = await fetchLastAssistantMessage(client, sessionID)
 
-        if (!lastMessage) {
+        if (!found && !textContent.startsWith("Error")) {
           return `No assistant response found.\n\nSession ID: ${sessionID}`
         }
-
-        // Extract text from both "text" and "reasoning" parts (thinking models use "reasoning")
-        const textParts = lastMessage?.parts?.filter((p) => p.type === "text" || p.type === "reasoning") ?? []
-        const textContent = textParts.map((p) => p.text ?? "").filter(Boolean).join("\n")
+        if (!found) {
+          return textContent // Error message from fetchLastAssistantMessage
+        }
 
         const duration = formatDuration(startTime)
 

@@ -1,16 +1,16 @@
 > [!WARNING]
-> **Cảnh báo bảo mật: trang web mạo danh**
+> **Security Warning: Impersonation Website**
 >
-> **ohmyopencode.com KHÔNG liên kết với dự án này.** Chúng tôi không vận hành hoặc xác nhận trang đó.
+> **ohmyopencode.com is NOT affiliated with this project.** We do not operate or endorse that site.
 >
-> OmoCli là phần mềm **miễn phí và mã nguồn mở**. **Không** tải installer hoặc nhập thông tin thanh toán trên các trang tự xưng là "chính thức."
+> OmoCli is **free and open-source** software. **Do not** download installers or enter payment information on sites claiming to be "official."
 >
-> ✅ Tải chính thức: https://github.com/aurora-freedom-project/omo-cli/releases
+> ✅ Official downloads: https://github.com/aurora-freedom-project/omo-cli/releases
 
 > [!NOTE]
 >
-> [![Orchestrator Labs — Orchestrator là agent lập trình như đội ngũ của bạn.](./.github/assets/sisyphuslabs.png?v=2)](https://sisyphuslabs.ai)
-> > **Chúng tôi đang xây dựng phiên bản hoàn chỉnh của Orchestrator để định hình tương lai của các frontier agent. <br />Tham gia waitlist [tại đây](https://sisyphuslabs.ai).**
+> [![Orchestrator Labs — Orchestrator is a coding agent like your team.](./.github/assets/sisyphuslabs.png?v=2)](https://sisyphuslabs.ai)
+> > **We're building the full version of Orchestrator to shape the future of frontier agents. <br />Join the waitlist [here](https://sisyphuslabs.ai).**
 
 <div align="center">
 
@@ -20,7 +20,7 @@
 
 </div>
 
-> Đây là lập trình ở một tầm cao mới — `omo-cli` đang hoạt động. Chạy agent nền song song, gọi các agent chuyên biệt như architect, researcher, frontend engineer. Sử dụng LSP/AST tools, MCP tuyển chọn, và lớp tương thích Claude Code hoàn chỉnh.
+> This is coding at a whole new level — `omo-cli` in action. Run parallel background agents, call specialized agents like architect, researcher, frontend engineer. Use LSP/AST tools, curated MCPs, and full Claude Code compatibility layer.
 
 <div align="center">
 
@@ -29,239 +29,252 @@
 [![GitHub Stars](https://img.shields.io/github/stars/aurora-freedom-project/omo-cli?color=ffcb47&labelColor=black&style=flat-square)](https://github.com/aurora-freedom-project/omo-cli/stargazers)
 [![License](https://img.shields.io/badge/license-SUL--1.0-white?labelColor=black&style=flat-square)](https://github.com/aurora-freedom-project/omo-cli/blob/master/LICENSE.md)
 
+**[🇻🇳 Phiên bản tiếng Việt](README.vi.md)**
+
 </div>
 
 ---
 
-## Mục lục
+## Table of Contents
 
 - [OMO CLI (Oh My OpenCode)](#omo-cli-oh-my-opencode)
-  - [Khỏi đọc README này](#khỏi-đọc-readme-này)
-  - [🪄 Từ khóa thần kỳ: `ultrawork`](#-từ-khóa-thần-kỳ-ultrawork)
-  - [Cài đặt](#cài-đặt)
-  - [Kiến trúc dự án](#kiến-trúc-dự-án)
+  - [Skip This README](#skip-this-readme)
+  - [🪄 The Magic Word: `ultrawork`](#-the-magic-word-ultrawork)
+  - [Installation](#installation)
+  - [Project Architecture](#project-architecture)
   - [Plugin Lifecycle](#plugin-lifecycle)
-  - [Hệ thống Profile](#hệ-thống-profile)
-  - [Kiến trúc Agent](#kiến-trúc-agent)
+  - [Profile System](#profile-system)
+  - [Agent Architecture](#agent-architecture)
   - [Background Agent & Tmux](#background-agent--tmux)
-  - [Hệ thống Hook (40+)](#hệ-thống-hook-40)
-  - [Hệ thống Tool (20+)](#hệ-thống-tool-20)
-  - [Định tuyến thông minh](#định-tuyến-thông-minh)
+  - [Hook System (40+)](#hook-system-40)
+  - [Tool System (20+)](#tool-system-20)
+  - [Smart Routing](#smart-routing)
   - [Code Intelligence](#code-intelligence)
-  - [Thư viện Skill (700+)](#thư-viện-skill-700)
-  - [Tham chiếu lệnh CLI](#tham-chiếu-lệnh-cli)
-  - [Tham chiếu cấu hình](#tham-chiếu-cấu-hình)
-  - [Xử lý sự cố](#xử-lý-sự-cố)
+  - [Skill Library (1243+)](#skill-library-1243)
+  - [CLI Reference](#cli-reference)
+  - [Configuration Reference](#configuration-reference)
+  - [Troubleshooting](#troubleshooting)
 
 # OMO CLI (Oh My OpenCode)
 
-[Claude Code](https://www.claude.com/product/claude-code) rất tuyệt.
-Nhưng nếu bạn là hacker, bạn sẽ phải lòng [OpenCode](https://github.com/sst/opencode).
-**BẮT ĐẦU VỚI SUBSCRIPTION ChatGPT, Claude, VÀ Gemini CỦA BẠN. OPENCODE BAO TRỌN TẤT CẢ.**
+[Claude Code](https://www.claude.com/product/claude-code) is great.
+But if you're a hacker, you'll fall in love with [OpenCode](https://github.com/sst/opencode).
+**START WITH YOUR ChatGPT, Claude, AND Gemini SUBSCRIPTIONS. OPENCODE COVERS THEM ALL.**
 
-- Mở rộng vô hạn. Tùy chỉnh vô hạn.
-- Không giật màn hình.
-- [LSP](https://opencode.ai/docs/lsp/), [linter, formatter](https://opencode.ai/docs/formatters/) tự kích hoạt theo từng file — và bạn có thể tinh chỉnh mọi thứ.
-- Phối hợp nhiều model. **Phân công chúng theo mục đích.**
-- Đầy đủ tính năng. Đẹp. Terminal không nghẹt. Hiệu năng cao.
+- Infinitely extensible. Infinitely customizable.
+- No screen tearing.
+- [LSP](https://opencode.ai/docs/lsp/), [linter, formatter](https://opencode.ai/docs/formatters/) auto-activate per file — and you can fine-tune everything.
+- Multi-model coordination. **Assign them by purpose.**
+- Full-featured. Beautiful. No terminal lag. High performance.
 
-Bạn còn nhớ lần đầu chuyển từ Windows sang Linux không? Cảm giác phấn khích khi cấu hình mọi thứ theo đúng ý mình?
-Trong thời đại mà cảm giác đó dường như đã mất, OpenCode mang nó trở lại.
+Remember the first time you switched from Windows to Linux? That thrill of configuring everything exactly how you wanted?
+In an era where that feeling seemed lost, OpenCode brings it back.
 
-Tôi đã giải quyết đường cong học tập bằng cách mã hóa trực tiếp những môi trường tốt nhất vào codebase này. Đưa tài liệu này cho một agent và để nó cài đặt hộ bạn.
+I've solved the learning curve by encoding the best environments directly into this codebase. Hand this documentation to an agent and let it install for you.
 
-## Khỏi đọc README này
+## Skip This README
 
-### Thời đại Agent rồi
-- **Dán link này vào Claude Code / AmpCode / Factory Droid / Cursor và yêu cầu nó giải thích.**
-  - Hỏi tại sao nó tốt, tại sao nó không chỉ là boilerplate setup, cái gì thực sự cải thiện.
-  - Nếu bạn là LLM agent, hãy giải thích cho người dùng những gì có thể thực hiện ngay với dự án này.
+### It's the Agent Era
+- **Paste this link into Claude Code / AmpCode / Factory Droid / Cursor and ask it to explain.**
+  - Ask why it's good, why it's not just boilerplate setup, what actually improves.
+  - If you're an LLM agent, explain to the user what they can do right now with this project.
 
 ```
 Hey please read this readme and tell me why it is different from other agent harness? why is this actually good? https://raw.githubusercontent.com/aurora-freedom-project/omo-cli/refs/heads/dev/README.md
 ```
 
-### 🪄 Từ khóa thần kỳ: `ultrawork`
+### 🪄 The Magic Word: `ultrawork`
 
-**Lười đọc hết? Chỉ cần thêm `ultrawork` (hoặc `ulw`) vào prompt.**
+**Too lazy to read everything? Just add `ultrawork` (or `ulw`) to your prompt.**
 
-Thế thôi. Mọi tính năng sẽ hoạt động như phép thuật — agent song song, tác vụ nền, khám phá sâu, và thực thi không ngừng cho đến khi hoàn thành. Agent tự xử lý phần còn lại.
+That's it. Every feature activates like magic — parallel agents, background tasks, deep exploration, and relentless execution until completion. The agent handles the rest.
 
-### Gặp Orchestrator
+### Meet Orchestrator
 
-![Gặp Orchestrator](.github/assets/sisyphus.png)
+![Meet Orchestrator](.github/assets/sisyphus.png)
 
-Trong thần thoại Hy Lạp, Orchestrator bị kết án lăn tảng đá lên đồi mãi mãi. LLM Agent chẳng làm gì sai, nhưng chúng cũng lăn "đá" của mình — suy nghĩ — mỗi ngày.
+In Greek mythology, Sisyphus was condemned to roll a boulder uphill forever. LLM Agents did nothing wrong, but they too roll their "boulder" — thinking — every day.
 
-Đây là agent chính của chúng tôi: **Orchestrator** (Claude Opus 4.6 Thinking). Dưới đây là công cụ Orchestrator dùng để tiếp tục lăn đá. *Mọi thứ bên dưới đều có thể tùy chỉnh. Lấy cái bạn muốn. Tất cả tính năng được bật mặc định.*
+This is our primary agent: **Orchestrator** (Claude Opus 4.6 Thinking). Below are the tools Orchestrator uses to keep rolling. *Everything below is customizable. Take what you want. All features enabled by default.*
 
-- **Đồng đội của Orchestrator** (10 Agent tuyển chọn chạy song song)
-- **Hỗ trợ LSP / AstGrep đầy đủ**: Refactor quyết đoán.
-- **Todo Continuation Enforcer**: Buộc agent tiếp tục nếu nó bỏ cuộc giữa chừng. **Đây là thứ giữ Orchestrator lăn đá.**
-- **Tương thích Claude Code**: Command, Agent, Skill, MCP, Hook
-- **MCP tuyển chọn**: Exa (Web Search), Context7 (Tài liệu real-time), Grep.app (Tìm kiếm code GitHub)
-- **700+ Skill đi kèm**: Skill cấp chuyên gia, lưu tập trung tại `~/.config/_skills_/` (symlink tự động từ `~/.opencode/skills/`)
+- **Orchestrator's Teammates** (10 curated Agents running in parallel)
+- **Full LSP / AstGrep Support**: Decisive refactoring.
+- **Todo Continuation Enforcer**: Forces the agent to continue if it gives up mid-task. **This is what keeps Orchestrator rolling.**
+- **Claude Code Compatible**: Commands, Agents, Skills, MCP, Hooks
+- **Curated MCPs**: Exa (Web Search), Context7 (Real-time docs), Grep.app (GitHub code search), AgentQL (Web data extraction)
+- **1243+ Built-in Skills**: Expert-level skills, centrally stored at `~/.config/_skills_/` (auto-symlinked from `~/.opencode/skills/`)
+- **Pipeline Task**: Multi-stage DAG execution — chain agents in sequence (analyst → architect → coder → reviewer)
+- **10 Design Commands**: `/design-audit`, `/design-polish`, `/design-critique`, and 7 more steering commands
 
 ---
 
-## Cài đặt
+## Installation
 
-> **Lưu ý:** Đây là bản fork tùy chỉnh với tính năng nâng cao. Phải cài từ source.
+> **Note:** This is a custom fork with advanced features. Must install from source.
 
-### Yêu cầu
+### Prerequisites
 
-- [Bun](https://bun.sh) — runtime & trình quản lý package
+- [Bun](https://bun.sh) — runtime & package manager
 - [OpenCode](https://github.com/sst/opencode) — terminal AI coding
 
-### Cài đặt nhanh
+### Quick Install
 
 ```bash
 # 1. Clone repo
 git clone https://github.com/aurora-freedom-project/omo-cli.git -b dev
 cd omo-cli
 
-# 2. Cài dependencies & build
+# 2. Install dependencies & build
 bun install && bun run build
 
-# 3. Đăng ký `omo-cli` làm lệnh toàn cục
+# 3. Register `omo-cli` as a global command
 bun link
 
-# 4. Cài plugin vào OpenCode (chọn profile tương tác)
+# 4. Install plugin into OpenCode (interactive profile selection)
 omo-cli install
 
-# Hoặc cài thẳng với profile cụ thể
+# Or install directly with a specific profile
 omo-cli install --profile=mike
 ```
 
-Sau `bun link`, lệnh `omo-cli` sử dụng được từ bất kỳ thư mục nào.
+After `bun link`, the `omo-cli` command is available from any directory.
 
-> **Mẹo**: Mỗi khi `git pull` code mới, chỉ cần chạy `bun run build` — lệnh `omo-cli` tự cập nhật vì nó trỏ thẳng đến `dist/`.
+> **Tip**: Whenever you `git pull` new code, just run `bun run build` — the `omo-cli` command auto-updates since it points directly to `dist/`.
 
-### Xác minh cài đặt
+### Verify Installation
 
 ```bash
-# Kiểm tra phiên bản
+# Check version
 omo-cli --version
 
-# Kiểm tra sức khỏe toàn hệ thống
+# Full system health check
 omo-cli doctor
 ```
 
-### Gỡ cài đặt
+### Uninstall
 
 ```bash
-# Xóa plugin khỏi config
+# Remove plugin from config
 jq '.plugin = [.plugin[] | select(. != "omo-cli")]' \
     ~/.config/opencode/opencode.json > /tmp/oc.json && \
     mv /tmp/oc.json ~/.config/opencode/opencode.json
 
-# Xóa profile
+# Remove profiles
 rm -rf ~/.config/opencode/profiles/
 ```
 
 ---
 
-## Kiến trúc dự án
+## Project Architecture
 
 ```
 omo-cli/
-├── bin/                          # Launcher cho phân phối npm
-│   ├── omo-cli.js                # Bộ điều phối binary theo platform
-│   └── platform.js               # Logic phát hiện platform
-├── dist/                         # Đầu ra build (tạo bởi `bun run build`)
-│   ├── index.js                  # Entry point plugin (2.65 MB)
-│   └── cli/index.js              # Entry point CLI (1.1 MB) ← `omo-cli` trỏ đến đây
+├── bin/                          # Launcher for npm distribution
+│   ├── omo-cli.js                # Platform-specific binary dispatcher
+│   └── platform.js               # Platform detection logic
+├── dist/                         # Build output (created by `bun run build`)
+│   ├── index.js                  # Plugin entry point (2.65 MB)
+│   └── cli/index.js              # CLI entry point (1.1 MB) ← `omo-cli` points here
 ├── assets/
-│   └── omo-cli.schema.json       # JSON Schema cho file config omo-cli.json
-├── script/                       # Script build & tooling
-│   ├── build-schema.ts           # Generate JSON Schema từ Zod
-│   ├── build-binaries.ts         # Compile binary cho multi-platform
-│   └── test-isolated.ts          # Test runner (process riêng biệt)
-├── profiles/                     # Template profile có sẵn
-│   ├── mike/omo-cli.json         # Profile baseline chính (cloud model)
-│   └── mike-local/omo-cli.json   # Profile local/offline (Qwen, GLM, Minimax)
+│   └── omo-cli.schema.json       # JSON Schema for omo-cli.json config file
+├── script/                       # Build & tooling scripts
+│   ├── build-schema.ts           # Generate JSON Schema from Zod
+│   ├── build-binaries.ts         # Compile binaries for multi-platform
+│   ├── fix-test-types.ts         # Auto-fix tsc errors in test files
+│   └── test-isolated.ts          # Test runner (isolated process)
+├── profiles/                     # Built-in profile templates
+│   ├── mike/omo-cli.json         # Main baseline profile (cloud models)
+│   └── mike-local/omo-cli.json   # Local/offline profile (Qwen, GLM, Minimax)
 ├── src/
-│   ├── index.ts                  # Đăng ký plugin & kết nối hook OpenCode
-│   ├── plugin-config.ts          # Nạp config (omo-cli.json)
-│   ├── plugin-state.ts           # Trạng thái runtime (model cache, v.v.)
-│   ├── agents/                   # 🧠 Định nghĩa Agent (10 agent)
-│   │   ├── orchestrator.ts       # Orchestrator — nhạc trưởng chính
-│   │   ├── worker.ts             # Worker — worker song song
-│   │   ├── coder.ts              # Planner — lập kế hoạch chiến lược (interview mode)
-│   │   ├── explorer.ts           # Explorer — duyệt codebase
-│   │   ├── researcher.ts         # Researcher — nghiên cứu chuyên sâu
-│   │   ├── conductor.ts          # Consultant — phân tích trước kế hoạch (gap detection)
-│   │   ├── architect.ts          # Architect — tư vấn kiến trúc
-│   │   ├── reviewer.ts           # Reviewer — review code
-│   │   ├── navigator.ts          # Conductor — master orchestrator (giữ todo list)
-│   │   └── vision.ts             # Vision — phân tích đa phương tiện
-│   ├── hooks/                    # 🪝 Hook vòng đời (40+ hook)
-│   │   ├── todo-continuation-enforcer.ts   # Giữ Orchestrator lăn đá
-│   │   ├── comment-checker/               # Hook chống AI slop
-│   │   ├── ralph-loop/                    # Retry loop cho lỗi
-│   │   ├── think-mode/                    # Bật/tắt thinking mở rộng
-│   │   ├── session-recovery/              # Phục hồi sau crash
-│   │   └── ...                            # 30+ hook khác
-│   ├── tools/                    # 🔧 Công cụ tùy chỉnh
-│   │   ├── ast-grep/             # Refactor dựa trên AST
+│   ├── index.ts                  # Plugin registration & OpenCode hook wiring
+│   ├── plugin-config.ts          # Config loading (omo-cli.json)
+│   ├── plugin-state.ts           # Runtime state (model cache, etc.)
+│   ├── agents/                   # 🧠 Agent Definitions (10 agents)
+│   │   ├── orchestrator.ts       # Orchestrator — primary conductor
+│   │   ├── worker.ts             # Worker — parallel worker
+│   │   ├── coder.ts              # Planner — strategic planning (interview mode)
+│   │   ├── explorer.ts           # Explorer — codebase traversal
+│   │   ├── researcher.ts         # Researcher — deep research
+│   │   ├── conductor.ts          # Consultant — pre-plan analysis (gap detection)
+│   │   ├── architect.ts          # Architect — architecture consulting
+│   │   ├── reviewer.ts           # Reviewer — code review
+│   │   ├── navigator.ts          # Conductor — master orchestrator (todo list keeper)
+│   │   └── vision.ts             # Vision — multimodal analysis
+│   ├── hooks/                    # 🪝 Lifecycle Hooks (40+ hooks)
+│   │   ├── todo-continuation-enforcer.ts   # Keeps Orchestrator rolling
+│   │   ├── comment-checker/               # Anti-AI-slop hook
+│   │   ├── ralph-loop/                    # Retry loop for errors
+│   │   ├── think-mode/                    # Toggle extended thinking
+│   │   ├── session-recovery/              # Crash recovery
+│   │   ├── workpad-tracker.ts         # Session artifact tracking
+│   │   └── ...                            # (see hook list below)
+│   ├── tools/                    # 🔧 Custom Tools
+│   │   ├── ast-grep/             # AST-based refactoring
 │   │   ├── lsp/                  # Language Server Protocol
-│   │   ├── background-task/      # Chạy agent song song
-│   │   ├── delegate-task/        # Ủy thác giữa agent
-│   │   ├── call-omo-agent/       # Gọi agent trực tiếp
-│   │   ├── look-at/              # Công cụ vision
-│   │   └── skill/                # Khám phá & thực thi skill
-│   ├── features/                 # 📦 Module tính năng (17 module)
+│   │   ├── background-task/      # Run agents in parallel
+│   │   ├── delegate-task/        # Inter-agent delegation
+│   │   ├── pipeline-task/        # Multi-stage DAG execution
+│   │   ├── call-omo-agent/       # Direct agent invocation
+│   │   ├── look-at/              # Vision tool
+│   │   └── skill/                # Skill discovery & execution
+│   ├── features/                 # 📦 Feature Modules (22 modules)
 │   │   ├── code-intel/              # 🧬 Code Intelligence (AST indexing)
-│   │   ├── opencode-skill-loader/   # Nạp skill từ ~/.config/_skills_/
-│   │   ├── builtin-skills/          # Skill chuyên gia đi kèm
-│   │   ├── builtin-commands/        # Lệnh builtin (slash command)
-│   │   ├── background-agent/        # Runtime agent nền
-│   │   ├── boulder-state/           # Trạng thái "lăn đá" persistence
-│   │   ├── tmux-subagent/           # Thực thi song song qua tmux
-│   │   ├── context-injector/        # Inject context động
-│   │   ├── hook-message-injector/   # Inject message từ hook vào thread
-│   │   ├── skill-mcp-manager/       # Quản lý MCP server cho skill
-│   │   ├── task-toast-manager/      # Toast notification tác vụ nền
-│   │   ├── mcp-oauth/               # OAuth flow cho MCP server
-│   │   ├── claude-code-agent-loader/    # Nạp agent từ .claude config
-│   │   ├── claude-code-command-loader/  # Nạp command từ .claude config
-│   │   ├── claude-code-mcp-loader/      # Nạp MCP từ .claude config
-│   │   ├── claude-code-plugin-loader/   # Nạp plugin từ .claude config
-│   │   └── claude-code-session-state/   # Quản lý session state Claude Code
-│   ├── mcp/                      # 🌐 Cấu hình MCP server
-│   │   ├── context7.ts           # Tài liệu real-time
-│   │   ├── grep-app.ts           # Tìm kiếm code GitHub
-│   │   └── websearch.ts          # Tìm kiếm web Exa
-│   ├── cli/                      # 💻 Lệnh CLI
+│   │   ├── opencode-skill-loader/   # Load skills from ~/.config/_skills_/
+│   │   ├── builtin-skills/          # Built-in expert skills
+│   │   ├── builtin-commands/        # Built-in commands (slash commands)
+│   │   ├── background-agent/        # Background agent runtime
+│   │   ├── boulder-state/           # "Rolling boulder" state persistence
+│   │   ├── tmux-subagent/           # Parallel execution via tmux
+│   │   ├── context-injector/        # Dynamic context injection
+│   │   ├── hook-message-injector/   # Inject hook messages into thread
+│   │   ├── skill-mcp-manager/       # MCP server management for skills
+│   │   ├── task-toast-manager/      # Background task toast notifications
+│   │   ├── mcp-oauth/               # OAuth flow for MCP servers
+│   │   ├── claude-code-agent-loader/    # Load agents from .claude config
+│   │   ├── claude-code-command-loader/  # Load commands from .claude config
+│   │   ├── claude-code-mcp-loader/      # Load MCPs from .claude config
+│   │   ├── claude-code-plugin-loader/   # Load plugins from .claude config
+│   │   ├── claude-code-session-state/   # Claude Code session state management
+│   │   ├── reasoning-bank/          # Pattern learning & trajectory tracking
+│   │   ├── perf-benchmark/           # Performance benchmarks (p50/p95/p99)
+│   │   ├── claim-release/            # Exclusive resource locking
+│   │   └── workflow-unifier/         # WORKFLOW.md discovery & unification
+│   ├── mcp/                      # 🌐 MCP Server Configuration
+│   │   ├── agentql.ts            # Web data extraction (AgentQL)
+│   │   ├── context7.ts           # Real-time documentation
+│   │   ├── grep-app.ts           # GitHub code search
+│   │   └── websearch.ts          # Exa web search
+│   ├── cli/                      # 💻 CLI Commands
 │   │   ├── install.ts            # `omo-cli install`
-│   │   ├── config-manager.ts     # Tạo & quản lý config
-│   │   ├── profile-manager.ts    # CRUD profile
-│   │   ├── profile-wizard.ts     # Trình tạo profile tương tác
+│   │   ├── config-manager.ts     # Config creation & management
+│   │   ├── profile-manager.ts    # Profile CRUD
+│   │   ├── profile-wizard.ts     # Interactive profile wizard
 │   │   ├── doctor/               # `omo-cli doctor`
 │   │   ├── run/                  # `omo-cli run`
-│   │   └── skills-*.ts           # Import/scan/adapt/sync skill
-│   ├── config/                   # Schema config & validation
-│   ├── shared/                   # Tiện ích dùng chung (55+ module)
-│   └── plugin-handlers/          # Xử lý sự kiện plugin OpenCode
+│   │   └── skills-*.ts           # Import/scan/adapt/sync skills
+│   ├── config/                   # Config schema & validation
+│   ├── shared/                   # Cross-cutting utilities (57+ modules)
+│   │   └── skills-brain-query.ts # SurrealDB Brain query (hybrid search, BM25)
+│   └── plugin-handlers/          # OpenCode plugin event handlers
 ├── package.json
 ├── tsconfig.json
-└── AGENTS.md                     # Tài liệu hành vi agent
+└── AGENTS.md                     # Agent behavior documentation
 ```
 
-### Quyết định thiết kế chính
+### Key Design Decisions
 
-| Quyết định | Lý do |
+| Decision | Rationale |
 |----------|-----------|
-| **Kiến trúc plugin** | Hook vào hệ thống plugin gốc của OpenCode — zero patch vào core OpenCode |
-| **Config theo profile** | Một file JSON điều khiển toàn bộ agent, model, feature — chuyển đổi tức thì |
-| **Unified Skills (`~/.config/_skills_/`)** | Single source of truth — `~/.opencode/skills` là symlink tự động, chia sẻ với mọi công cụ AI |
-| **`bun link` cho dev** | `dist/cli/index.js` là bin target — rebuild là lệnh tự cập nhật |
+| **Plugin architecture** | Hooks into OpenCode's native plugin system — zero patches to OpenCode core |
+| **Profile-based config** | One JSON file controls all agents, models, features — instant switching |
+| **Unified Skills (`~/.config/_skills_/`)** | Single source of truth — `~/.opencode/skills` auto-symlinks, shared with all AI tools |
+| **`bun link` for dev** | `dist/cli/index.js` is the bin target — rebuild = command auto-updates |
 
 ---
 
 ## Plugin Lifecycle
 
-Khi OpenCode khởi động, plugin `omo-cli` đăng ký qua hàm `OmoCliPlugin(ctx)`. Đây là luồng khởi tạo:
+When OpenCode starts, the `omo-cli` plugin registers via `OmoCliPlugin(ctx)`. Here's the initialization flow:
 
 ```
 OpenCode Boot
@@ -269,9 +282,9 @@ OpenCode Boot
  v
 OmoCliPlugin(ctx)
  |
- +--[1] loadPluginConfig()        Nap omo-cli.json tu .opencode/
- +--[2] startTmuxCheck()          Kiem tra tmux kha dung
- +--[3] Register 40+ hooks        Tuy dieu kien disabled_hooks
+ +--[1] loadPluginConfig()        Load omo-cli.json from .opencode/
+ +--[2] startTmuxCheck()          Check tmux availability
+ +--[3] Register 40+ hooks        Conditional on disabled_hooks
  +--[4] Register 20+ tools        LSP, AST, Session, Code-Intel, ...
  +--[5] Discover skills            Builtin + Global + Project
  +--[6] Start MCP servers          Context7, Grep.app, Exa
@@ -281,32 +294,32 @@ OmoCliPlugin(ctx)
 Return { tool, chat.message, event, tool.execute.before/after }
 ```
 
-Plugin trả về **5 lifecycle hooks**, OpenCode gọi chúng tại các thời điểm khác nhau:
+The plugin returns **5 lifecycle hooks**, called by OpenCode at different points:
 
-| Lifecycle Point | Khi nào | Vai trò |
-|----------------|---------|----------|
-| `chat.message` | Mỗi tin nhắn người dùng | Variant injection, keyword detection, Ralph Loop |
+| Lifecycle Point | When | Purpose |
+|----------------|------|---------|
+| `chat.message` | Every user message | Variant injection, keyword detection, Ralph Loop |
 | `event` | Session created/deleted, error | Recovery, auto-update, notification |
-| `tool.execute.before` | Trước khi tool chạy | Arg injection, routing, question blocking |
-| `tool.execute.after` | Sau khi tool chạy | Output truncation, error recovery |
-| `messages.transform` | Transform thread | Context injection, thinking validation |
+| `tool.execute.before` | Before tool runs | Arg injection, routing, question blocking |
+| `tool.execute.after` | After tool runs | Output truncation, error recovery |
+| `messages.transform` | Thread transform | Context injection, thinking validation |
 
-> **Thiết kế zero-patch**: Plugin hook vào OpenCode qua API chính thức. Không sửa đổi core OpenCode.
+> **Zero-patch design**: Plugin hooks into OpenCode via official API. No modifications to OpenCode core.
 
 ---
 
-## Hệ thống Profile
+## Profile System
 
-`omo-cli` sử dụng hệ thống **cài đặt hoàn toàn theo profile**. Quên mấy flag phức tạp. Mọi thứ được bao gói trực tiếp trong template profile `omo-cli.json`.
+`omo-cli` uses a fully **profile-driven configuration** system. Forget complex flags. Everything is packaged directly in the `omo-cli.json` profile template.
 
-Mỗi profile là một vũ trụ độc lập. Dùng `omo-cli profile apply <tên>` để cập nhật workspace với ma trận hoàn chỉnh gồm cài đặt Agent, lựa chọn Model, và thẻ Feature được điều khiển bởi định nghĩa JSON của profile đó. Mọi thứ neo vào mô hình thư mục `.opencode`.
+Each profile is an independent universe. Use `omo-cli profile apply <name>` to update your workspace with a complete matrix of Agent settings, Model selection, and Feature flags driven by that profile's JSON definition. Everything anchors to the `.opencode` directory model.
 
-### Profile có sẵn
+### Built-in Profiles
 
-#### Profile `mike` — Cloud (baseline chính)
+#### Profile `mike` — Cloud (main baseline)
 
-| Tầng Agent | Vai trò | Model được chọn |
-|-----------|---------|--------|
+| Agent Tier | Roles | Selected Model |
+|-----------|-------|----------------|
 | 🧠 **Brain** | Orchestrator, Planner, Conductor, Architect | Opus 4.6 Thinking |
 | ⚡ **Worker** | Consultant, Reviewer, Worker | Sonnet 4.5 Thinking |
 | 👁️ **Vision** | Vision | Gemini 3 Pro Image |
@@ -314,30 +327,30 @@ Mỗi profile là một vũ trụ độc lập. Dùng `omo-cli profile apply <t�
 
 #### Profile `mike-local` — Local/Offline
 
-| Tầng Agent | Vai trò | Model được chọn |
-|-----------|---------|--------|
+| Agent Tier | Roles | Selected Model |
+|-----------|-------|----------------|
 | 🧠 **Brain** | Orchestrator, Planner, Conductor, Architect, Consultant, Reviewer, Vision | Qwen 3.5 397B |
 | ⚡ **Worker** | Worker | Qwen3 Coder Next |
 | 🚀 **IO** | Explorer | Minimax M2.5 |
 | 📚 **Research** | Researcher | GLM-5 |
 
-### Lệnh Profile
+### Profile Commands
 
 ```bash
-omo-cli profile list            # Liệt kê tất cả profile
-omo-cli profile show            # Xem profile đang hoạt động
-omo-cli profile apply mike      # Áp dụng profile cloud
-omo-cli profile apply mike-local # Áp dụng profile local
-omo-cli profile create          # Tạo profile tùy chỉnh (tương tác)
+omo-cli profile list            # List all profiles
+omo-cli profile show            # Show active profile
+omo-cli profile apply mike      # Apply cloud profile
+omo-cli profile apply mike-local # Apply local profile
+omo-cli profile create          # Create custom profile (interactive)
 ```
 
 ---
 
-## Kiến trúc Agent
+## Agent Architecture
 
-Agent được chia thành **10 thực thể cụ thể** phục vụ trong **8 danh mục chức năng**.
+Agents are divided into **10 specific entities** serving **8 functional categories**.
 
-### Luồng điều phối (Orchestration Flow)
+### Orchestration Flow
 
 ```
 User Prompt
@@ -345,52 +358,53 @@ User Prompt
       v
 +-----------------------------+
 |   Orchestrator (Opus 4.6)   |  BM25 keyword scoring
-|   Phan tich + lap ke hoach  |  Auto-route den dung agent
+|   Analyze + plan            |  Auto-route to right agent
 +-----------------------------+
       |
-      +-- delegate_task -------> Worker (Sonnet 4.5)   [dong bo]
-      |                          Ket qua tra ve parent
+      +-- delegate_task -------> Worker (Sonnet 4.5)   [sync]
+      |                          Results return to parent
       |
-      +-- call_omo_agent ------> Bat ky agent nao       [dong bo]
-      |                          Routing tu dong
+      +-- call_omo_agent ------> Any agent              [sync]
+      |                          Auto-routing
       |
-      +-- background_task -----> Background Agent       [bat dong bo]
-      |                          Song song qua tmux
-      |                          Toast khi xong
+      +-- background_task -----> Background Agent       [async]
+      |                          Parallel via tmux
+      |                          Toast on completion
       v
 +-----------------------------+
 |   Todo Continuation         |
 |   Enforcer                  |<--> Boulder State
-|   Buoc agent tiep tuc       |     (persistence)
+|   Forces agent to continue  |     (persistence)
 +-----------------------------+
       |
       v
-  Hoan thanh / Tiep tuc
+   Complete / Continue
 ```
 
-**3 cơ chế ủy thác:**
+**4 delegation mechanisms:**
 
-| Cơ chế | Kiểu | Mô tả |
-|--------|------|--------|
-| `delegate_task` | Đồng bộ | Agent con chạy trong session con, kết quả trả về parent. Dùng cho tác vụ cần kết quả ngay. |
-| `call_omo_agent` | Đồng bộ | Gọi agent cụ thể theo tên. Routing tự động dựa BM25 keyword scoring. |
-| `background_task` | Bất đồng bộ | Chạy song song qua tmux. Toast notification khi xong. Không block Orchestrator. |
+| Mechanism | Type | Description |
+|-----------|------|-------------|
+| `delegate_task` | Sync | Child agent runs in sub-session, results return to parent. For tasks needing immediate results. |
+| `pipeline_task` | Sync | Multi-stage DAG — chains agents sequentially (analyst → architect → coder → reviewer). Output of stage N feeds into stage N+1. |
+| `call_omo_agent` | Sync | Call specific agent by name. Auto-routing via BM25 keyword scoring. |
+| `background_task` | Async | Runs in parallel via tmux. Toast notification on completion. Doesn't block Orchestrator. |
 
-### Chuỗi dự phòng (Fallback Chain)
+### Fallback Chain
 
-Khi model gặp lỗi (timeout, rate limit, server lỗi), logic omo-cli tự động nhảy xuống chuỗi dự phòng:
+When a model encounters errors (timeout, rate limit, server error), omo-cli automatically falls through the fallback chain:
 ```
-Tang Brain:   Opus 4.6  -->  Sonnet 4.5  -->  Gemini Pro  -->  big-pickle
-Tang Worker:  Sonnet 4.5  -->  Gemini Pro  -->  big-pickle
-Tang Vision:  Gemini Pro  -->  Gemini Flash  -->  big-pickle
-Tang IO:      Minimax M2.1  -->  Gemini Flash  -->  big-pickle
+Brain Tier:   Opus 4.6  -->  Sonnet 4.5  -->  Gemini Pro  -->  big-pickle
+Worker Tier:  Sonnet 4.5  -->  Gemini Pro  -->  big-pickle
+Vision Tier:  Gemini Pro  -->  Gemini Flash  -->  big-pickle
+IO Tier:      Minimax M2.1  -->  Gemini Flash  -->  big-pickle
 ```
 
 ---
 
 ## Background Agent & Tmux
 
-Khi Orchestrator cần chạy nhiều tác vụ song song, nó dùng `background_task` tool. Mỗi tác vụ nền chạy trong một tmux pane riêng biệt.
+When Orchestrator needs to run multiple tasks in parallel, it uses the `background_task` tool. Each background task runs in a separate tmux pane.
 
 ```
 +-------------------------------------------------------+
@@ -406,7 +420,7 @@ Khi Orchestrator cần chạy nhiều tác vụ song song, nó dùng `background
                         v              v
                   +------------------------+
                   |  Task Toast Manager    |
-                  |  Notification khi xong |
+                  |  Notification on done  |
                   +------------------------+
                         |
                         v
@@ -417,81 +431,81 @@ Khi Orchestrator cần chạy nhiều tác vụ song song, nó dùng `background
                   +------------------------+
 ```
 
-**Thành phần chính:**
+**Key components:**
 
-| Module | File | Chức năng |
-|--------|------|-----------|
-| `BackgroundManager` | `features/background-agent/` | Quản lý vòng đời tác vụ nền, concurrent limits |
-| `TmuxSessionManager` | `features/tmux-subagent/` | Tạo/quản lý tmux pane cho mỗi agent con |
-| `TaskToastManager` | `features/task-toast-manager/` | Toast notification qua TUI khi tác vụ xong |
-| `BoulderState` | `features/boulder-state/` | Persist trạng thái "lăn đá" across session restart |
+| Module | File | Function |
+|--------|------|----------|
+| `BackgroundManager` | `features/background-agent/` | Background task lifecycle management, concurrent limits |
+| `TmuxSessionManager` | `features/tmux-subagent/` | Create/manage tmux panes for each sub-agent |
+| `TaskToastManager` | `features/task-toast-manager/` | Toast notifications via TUI when tasks complete |
+| `BoulderState` | `features/boulder-state/` | Persist "rolling boulder" state across session restarts |
 
 ---
 
-## Hệ thống Hook (40+)
+## Hook System (40+)
 
-40+ hook chạy xuyên suốt lifecycle, phân loại theo 6 danh mục:
+40+ hooks run throughout the lifecycle, categorized into 6 groups:
 
 ```
 chat.message --------+
                      |    +-----------------------------+
-event ---------------+--->|       Hook Pipeline         |
+event ---------------+---->|       Hook Pipeline         |
                      |    |                             |
-tool.execute.before -+    |  40+ hooks x 6 danh muc     |
+tool.execute.before -+    |  40+ hooks x 6 categories  |
 tool.execute.after --+    |                             |
-                     |    |  Moi hook co the:            |
-messages.transform --+    |   - Thay doi input/output   |
+                     |    |  Each hook can:              |
+messages.transform --+    |   - Modify input/output     |
                           |   - Inject context           |
                           |   - Block / retry            |
-                          |   - Bat event                |
+                          |   - Fire events              |
                           +-----------------------------+
 ```
 
-| Danh mục | Hook | Mục đích |
-|----------|------|----------|
-| **Persistence** | `todo-continuation-enforcer` | Buộc agent tiếp tục nếu bỏ cuộc giữa chừng |
-| | `session-recovery` | Phục hồi session sau crash/timeout |
-| | `boulder-state` | Persist trạng thái across restart |
-| **Chất lượng** | `comment-checker` | Chống AI slop — từ chối comment vô nghĩa |
-| | `thinking-block-validator` | Validate thinking blocks hợp lệ |
-| | `edit-error-recovery` | Tự sửa lỗi edit file |
-| | `coder-md-only` | Enforce markdown format cho Coder |
-| **Context** | `context-injector` | Inject context động vào thread |
-| | `compaction-context-injector` | Bổ sung context khi compaction |
+| Category | Hook | Purpose |
+|----------|------|---------|
+| **Persistence** | `todo-continuation-enforcer` | Forces agent to continue if it gives up mid-task |
+| | `session-recovery` | Recover session after crash/timeout |
+| | `boulder-state` | Persist state across restarts |
+| **Quality** | `comment-checker` | Anti-AI-slop — rejects meaningless comments |
+| | `thinking-block-validator` | Validate thinking blocks are valid |
+| | `edit-error-recovery` | Auto-fix file edit errors |
+| | `coder-md-only` | Enforce markdown format for Coder |
+| **Context** | `context-injector` | Dynamic context injection into thread |
+| | `compaction-context-injector` | Supplement context during compaction |
 | | `rules-injector` | Inject `.opencode/rules` |
-| | `directory-agents-injector` | Inject `AGENTS.md` vào context |
-| | `directory-readme-injector` | Inject `README.md` dự án |
-| | `memory-capture` | Tự động lưu kiến thức vào SurrealDB |
-| **Routing** | `keyword-detector` | Phát hiện keyword trigger (ultrawork, v.v.) |
-| | `auto-slash-command` | Tự động matching slash command |
-| | `navigator` / `conductor` | Điều phối tác vụ phức tạp |
-| | `category-skill-reminder` | Gợi ý skill phù hợp theo danh mục |
-| | `agent-usage-reminder` | Nhắc sử dụng agent chuyên biệt |
-| **Recovery** | `ralph-loop` | Retry loop tự phục hồi cho lỗi recurring |
-| | `anthropic-context-window-limit-recovery` | Recovery khi context window đầy |
-| | `delegate-task-retry` | Retry tác vụ ủy thác thất bại |
-| | `context-window-monitor` | Giám sát và cảnh báo context window |
-| **UX** | `session-notification` | Thông báo khi session hoàn thành |
-| | `background-notification` | Thông báo tác vụ nền |
-| | `auto-update-checker` | Kiểm tra và thông báo phiên bản mới |
-| | `think-mode` | Bật/tắt extended thinking |
-| | `start-work` | Hook khởi đầu phiên làm việc |
-| | `worker-notepad` | Notepad nội bộ cho Worker |
-| | `question-label-truncator` | Cắt ngắn nhãn câu hỏi TUI |
-| | `subagent-question-blocker` | Block câu hỏi của subagent |
-| | `non-interactive-env` | Hỗ trợ môi trường non-interactive |
-| | `tool-output-truncator` | Cắt ngắn output tool quá dài |
-| | `empty-task-response-detector` | Phát hiện response rỗng |
-| | `task-resume-info` | Thông tin resume tác vụ |
-| **Metering** | `cost-metering` | Theo dõi token usage và ước tính chi phí USD mỗi session |
+| | `directory-agents-injector` | Inject `AGENTS.md` into context |
+| | `directory-readme-injector` | Inject project `README.md` |
+| | `memory-capture` | Auto-save knowledge to SurrealDB |
+| **Routing** | `keyword-detector` | Detect keyword triggers (ultrawork, etc.) |
+| | `auto-slash-command` | Auto-match slash commands |
+| | `navigator` / `conductor` | Complex task orchestration |
+| | `category-skill-reminder` | Suggest relevant skills by category |
+| | `agent-usage-reminder` | Remind to use specialized agents |
+| **Recovery** | `ralph-loop` | Self-healing retry loop for recurring errors |
+| | `anthropic-context-window-limit-recovery` | Recovery when context window is full |
+| | `delegate-task-retry` | Retry failed delegation tasks |
+| | `context-window-monitor` | Monitor and warn about context window |
+| **UX** | `session-notification` | Notify when session completes |
+| | `background-notification` | Background task notifications |
+| | `auto-update-checker` | Check and notify about new versions |
+| | `think-mode` | Toggle extended thinking |
+| | `start-work` | Work session start hook |
+| | `worker-notepad` | Internal notepad for Worker |
+| | `question-label-truncator` | Truncate TUI question labels |
+| | `subagent-question-blocker` | Block subagent questions |
+| | `non-interactive-env` | Non-interactive environment support |
+| | `tool-output-truncator` | Truncate long tool output |
+| | `empty-task-response-detector` | Detect empty responses |
+| | `task-resume-info` | Task resume information |
+| **Metering** | `cost-metering` | Track token usage and estimate USD cost per session |
 
-> **Tắt hook**: Thêm tên hook vào `disabled_hooks` trong `omo-cli.json`. Xem [Tham chiếu cấu hình](#tham-chiếu-cấu-hình).
+> **Disable hooks**: Add hook names to `disabled_hooks` in `omo-cli.json`. See [Configuration Reference](#configuration-reference).
 
 ---
 
-## Hệ thống Tool (20+)
+## Tool System (20+)
 
-20+ tool được đăng ký vào OpenCode, phân loại theo 6 nhóm:
+20+ tools registered into OpenCode, categorized into 6 groups:
 
 ```
 +-----------------+   +-----------------+   +-----------------+
@@ -503,39 +517,39 @@ messages.transform --+    |   - Thay doi input/output   |
 | prepare_rename  |   +-----------------+   +-----------------+
 | rename          |   | Code Intel (4)  |
 +-----------------+   | code_search     |   +-----------------+
-                      | code_callers    |   | Orchestrate (4) |
+                      | code_callers    |   | Orchestrate (5) |
 +-----------------+   | code_deps       |   | delegate_task   |
-|  Utility (5)    |   | code_overview   |   | call_omo_agent  |
-| look_at         |   +-----------------+   | background_out  |
-| skill           |                         | background_cncl |
-| skill_mcp       |                         +-----------------+
-| slashcommand    |
+|  Utility (5)    |   | code_overview   |   | pipeline_task   |
+| look_at         |   +-----------------+   | call_omo_agent  |
+| skill           |                         | background_out  |
+| skill_mcp       |                         | background_cncl |
+| slashcommand    |                         +-----------------+
 | interactv_bash  |
 +-----------------+
 ```
 
-| Nhóm | Tools | Mô tả |
-|------|-------|--------|
-| **LSP** | `lsp_goto_definition`, `lsp_find_references`, `lsp_symbols`, `lsp_diagnostics`, `lsp_prepare_rename`, `lsp_rename` | Language Server Protocol — refactor chính xác, navigation |
-| **AST** | `ast_grep_search`, `ast_grep_replace` | Tìm kiếm/thay thế dựa trên cấu trúc AST |
-| **Session** | `session_list`, `session_read`, `session_search`, `session_info` | Quản lý và truy vấn lịch sử session |
-| **Code Intel** | `code_search`, `code_callers`, `code_deps`, `code_overview` | BM25 search, graph analysis (xem [Code Intelligence](#code-intelligence)) |
-| **Orchestration** | `delegate_task`, `call_omo_agent`, `background_output`, `background_cancel` | Ủy thác và quản lý tác vụ nền |
+| Group | Tools | Description |
+|-------|-------|-------------|
+| **LSP** | `lsp_goto_definition`, `lsp_find_references`, `lsp_symbols`, `lsp_diagnostics`, `lsp_prepare_rename`, `lsp_rename` | Language Server Protocol — precise refactoring, navigation |
+| **AST** | `ast_grep_search`, `ast_grep_replace` | Structure-based AST search/replace |
+| **Session** | `session_list`, `session_read`, `session_search`, `session_info` | Manage and query session history |
+| **Code Intel** | `code_search`, `code_callers`, `code_deps`, `code_overview` | BM25 search, graph analysis (see [Code Intelligence](#code-intelligence)) |
+| **Orchestration** | `delegate_task`, `pipeline_task`, `call_omo_agent`, `background_output`, `background_cancel` | Delegation, multi-stage pipelines, and background task management |
 | **Utility** | `look_at`, `skill`, `skill_mcp`, `slashcommand`, `interactive_bash` | Vision, skill execution, command routing |
 
 ---
 
-## Định tuyến thông minh
+## Smart Routing
 
-Engine định tuyến sử dụng **BM25 keyword scoring** trên prompt để khớp tức thì đến đúng Agent và Sub-skill mà không cần chỉ dẫn từ người dùng. Bao phủ định tuyến phức tạp trên 12 loại tác vụ chức năng riêng biệt (Architecture vs DevOps vs Code-gen) và phát hiện 15+ ngôn ngữ lập trình trực tiếp từ luồng hướng dẫn.
+The routing engine uses **BM25 keyword scoring** on the prompt to instantly match the right Agent and Sub-skill without user guidance. Covers complex routing across 12 distinct functional task types (Architecture vs DevOps vs Code-gen) and detects 15+ programming languages directly from the instruction flow.
 
 ---
 
 ## Code Intelligence
 
-`omo-cli` tích hợp **Code Intelligence** — hệ thống phân tích cấu trúc mã nguồn tự động sử dụng AST-grep và SurrealDB.
+`omo-cli` integrates **Code Intelligence** — an automatic code structure analysis system using AST-grep and SurrealDB.
 
-### Cách hoạt động
+### How It Works
 
 ```
 +----------------+    +----------------+    +----------------+
@@ -548,151 +562,175 @@ Engine định tuyến sử dụng **BM25 keyword scoring** trên prompt để k
   Incremental hash                       Graph Relations
 ```
 
-1. **AST Parsing** — Dùng [ast-grep](https://ast-grep.github.io/) phân tích cấu trúc: function, class, interface, type, import/export
-2. **Incremental Indexing** — Chỉ index file thay đổi (so sánh hash). Git-aware.
-3. **SurrealDB Storage** — Lưu trữ code elements + quan hệ gọi/phụ thuộc trong graph database
-4. **Auto-init** — Tự động chạy nền khi plugin load. Không block workflow.
+1. **AST Parsing** — Uses [ast-grep](https://ast-grep.github.io/) for structure analysis: functions, classes, interfaces, types, imports/exports
+2. **Incremental Indexing** — Only indexes changed files (hash comparison). Git-aware.
+3. **SurrealDB Storage** — Stores code elements + call/dependency relationships in graph database
+4. **Auto-init** — Runs automatically in background when plugin loads. Non-blocking.
 
-### 4 Tools cho Agent
+### 4 Tools for Agents
 
-| Tool | Mô tả |
-|------|--------|
-| `code_search` | Tìm kiếm BM25 trên function, class, interface theo tên hoặc mô tả |
-| `code_callers` | Phân tích blast radius — ai gọi hàm này? |
-| `code_deps` | Biểu đồ phụ thuộc file — import gì, ai import nó |
-| `code_overview` | Tổng quan cấu trúc project — đếm file, element, exported symbols |
+| Tool | Description |
+|------|-------------|
+| `code_search` | BM25 search on functions, classes, interfaces by name or description |
+| `code_callers` | Blast radius analysis — who calls this function? |
+| `code_deps` | File dependency graph — what it imports, who imports it |
+| `code_overview` | Project structure overview — file, element, exported symbol counts |
 
-### Ngôn ngữ hỗ trợ
+### Supported Languages
 
-TypeScript, JavaScript, Python, Go, Rust, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin, Scala, và nhiều hơn nữa.
+TypeScript, JavaScript, Python, Go, Rust, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin, Scala, and more.
 
-### Thiết lập
+### Setup
 
 ```bash
-# Khởi động SurrealDB (chỉ lần đầu)
+# Start SurrealDB (first time only)
 omo-cli memory start
 
-# Index tự động chạy nền khi bạn mở OpenCode
-# Hoặc chạy thủ công nếu cần:
+# Auto-indexing runs in background when you open OpenCode
+# Or run manually if needed:
 omo-cli index
 ```
 
-> **Lưu ý**: Code Intelligence là tính năng tùy chọn. Nếu Docker/SurrealDB không khả dụng, plugin tiếp tục hoạt động bình thường — chỉ 4 tool trên bị vô hiệu hóa.
+> **Note**: Code Intelligence is optional. If Docker/SurrealDB is unavailable, the plugin continues working normally — only the 4 tools above are disabled.
+
+### SurrealDB Brain Integration
+
+omo-cli integrates with **Omni Brain** (SurrealDB) for enhanced hybrid skill search:
+
+| Feature | Description |
+|---------|-------------|
+| **Hybrid Search** | BM25 full-text + Vector embedding + RRF fusion |
+| **Graceful Fallback** | Brain unavailable → auto-fallback to filesystem |
+| **Content Hash** | Smart reconciliation — only syncs changed skills |
+| **Event Sourcing** | `execution_event` schema for audit trail |
+
+Configuration in `omo-cli.json`:
+```json
+{
+  "memory": {
+    "enabled": true,
+    "mode": "managed",
+    "port": 18000,
+    "namespace": "omo",
+    "database": "memory"
+  }
+}
+```
+
+> **Modes**: `"managed"` (auto Docker) or `"external"` (pre-existing SurrealDB).
 
 ---
 
-## Thư viện Skill (700+)
+## Skill Library (1243+)
 
-`omo-cli` gắn kết thuần với triết lý OpenCode. **Hook legacy `.claude` và `.agent` đã bị loại bỏ hoàn toàn.**
+`omo-cli` aligns purely with OpenCode philosophy. **Legacy `.claude` and `.agent` hooks have been completely removed.**
 
-Tất cả skill được lưu tập trung tại **`~/.config/_skills_/`** — đây là Single Source of Truth.
-`~/.opencode/skills` là symlink tự động trỏ đến `~/.config/_skills_/`, giúp OpenCode phát hiện skill bình thường.
-Việc này cho phép bạn chia sẻ bộ skill với các công cụ AI khác (Claude Code, Cursor, v.v.) từ một nơi duy nhất.
+All skills are centrally stored at **`~/.config/_skills_/`** — this is the Single Source of Truth.
+`~/.opencode/skills` is an auto-symlink pointing to `~/.config/_skills_/`, allowing OpenCode to discover skills normally.
+This lets you share your skill library with other AI tools (Claude Code, Cursor, etc.) from a single location.
 
 ```bash
-# Import toàn bộ skill an toàn và đã xác minh
+# Import all safe and verified skills
 omo-cli import-skills --all --valid-only
 
-# Import theo tầng an toàn/chất lượng
-omo-cli adapt-skills --tier 1        # 85 skill SAFE + Excellent
-omo-cli adapt-skills --max-tier 2    # Tầng 1 + 2 (479 skill)
+# Import by safety/quality tier
+omo-cli adapt-skills --tier 1        # 85 SAFE + Excellent skills
+omo-cli adapt-skills --max-tier 2    # Tiers 1 + 2 (479 skills)
 
-# Đồng bộ từ remote agentskills.io
+# Sync from remote agentskills.io
 omo-cli sync-skills
 ```
 
 ---
 
-## Tham chiếu lệnh CLI
+## CLI Reference
 
 ### `omo-cli install`
 
-Cài đặt và cấu hình omo-cli vào OpenCode bằng hệ thống profile.
+Install and configure omo-cli into OpenCode using the profile system.
 
 ```
-Cú pháp: omo-cli install [tùy chọn]
+Usage: omo-cli install [options]
 
-Tùy chọn:
-  --no-tui              Chạy không tương tác (yêu cầu --profile)
-  -p, --profile <tên>   Áp dụng profile theo tên (vd: mike)
-  --skip-auth           Bỏ qua gợi ý thiết lập xác thực
+Options:
+  --no-tui              Run non-interactively (requires --profile)
+  -p, --profile <name>  Apply profile by name (e.g., mike)
+  --skip-auth           Skip authentication setup prompts
 
-Ví dụ:
-  omo-cli install                              # TUI tương tác (profile wizard)
-  omo-cli install --no-tui --profile=mike      # Không tương tác
+Examples:
+  omo-cli install                              # Interactive TUI (profile wizard)
+  omo-cli install --no-tui --profile=mike      # Non-interactive
 ```
-
-Profile định nghĩa model đang hoạt động cho mỗi agent và danh mục tác vụ. Dùng lệnh `omo-cli profile` để xem hoặc tạo profile.
 
 ---
 
 ### `omo-cli run`
 
-Chạy OpenCode với enforcement hoàn thành todo/tác vụ nền.
+Run OpenCode with todo/background task completion enforcement.
 
 ```
-Cú pháp: omo-cli run [tùy chọn] <tin nhắn>
+Usage: omo-cli run [options] <message>
 
-Tùy chọn:
-  -a, --agent <tên>       Agent sử dụng (mặc định: Orchestrator)
-  -d, --directory <path>  Thư mục làm việc
-  -t, --timeout <ms>      Timeout tính bằng mili-giây (mặc định: 30 phút)
+Options:
+  -a, --agent <name>       Agent to use (default: Orchestrator)
+  -d, --directory <path>   Working directory
+  -t, --timeout <ms>       Timeout in milliseconds (default: 30 min)
 
-Ví dụ:
-  omo-cli run "Sửa bug trong index.ts"
-  omo-cli run --agent Orchestrator "Triển khai tính năng X"
-  omo-cli run --timeout 3600000 "Tác vụ refactoring lớn"
+Examples:
+  omo-cli run "Fix bug in index.ts"
+  omo-cli run --agent Orchestrator "Implement feature X"
+  omo-cli run --timeout 3600000 "Large refactoring task"
 ```
 
-Khác với `opencode run`, lệnh này chờ cho đến khi:
-- Tất cả todo được hoàn thành hoặc hủy
-- Tất cả session con (tác vụ nền) ở trạng thái idle
+Unlike `opencode run`, this command waits until:
+- All todos are completed or cancelled
+- All child sessions (background tasks) are idle
 
 ---
 
 ### `omo-cli memory`
 
-Quản lý cơ sở dữ liệu SurrealDB cục bộ cho tính năng Project Memory (Lưu trữ Vector/Kiến thức).
+Manage the local SurrealDB database for Project Memory (Vector/Knowledge storage).
 
 ```
-Cú pháp: omo-cli memory [lệnh con]
+Usage: omo-cli memory [subcommand]
 
-Lệnh con:
-  start    Khởi động container SurrealDB (cổng 18000)
-  stop     Dừng container SurrealDB
-  status   Xem trạng thái container và kết nối
-  reset    Xóa toàn bộ dữ liệu trí nhớ (CẨN THẬN)
+Subcommands:
+  start    Start SurrealDB container (port 18000)
+  stop     Stop SurrealDB container
+  status   View container and connection status
+  reset    Delete all memory data (CAUTION)
 
-Ví dụ:
+Examples:
   omo-cli memory start
   omo-cli memory status
 ```
 
-> **Mẹo Docker Compose**: OMO CLI mặc định hỗ trợ khởi chạy qua `docker-compose.yml`. Nếu bạn có file `docker-compose.yml` ở thư mục gốc dự án (với định nghĩa service `omo-surrealdb`), lệnh `omo-cli memory start` sẽ tự động ưu tiên gọi `docker compose up -d` thay vì tự chạy container `docker run` độc lập. Hoặc bạn cũng có thể cài đặt chế độ `external` để không thiết lập auto-container.
+> **Docker Compose Tip**: OMO CLI supports launching via `docker-compose.yml` by default. If you have a `docker-compose.yml` at your project root (with an `omo-surrealdb` service definition), `omo-cli memory start` will automatically prefer `docker compose up -d` instead of running a standalone `docker run` container. Or you can configure `external` mode to skip auto-container setup.
 
 ---
 
 ### `omo-cli doctor`
 
-Kiểm tra sức khỏe cài đặt và chẩn đoán sự cố.
+Health check installation and diagnose issues.
 
 ```
-Cú pháp: omo-cli doctor [tùy chọn]
+Usage: omo-cli doctor [options]
 
-Tùy chọn:
-  --verbose               Hiện thông tin chẩn đoán chi tiết
-  --json                  Xuất kết quả dạng JSON
-  --category <danh mục>   Chỉ chạy danh mục cụ thể
+Options:
+  --verbose               Show detailed diagnostic information
+  --json                  Output results as JSON
+  --category <category>   Run specific category only
 
-Danh mục kiểm tra:
-  installation     Kiểm tra cài đặt OpenCode và plugin
-  configuration    Xác thực file cấu hình
-  authentication   Kiểm tra trạng thái provider xác thực
-  dependencies     Kiểm tra dependency bên ngoài
-  tools            Kiểm tra LSP và MCP server
-  updates          Kiểm tra cập nhật phiên bản
+Check categories:
+  installation     Check OpenCode and plugin installation
+  configuration    Validate configuration files
+  authentication   Check provider authentication status
+  dependencies     Check external dependencies
+  tools            Check LSP and MCP servers
+  updates          Check for version updates
 
-Ví dụ:
+Examples:
   omo-cli doctor
   omo-cli doctor --verbose
   omo-cli doctor --json
@@ -703,214 +741,201 @@ Ví dụ:
 
 ### `omo-cli get-local-version`
 
-Hiện phiên bản đã cài và kiểm tra cập nhật.
+Show installed version and check for updates.
 
 ```
-Cú pháp: omo-cli get-local-version [tùy chọn]
+Usage: omo-cli get-local-version [options]
 
-Tùy chọn:
-  -d, --directory <path>  Thư mục để kiểm tra config
-  --json                  Xuất dạng JSON cho scripting
+Options:
+  -d, --directory <path>  Directory to check config
+  --json                  Output as JSON for scripting
 
-Ví dụ:
+Examples:
   omo-cli get-local-version
   omo-cli get-local-version --json
 ```
-
-Lệnh này hiện: phiên bản hiện tại, phiên bản mới nhất trên npm, trạng thái cập nhật, và chế độ đặc biệt (local dev, pinned version).
 
 ---
 
 ### `omo-cli import-skills`
 
-Import skill từ thư viện antigravity-awesome-skills (560+ skill).
+Import skills from the antigravity-awesome-skills library (560+ skills).
 
 ```
-Cú pháp: omo-cli import-skills [tùy chọn]
+Usage: omo-cli import-skills [options]
 
-Tùy chọn:
-  -b, --bundle <tên>        Import gói skill (essentials, web-dev, security, devops, v.v.)
-  -s, --skills <tên...>     Import skill cụ thể theo tên
-  -t, --target <path>       Thư mục đích (mặc định: ~/.config/_skills_)
-  -l, --list                Liệt kê các gói có sẵn
-  -a, --all                 Import TẤT CẢ skill từ repository
-  --tier <số>               Import skill theo tầng (1-4, cần chạy categorize-skills trước)
-  --audit                   Kiểm tra cấu trúc skill mà không import
-  --valid-only              Với --all: chỉ import skill hợp lệ (có SKILL.md đúng chuẩn)
+Options:
+  -b, --bundle <name>        Import skill bundle (essentials, web-dev, security, devops, etc.)
+  -s, --skills <name...>     Import specific skills by name
+  -t, --target <path>        Target directory (default: ~/.config/_skills_)
+  -l, --list                 List available bundles
+  -a, --all                  Import ALL skills from repository
+  --tier <number>            Import skills by tier (1-4, requires categorize-skills first)
+  --audit                    Check skill structure without importing
+  --valid-only               With --all: only import valid skills (proper SKILL.md)
 
-Ví dụ:
-  omo-cli import-skills --list                  # Liệt kê gói
-  omo-cli import-skills --audit                 # Kiểm tra cấu trúc
-  omo-cli import-skills --tier 1                # Tầng 1: 85 SAFE + Excellent
-  omo-cli import-skills --all --valid-only      # Tất cả skill hợp lệ
-  omo-cli import-skills --bundle essentials     # Gói thiết yếu
-  omo-cli import-skills --skills brainstorming api-design  # Skill cụ thể
+Tiers (run categorize-skills first):
+  Tier 1    85 skills  - SAFE + Excellent quality (recommended to start)
+  Tier 2   394 skills  - SAFE/LOW + Good quality
+  Tier 3   100 skills  - MEDIUM risk
+  Tier 4    36 skills  - HIGH risk (requires manual review)
 
-Các tầng (chạy categorize-skills trước):
-  Tầng 1    85 skill  - SAFE + Chất lượng Excellent (khuyên dùng để bắt đầu)
-  Tầng 2   394 skill  - SAFE/LOW + Chất lượng Good
-  Tầng 3   100 skill  - Rủi ro MEDIUM
-  Tầng 4    36 skill  - Rủi ro HIGH (cần review thủ công)
-
-Gói có sẵn:
-  essentials    Skill cốt lõi cho mọi người (brainstorming, planning, clean code)
-  web-dev       Phát triển web frontend và full-stack
-  security      Kiểm tra bảo mật, audit, best practices
-  devops        Hạ tầng, triển khai, tự động hóa
-  backend       Phát triển server-side và API
-  data-ai       Xử lý dữ liệu, ML, ứng dụng AI
-  testing       Testing, QA, tự động hóa
+Available bundles:
+  essentials    Core skills for everyone (brainstorming, planning, clean code)
+  web-dev       Frontend and full-stack web development
+  security      Security auditing, best practices
+  devops        Infrastructure, deployment, automation
+  backend       Server-side and API development
+  data-ai       Data processing, ML, AI applications
+  testing       Testing, QA, automation
 ```
 
 ---
 
 ### `omo-cli scan-skills`
 
-Quét bảo mật và chất lượng cho skill (chạy trước khi import).
+Security and quality scan for skills (run before importing). Supports CI/CD gating.
 
 ```
-Cú pháp: omo-cli scan-skills [tùy chọn]
+Usage: omo-cli scan-skills [options]
 
-Tùy chọn:
-  -o, --output <path>  Đường dẫn xuất báo cáo JSON (mặc định: ./skills_security_report.json)
-  -d, --details        Hiện danh sách skill chi tiết
+Options:
+  -o, --output <path>      Report output path (default: ./skills_security_report.json)
+  -d, --details            Show detailed skill list
+  --min-score <number>     Minimum quality score threshold (0-100)
+  --strict                 Exit with code 1 if any skill falls below --min-score (CI/CD gate)
 
-Ví dụ:
-  omo-cli scan-skills
-  omo-cli scan-skills --details
-  omo-cli scan-skills --output ./bao-cao.json
+Examples:
+  omo-cli scan-skills                              # Standard scan
+  omo-cli scan-skills --min-score 70 --strict      # CI/CD gate: fail if score < 70
+  omo-cli scan-skills --details --output report.json
 ```
-
-Lệnh này quét tất cả skill tìm:
-- 🔴 Rủi ro HIGH: Lệnh nguy hiểm (rm -rf, sudo, curl|bash)
-- 🟠 Rủi ro MEDIUM: Lệnh shell, thao tác file
-- 🟡 Rủi ro LOW: URL bên ngoài, tham chiếu API key
-- 🟢 SAFE: Hướng dẫn markdown thuần
-
-Kèm chấm điểm chất lượng và ánh xạ agent OMO.
 
 ---
 
 ### `omo-cli categorize-skills`
 
-Phân loại skill theo tầng và tương thích agent (chạy sau scan-skills).
+Categorize skills by tier and agent compatibility (run after scan-skills).
 
 ```
-Cú pháp: omo-cli categorize-skills [tùy chọn]
+Usage: omo-cli categorize-skills [options]
 
-Tùy chọn:
-  -i, --input <path>   Đường dẫn báo cáo scan đầu vào (mặc định: ./skills_security_report.json)
-  -o, --output <path>  Đường dẫn xuất báo cáo phân loại
-
-Ví dụ:
-  omo-cli categorize-skills
-  omo-cli categorize-skills --input ./bao-cao-scan.json
+Options:
+  -i, --input <path>   Input scan report path (default: ./skills_security_report.json)
+  -o, --output <path>  Output categorization report path
 ```
-
-Lệnh này tạo ra:
-- 📊 Danh sách import theo tầng (Tầng 1-4 dựa trên rủi ro/chất lượng)
-- 🤖 Phân công agent-skill (agent nào nên dùng skill nào)
-- 📂 Phân loại theo danh mục (architecture, security, devops, v.v.)
 
 ---
 
 ### `omo-cli adapt-skills`
 
-Import skill kèm metadata OMO (agent, danh mục, tầng).
+Import skills with OMO metadata (agent, category, tier).
 
 ```
-Cú pháp: omo-cli adapt-skills [tùy chọn]
+Usage: omo-cli adapt-skills [options]
 
-Tùy chọn:
-  --tier <số>           Import tầng cụ thể (1-4)
-  --max-tier <số>       Import tất cả tầng đến max (mặc định: 2)
-  -t, --target <path>   Thư mục đích (mặc định: ~/.config/_skills_)
-
-Ví dụ:
-  omo-cli adapt-skills --tier 1         # Chỉ Tầng 1 (85 skill)
-  omo-cli adapt-skills --max-tier 2     # Tầng 1 + 2 (479 skill)
-  omo-cli adapt-skills --max-tier 3     # Tầng 1-3 (626+ skill)
+Options:
+  --tier <number>        Import specific tier (1-4)
+  --max-tier <number>    Import all tiers up to max (default: 2)
+  -t, --target <path>    Target directory (default: ~/.config/_skills_)
 ```
-
-Lệnh này sẽ:
-1. Copy skill từ cache sang thư mục đích
-2. Bổ sung metadata OMO vào SKILL.md (agents, category, complexity, tier)
 
 ---
 
 ### `omo-cli sync-skills`
 
-Đồng bộ skill toàn cục từ remote repo agentskills.io.
+Sync global skills from remote agentskills.io repo.
 
 ```
-Cú pháp: omo-cli sync-skills [tùy chọn]
+Usage: omo-cli sync-skills [options]
 
-Tùy chọn:
-  -f, --force  Buộc làm mới shadow clone
-
-Ví dụ:
-  omo-cli sync-skills
-  omo-cli sync-skills -f
+Options:
+  -f, --force  Force refresh shadow clone
 ```
-
-Lệnh này dùng kiến trúc Shadow Clone để fetch skill toàn cục mới nhất mà không làm hỏng git cache cục bộ. Tự động sửa YAML và loại bỏ trùng tên skill trước khi copy sang `~/.config/_skills_`.
 
 ---
 
 ### `omo-cli mcp`
 
-Quản lý MCP server.
+Manage MCP servers.
 
 ```
-Cú pháp: omo-cli mcp [lệnh con]
+Usage: omo-cli mcp [subcommand]
 
-Lệnh con:
-  oauth   Quản lý token OAuth cho MCP server
-
-Ví dụ:
-  omo-cli mcp oauth
+Subcommands:
+  oauth   Manage OAuth tokens for MCP servers
 ```
 
 ---
 
-### Quy trình làm việc khuyến nghị với Skill
+### `omo-cli create-skill`
+
+Create a new skill with an 8-section template and automatic quality scoring.
+
+```
+Usage: omo-cli create-skill <name> [options]
+
+Options:
+  --description <text>   Skill description
+  -t, --target <path>    Target directory (default: ~/.config/_skills_)
+  -f, --force            Overwrite existing skill
+
+Examples:
+  omo-cli create-skill api-design --description "REST API design patterns"
+  omo-cli create-skill my-skill --target ./skills --force
+```
+
+The generated SKILL.md includes 8 sections: Instructions, Context Detection, Examples,
+Anti-Patterns, Edge Cases, Quality Checklist, Iteration Notes, and Metadata.
+After creation, the skill is automatically scored across 7 quality dimensions.
+
+---
+
+### Recommended Skill Workflow
 
 ```bash
-# Bước 1: Quét bảo mật & chất lượng
+# Step 1: Create a new skill
+omo-cli create-skill my-skill --description "My custom skill"
+
+# Step 2: Fill in the 8-section template (edit SKILL.md)
+
+# Step 3: Security & quality scan
 omo-cli scan-skills
 
-# Bước 2: Phân loại theo tầng
+# Step 4: Categorize by tier
 omo-cli categorize-skills
 
-# Bước 3: Import theo tầng (an toàn → rủi ro dần)
-omo-cli adapt-skills --tier 1          # Bắt đầu với 85 skill tốt nhất
-omo-cli adapt-skills --max-tier 2      # Mở rộng lên 479 skill
+# Step 5: Import by tier (safe → riskier)
+omo-cli adapt-skills --tier 1          # Start with 85 best skills
+omo-cli adapt-skills --max-tier 2      # Expand to 479 skills
 ```
 
 ---
 
-## Tham chiếu cấu hình
+## Configuration Reference
 
-File `omo-cli.json` (trong `.opencode/`) điều khiển toàn bộ hành vi plugin. Cấu trúc chính:
+The `omo-cli.json` file (in `.opencode/`) controls all plugin behavior. Main structure:
 
 ```
 omo-cli.json
  |
- +-- agents                 Override model cho tung agent
+ +-- agents                 Override model per agent
  |   +-- orchestrator       { model: "...", variant: "..." }
  |   +-- worker
  |   +-- explorer
  |   +-- ...
  |
- +-- disabled_hooks[]       Tat hook cu the (ten hook)
- +-- disabled_agents[]      Tat agent cu the
- +-- disabled_skills[]      Tat skill cu the
+ +-- disabled_hooks[]       Disable specific hooks (by name)
+ +-- disabled_agents[]      Disable specific agents
+ +-- disabled_skills[]      Disable specific skills
  |
  +-- memory                 SurrealDB config
  |   +-- enabled            true/false
- |   +-- mode               "docker" | "external"
+ |   +-- mode               "managed" | "external"
  |   +-- port               18000 (default)
- |   +-- auto_capture       Tu dong luu kien thuc
+ |   +-- namespace          "omo" (default)
+ |   +-- database           "memory" (default)
+ |   +-- auto_capture       Auto-save knowledge
  |
  +-- tmux                   Tmux layout config
  |   +-- enabled            true/false
@@ -926,38 +951,38 @@ omo-cli.json
  +-- auto_update            true/false
 ```
 
-| Thuộc tính | Kiểu | Mặc định | Mô tả |
-|-----------|------|----------|--------|
-| `agents.<name>.model` | `string` | Từ profile | Override model cho agent cụ thể |
-| `agents.<name>.variant` | `string` | `undefined` | Variant (vd: `"extended-thinking"`) |
-| `disabled_hooks` | `string[]` | `[]` | Danh sách hook bị tắt |
-| `disabled_agents` | `string[]` | `[]` | Danh sách agent bị tắt |
-| `memory.enabled` | `boolean` | `false` | Bật SurrealDB + Code Intelligence |
-| `memory.mode` | `string` | `"docker"` | `"docker"` (auto-start) hoặc `"external"` |
-| `tmux.enabled` | `boolean` | `false` | Bật tmux cho background agent |
-| `auto_update` | `boolean` | `true` | Tự kiểm tra phiên bản mới |
-| `cost_metering.enabled` | `boolean` | `false` | Bật theo dõi chi phí token |
-| `cost_metering.monthly_budget_usd` | `number` | — | Giới hạn ngân sách tháng (USD) |
-| `cost_metering.daily_budget_usd` | `number` | — | Giới hạn ngân sách ngày (USD) |
-| `cost_metering.show_idle_summary` | `boolean` | `true` | Hiện tổng kết chi phí khi session idle |
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `agents.<name>.model` | `string` | From profile | Override model for specific agent |
+| `agents.<name>.variant` | `string` | `undefined` | Variant (e.g., `"extended-thinking"`) |
+| `disabled_hooks` | `string[]` | `[]` | List of disabled hooks |
+| `disabled_agents` | `string[]` | `[]` | List of disabled agents |
+| `memory.enabled` | `boolean` | `false` | Enable SurrealDB + Code Intelligence |
+| `memory.mode` | `string` | `"managed"` | `"managed"` (auto Docker) or `"external"` (pre-existing SurrealDB) |
+| `tmux.enabled` | `boolean` | `false` | Enable tmux for background agents |
+| `auto_update` | `boolean` | `true` | Auto-check for new versions |
+| `cost_metering.enabled` | `boolean` | `false` | Enable token cost tracking |
+| `cost_metering.monthly_budget_usd` | `number` | — | Monthly budget limit (USD) |
+| `cost_metering.daily_budget_usd` | `number` | — | Daily budget limit (USD) |
+| `cost_metering.show_idle_summary` | `boolean` | `true` | Show cost summary when session is idle |
 
-> **Mẹo**: Dùng `omo-cli doctor --category configuration` để validate file config.
+> **Tip**: Use `omo-cli doctor --category configuration` to validate your config file.
 
 ---
 
-## Xử lý sự cố
+## Troubleshooting
 
-Dùng công cụ chẩn đoán nếu có vấn đề:
+Use the diagnostic tool if you have issues:
 ```bash
 omo-cli doctor
 ```
 
-Nó kiểm tra:
-- Plugin đã được inject vào OpenCode Core chưa
-- Tình trạng API của các provider
-- Tính hợp lệ của file trong `~/.opencode/skills/`
-- Cú pháp schema của `.opencode/omo-cli.json`
+It checks:
+- Whether the plugin is injected into OpenCode Core
+- Provider API status
+- Validity of files in `~/.opencode/skills/`
+- Schema syntax of `.opencode/omo-cli.json`
 
 ---
 
-*Cảm ơn đặc biệt [@junhoyeo](https://github.com/junhoyeo) vì ảnh hero gốc.*
+*Special thanks to [@junhoyeo](https://github.com/junhoyeo) for the original hero image.*

@@ -48,6 +48,12 @@ export interface Concept {
     source: string
     project?: string
     created?: string
+    /** Session/task ID for grouping related memories (ReasoningBank pattern). */
+    trajectory_id?: string
+    /** Task outcome — enables learning from success/failure patterns. */
+    outcome?: "success" | "failure" | "partial" | "pending"
+    /** Confidence score for this memory (0.0-1.0). */
+    confidence?: number
 }
 
 /** A concept with a similarity score from vector search. */
@@ -71,9 +77,14 @@ DEFINE FIELD IF NOT EXISTS embedding ON concept TYPE array<float>;
 DEFINE FIELD IF NOT EXISTS source    ON concept TYPE string;
 DEFINE FIELD IF NOT EXISTS project   ON concept TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS created   ON concept TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS trajectory_id ON concept TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS outcome       ON concept TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS confidence    ON concept TYPE option<float>;
 
 DEFINE INDEX IF NOT EXISTS idx_concept_embedding ON concept
   FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
+DEFINE INDEX IF NOT EXISTS idx_concept_trajectory ON concept FIELDS trajectory_id;
+DEFINE INDEX IF NOT EXISTS idx_concept_outcome    ON concept FIELDS outcome;
 
 DEFINE TABLE IF NOT EXISTS file SCHEMAFULL;
 DEFINE FIELD IF NOT EXISTS path    ON file TYPE string;
@@ -260,13 +271,16 @@ export async function addConcept(concept: Omit<Concept, "id">): Promise<string> 
     const result = await rpc<Array<{ result: Array<{ id: string }> }>>(
         "query",
         [
-            `CREATE concept SET content = $content, tags = $tags, embedding = $embedding, source = $source, project = $project;`,
+            `CREATE concept SET content = $content, tags = $tags, embedding = $embedding, source = $source, project = $project, trajectory_id = $trajectory_id, outcome = $outcome, confidence = $confidence;`,
             {
                 content: concept.content,
                 tags: concept.tags,
                 embedding: concept.embedding,
                 source: concept.source,
                 project: concept.project,
+                trajectory_id: concept.trajectory_id ?? null,
+                outcome: concept.outcome ?? null,
+                confidence: concept.confidence ?? null,
             },
         ]
     )
@@ -326,7 +340,15 @@ export async function searchSimilar(
         { embedding, project, limit },
     ])
 
-    return result?.[0]?.result ?? []
+    const raw = result?.[0]?.result ?? []
+
+    // Boost by outcome: success memories rank higher for retrieval (ReasoningBank pattern)
+    return raw.map(r => ({
+        ...r,
+        score: r.score * (r.outcome === "success" ? 1.15
+             : r.outcome === "failure" ? 0.85
+             : 1.0),
+    })).sort((a, b) => b.score - a.score)
 }
 
 /**

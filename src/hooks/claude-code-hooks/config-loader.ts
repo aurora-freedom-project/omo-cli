@@ -62,9 +62,42 @@ function mergeDisabledHooks(
   }
 }
 
+// Cache for loadPluginExtendedConfig (same pattern: mtime-based invalidation)
+const _extConfigCache: {
+  result: PluginExtendedConfig | null
+  mtimes: Map<string, number>
+} = { result: null, mtimes: new Map() }
+
+function getExtFileMtime(path: string): number {
+  try {
+    return existsSync(path) ? require("fs").statSync(path).mtimeMs : 0
+  } catch {
+    return 0
+  }
+}
+
 export async function loadPluginExtendedConfig(): Promise<PluginExtendedConfig> {
+  const paths = [USER_CONFIG_PATH, getProjectConfigPath()]
+
+  // Check mtime cache
+  let cacheValid = _extConfigCache.result !== null
+  if (cacheValid) {
+    for (const p of paths) {
+      if (getExtFileMtime(p) !== (_extConfigCache.mtimes.get(p) ?? 0)) {
+        cacheValid = false
+        break
+      }
+    }
+  }
+  if (cacheValid) return _extConfigCache.result!
+
   const userConfig = await loadConfigFromPath(USER_CONFIG_PATH)
   const projectConfig = await loadConfigFromPath(getProjectConfigPath())
+
+  // Update mtime cache
+  for (const p of paths) {
+    _extConfigCache.mtimes.set(p, getExtFileMtime(p))
+  }
 
   const merged: PluginExtendedConfig = {
     disabledHooks: mergeDisabledHooks(
@@ -81,6 +114,7 @@ export async function loadPluginExtendedConfig(): Promise<PluginExtendedConfig> 
     })
   }
 
+  _extConfigCache.result = merged
   return merged
 }
 

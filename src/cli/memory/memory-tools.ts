@@ -16,7 +16,7 @@ export interface Tool {
     execute: (args: Record<string, unknown>) => Promise<string>
 }
 
-let schemaInitialized = false
+let schemaInitPromise: Promise<void> | null = null
 
 async function ensureReady(config: MemoryConfig) {
     // Configure connection based on mode
@@ -43,10 +43,10 @@ async function ensureReady(config: MemoryConfig) {
         await ensureSurrealDBRunning(config)
     }
 
-    if (!schemaInitialized) {
-        await initSchema()
-        schemaInitialized = true
+    if (!schemaInitPromise) {
+        schemaInitPromise = initSchema()
     }
+    await schemaInitPromise
 }
 
 export function createMemoryTools(
@@ -75,6 +75,15 @@ export function createMemoryTools(
                     description: "Origin of this knowledge",
                     enum: ["user", "auto", "code-analysis"],
                 },
+                trajectory_id: {
+                    type: "string",
+                    description: "Session or task ID to group related memories for pattern learning",
+                },
+                outcome: {
+                    type: "string",
+                    description: "Task outcome for this memory — enables learning from results",
+                    enum: ["success", "failure", "partial", "pending"],
+                },
             },
             required: ["content", "tags"],
         },
@@ -88,12 +97,14 @@ export function createMemoryTools(
                         const content = args.content as string
                         const tags = (args.tags as string[]) ?? []
                         const source = (args.source as string) ?? "user"
+                        const trajectory_id = (args.trajectory_id as string) ?? undefined
+                        const outcome = (args.outcome as string) as "success" | "failure" | "partial" | "pending" | undefined
 
                         const embedding = await generateEmbedding(content)
-                        const id = await addConcept({ content, tags, embedding, source, project })
+                        const id = await addConcept({ content, tags, embedding, source, project, trajectory_id, outcome })
 
-                        log("[memory_add] Concept stored", { id, tags })
-                        return `✓ Memory stored (${id}). Tags: ${tags.join(", ")}`
+                        log("[memory_add] Concept stored", { id, tags, trajectory_id, outcome })
+                        return `✓ Memory stored (${id}). Tags: ${tags.join(", ")}${trajectory_id ? ` | Trajectory: ${trajectory_id}` : ""}${outcome ? ` | Outcome: ${outcome}` : ""}`
                     },
                     catch: (err) => err,
                 }).pipe(Effect.catchAll((err) => {

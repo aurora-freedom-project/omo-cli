@@ -22,6 +22,7 @@ const PENDING_CALL_TTL = 60_000
 
 let cliPathPromise: Promise<string | null> | null = null
 let cleanupIntervalStarted = false
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null
 
 function cleanupOldPendingCalls(): void {
   const now = Date.now()
@@ -37,9 +38,9 @@ export function createCommentCheckerHooks(config?: CommentCheckerConfig) {
 
   if (!cleanupIntervalStarted) {
     cleanupIntervalStarted = true
-    setInterval(cleanupOldPendingCalls, 10_000)
+    cleanupIntervalId = setInterval(cleanupOldPendingCalls, 10_000)
   }
-  
+
   // Start background CLI initialization (may trigger lazy download)
   startBackgroundInit()
   cliPathPromise = getCommentCheckerPath()
@@ -48,14 +49,14 @@ export function createCommentCheckerHooks(config?: CommentCheckerConfig) {
   }).catch(err => {
     debugLog("CLI path resolution error:", err)
   })
-  
+
   return {
     "tool.execute.before": async (
       input: { tool: string; sessionID: string; callID: string },
       output: { args: Record<string, unknown> }
     ): Promise<void> => {
       debugLog("tool.execute.before:", { tool: input.tool, callID: input.callID, args: output.args })
-      
+
       const toolLower = input.tool.toLowerCase()
       if (toolLower !== "write" && toolLower !== "edit" && toolLower !== "multiedit") {
         debugLog("skipping non-write/edit tool:", toolLower)
@@ -93,7 +94,7 @@ export function createCommentCheckerHooks(config?: CommentCheckerConfig) {
       output: { title: string; output: string; metadata: unknown }
     ): Promise<void> => {
       debugLog("tool.execute.after:", { tool: input.tool, callID: input.callID })
-      
+
       const pendingCall = pendingCalls.get(input.callID)
       if (!pendingCall) {
         debugLog("no pendingCall found for:", input.callID)
@@ -105,12 +106,12 @@ export function createCommentCheckerHooks(config?: CommentCheckerConfig) {
 
       // Only skip if the output indicates a tool execution failure
       const outputLower = output.output.toLowerCase()
-      const isToolFailure = 
-        outputLower.includes("error:") || 
+      const isToolFailure =
+        outputLower.includes("error:") ||
         outputLower.includes("failed to") ||
         outputLower.includes("could not") ||
         outputLower.startsWith("error")
-      
+
       if (isToolFailure) {
         debugLog("skipping due to tool failure in output")
         return
@@ -119,13 +120,13 @@ export function createCommentCheckerHooks(config?: CommentCheckerConfig) {
       try {
         // Wait for CLI path resolution
         const cliPath = await cliPathPromise
-        
+
         if (!cliPath || !existsSync(cliPath)) {
           // CLI not available - silently skip comment checking
           debugLog("CLI not available, skipping comment check")
           return
         }
-        
+
         // CLI mode only
         debugLog("using CLI:", cliPath)
         await processWithCli(input, pendingCall, output, cliPath, config?.custom_prompt)
@@ -144,7 +145,7 @@ async function processWithCli(
   customPrompt?: string
 ): Promise<void> {
   debugLog("using CLI mode with path:", cliPath)
-  
+
   const hookInput: HookInput = {
     session_id: pendingCall.sessionID,
     tool_name: pendingCall.tool.charAt(0).toUpperCase() + pendingCall.tool.slice(1),
@@ -159,9 +160,9 @@ async function processWithCli(
       edits: pendingCall.edits,
     },
   }
-  
+
   const result = await runCommentChecker(hookInput, cliPath, customPrompt)
-  
+
   if (result.hasComments && result.message) {
     debugLog("CLI detected comments, appending message")
     output.output += `\n\n${result.message}`

@@ -73,10 +73,12 @@ describe("createBuiltinSkills", () => {
 		for (const skills of [defaultSkills, agentBrowserSkills]) {
 			expect(skills.find((s) => s.name === "frontend-ui-ux")).toBeDefined()
 			expect(skills.find((s) => s.name === "git-master")).toBeDefined()
+			expect(skills.find((s) => s.name === "impeccable")).toBeDefined()
+			expect(skills.find((s) => s.name === "pipeline")).toBeDefined()
 		}
 	})
 
-	test("returns exactly 9 skills regardless of provider", () => {
+	test("returns exactly 12 skills regardless of provider", () => {
 		// #given
 
 		// #when
@@ -84,7 +86,7 @@ describe("createBuiltinSkills", () => {
 		const agentBrowserSkills = createBuiltinSkills({ browserProvider: "agent-browser" })
 
 		// #then
-		expect(defaultSkills).toHaveLength(10)
-		expect(agentBrowserSkills).toHaveLength(10)
+		expect(defaultSkills).toHaveLength(12)
+		expect(agentBrowserSkills).toHaveLength(12)
 	})
 })

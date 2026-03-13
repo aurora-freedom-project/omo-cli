@@ -6,6 +6,8 @@ export interface TimingConfig {
   readonly WAIT_FOR_SESSION_TIMEOUT_MS: number
   readonly MAX_POLL_TIME_MS: number
   readonly SESSION_CONTINUATION_STABILITY_MS: number
+  /** Stall timeout: kill agent if no new messages for this duration (ms) */
+  readonly STALL_TIMEOUT_MS: number
 }
 
 const DEFAULTS: TimingConfig = Object.freeze({
@@ -16,6 +18,7 @@ const DEFAULTS: TimingConfig = Object.freeze({
   WAIT_FOR_SESSION_TIMEOUT_MS: 30000,
   MAX_POLL_TIME_MS: 10 * 60 * 1000,
   SESSION_CONTINUATION_STABILITY_MS: 5000,
+  STALL_TIMEOUT_MS: 120000,
 })
 
 let _config: TimingConfig = DEFAULTS

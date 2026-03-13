@@ -25,6 +25,13 @@ mock.module("./constants", () => ({
   TOOL_NAME_PREFIX: "session_",
 }))
 
+// Also mock the injector's MESSAGE_STORAGE so shared/session-utils.getMessageDir uses test dir
+mock.module("../../features/hook-message-injector", () => ({
+  MESSAGE_STORAGE: TEST_MESSAGE_STORAGE,
+  findNearestMessageWithFields: () => null,
+  findFirstMessageWithAgent: () => null,
+}))
+
 const { getAllSessions, getMessageDir, sessionExists, readSessionMessages, readSessionTodos, getSessionInfo } =
   await import("./storage")
 

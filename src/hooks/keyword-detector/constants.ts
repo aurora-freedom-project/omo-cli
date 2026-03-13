@@ -1,5 +1,5 @@
-export const CODE_BLOCK_PATTERN = /```[\s\S]*?```/g
-export const INLINE_CODE_PATTERN = /`[^`]+`/g
+// Code block patterns moved to shared/prompt-text.ts — no longer needed here
+
 
 const ULTRAWORK_PLANNER_SECTION = `## CRITICAL: YOU ARE A PLANNER, NOT AN IMPLEMENTER
 

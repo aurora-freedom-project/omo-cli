@@ -23,6 +23,8 @@ export interface PollSessionOptions {
     maxTimeMs?: number
     /** Minimum stability time override (for session continuation). */
     minStabilityTimeMs?: number
+    /** Stall timeout: return stalled if no new messages for this duration (ms). */
+    stallTimeoutMs?: number
 }
 
 /** Result of polling a session. */
@@ -31,6 +33,8 @@ export interface PollResult {
     aborted: boolean
     /** Whether polling timed out. */
     timedOut: boolean
+    /** Whether the agent stalled (no activity within stall timeout). */
+    stalled: boolean
 }
 
 /**
@@ -48,15 +52,17 @@ export async function pollForSessionCompletion(options: PollSessionOptions): Pro
     const MAX_POLL_TIME_MS = options.maxTimeMs ?? timing.MAX_POLL_TIME_MS
     const MIN_STABILITY_TIME_MS = options.minStabilityTimeMs ?? timing.MIN_STABILITY_TIME_MS
     const STABILITY_POLLS_REQUIRED = timing.STABILITY_POLLS_REQUIRED
+    const STALL_TIMEOUT_MS = options.stallTimeoutMs ?? timing.STALL_TIMEOUT_MS
 
     const pollStart = Date.now()
     let lastMsgCount = 0
     let stablePolls = 0
     let pollCount = 0
+    let lastActivityTime = Date.now()
 
     while (Date.now() - pollStart < MAX_POLL_TIME_MS) {
         if (abort?.aborted) {
-            return { aborted: true, timedOut: false }
+            return { aborted: true, timedOut: false, stalled: false }
         }
 
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
@@ -82,8 +88,20 @@ export async function pollForSessionCompletion(options: PollSessionOptions): Pro
             if (sessionStatus && sessionStatus.type !== "idle") {
                 stablePolls = 0
                 lastMsgCount = 0
+                lastActivityTime = Date.now() // agent is active — reset stall timer
                 continue
             }
+        }
+
+        // Stall detection: if no activity for longer than stall timeout, bail
+        if (STALL_TIMEOUT_MS > 0 && Date.now() - lastActivityTime > STALL_TIMEOUT_MS) {
+            log("[delegate_task] Stall detected", {
+                sessionID,
+                pollCount,
+                stallTimeoutMs: STALL_TIMEOUT_MS,
+                lastActivityAge: Math.floor((Date.now() - lastActivityTime) / 1000) + "s",
+            })
+            return { aborted: false, timedOut: false, stalled: true }
         }
 
         const elapsed = Date.now() - pollStart
@@ -105,6 +123,9 @@ export async function pollForSessionCompletion(options: PollSessionOptions): Pro
             }
         } else {
             stablePolls = 0
+            if (currentMsgCount !== lastMsgCount) {
+                lastActivityTime = Date.now() // message count changed — reset stall timer
+            }
             lastMsgCount = currentMsgCount
         }
     }
@@ -114,7 +135,7 @@ export async function pollForSessionCompletion(options: PollSessionOptions): Pro
         log("[delegate_task] Poll timeout reached", { sessionID, pollCount, lastMsgCount, stablePolls })
     }
 
-    return { aborted: false, timedOut }
+    return { aborted: false, timedOut, stalled: false }
 }
 
 /**

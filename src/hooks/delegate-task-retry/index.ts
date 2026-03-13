@@ -123,8 +123,18 @@ delegate_task(
   return guidance
 }
 
+/** Default completion signals that indicate a task actually completed. */
+export const DEFAULT_COMPLETION_SIGNALS = ["RESULT", "COMPLETED", "DONE", "✅"]
+
+/** Check if delegate_task output contains a completion signal. */
+export function hasCompletionSignal(output: string, signals?: string[]): boolean {
+    const effectiveSignals = signals ?? DEFAULT_COMPLETION_SIGNALS
+    const upperOutput = output.toUpperCase()
+    return effectiveSignals.some(signal => upperOutput.includes(signal.toUpperCase()))
+}
+
 /** Creates the delegate_task retry hook that auto-injects guidance on error. */
-export function createDelegateTaskRetryHook(_ctx: PluginInput) {
+export function createDelegateTaskRetryHook(_ctx: PluginInput, completionSignals?: string[]) {
   return {
     "tool.execute.after": async (
       input: { tool: string; sessionID: string; callID: string },
@@ -136,6 +146,14 @@ export function createDelegateTaskRetryHook(_ctx: PluginInput) {
       if (errorInfo) {
         const guidance = buildRetryGuidance(errorInfo)
         output.output += `\n${guidance}`
+        return
+      }
+
+      // Completion gate: warn if output lacks completion signal
+      if (output.output.length > 50 && !output.output.includes("[ERROR]") && !output.output.includes("Invalid arguments")) {
+        if (!hasCompletionSignal(output.output, completionSignals)) {
+          output.output += `\n\n[COMPLETION WARNING] Task output lacks a clear completion signal (${(completionSignals ?? DEFAULT_COMPLETION_SIGNALS).join(", ")}). The sub-agent may have finished prematurely. Verify the result before proceeding.`
+        }
       }
     },
   }

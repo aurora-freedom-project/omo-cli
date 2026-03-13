@@ -6,6 +6,11 @@ import {
 } from "./storage";
 import { TARGET_TOOLS, AGENT_TOOLS, REMINDER_MESSAGE } from "./constants";
 import type { AgentUsageState } from "./types";
+import {
+  type ContextBudget,
+  InjectionPriority,
+  estimateTokens,
+} from "../../shared/context-budget";
 
 interface ToolExecuteInput {
   tool: string;
@@ -26,7 +31,7 @@ interface EventInput {
   };
 }
 
-export function createAgentUsageReminderHook(_ctx: PluginInput) {
+export function createAgentUsageReminderHook(_ctx: PluginInput, budget?: ContextBudget) {
   const sessionStates = new Map<string, AgentUsageState>();
 
   function getOrCreateState(sessionID: string): AgentUsageState {
@@ -75,6 +80,16 @@ export function createAgentUsageReminderHook(_ctx: PluginInput) {
 
     if (state.agentUsed) {
       return;
+    }
+
+    // Budget check: usage reminder is LOW priority — skip when budget tight
+    if (budget) {
+      const tokens = estimateTokens(REMINDER_MESSAGE);
+      const allocation = budget.requestAllocation(
+        "agent-usage-reminder", InjectionPriority.LOW, tokens, sessionID
+      );
+      if (!allocation.allowed) return;
+      budget.recordInjection("agent-usage-reminder", tokens, sessionID);
     }
 
     output.output += REMINDER_MESSAGE;

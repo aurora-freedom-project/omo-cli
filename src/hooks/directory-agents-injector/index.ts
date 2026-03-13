@@ -8,6 +8,12 @@ import {
 } from "./storage";
 import { AGENTS_FILENAME } from "./constants";
 import { createDynamicTruncator } from "../../shared/dynamic-truncator";
+import {
+  type ContextBudget,
+  InjectionPriority,
+  estimateTokens,
+  truncateToTokenBudget,
+} from "../../shared/context-budget";
 
 interface ToolExecuteInput {
   tool: string;
@@ -37,7 +43,7 @@ interface EventInput {
   };
 }
 
-export function createDirectoryAgentsInjectorHook(ctx: PluginInput) {
+export function createDirectoryAgentsInjectorHook(ctx: PluginInput, budget?: ContextBudget) {
   const sessionCaches = new Map<string, Set<string>>();
   const pendingBatchReads = new Map<string, string[]>();
   const truncator = createDynamicTruncator(ctx);
@@ -99,10 +105,29 @@ export function createDirectoryAgentsInjectorHook(ctx: PluginInput) {
       try {
         const content = readFileSync(agentsPath, "utf-8");
         const { result, truncated } = await truncator.truncate(sessionID, content);
-        const truncationNotice = truncated
-          ? `\n\n[Note: Content was truncated to save context window space. For full context, please read the file directly: ${agentsPath}]`
-          : "";
-        output.output += `\n\n[Directory Context: ${agentsPath}]\n${result}${truncationNotice}`;
+
+        // Budget check: AGENTS.md is HIGH priority — truncate but don't skip
+        if (budget) {
+          const tokens = estimateTokens(result);
+          const allocation = budget.requestAllocation(
+            "directory-agents-injector", InjectionPriority.HIGH, tokens, sessionID
+          );
+          if (!allocation.allowed) continue;
+          const finalResult = allocation.maxTokens < tokens
+            ? truncateToTokenBudget(result, allocation.maxTokens)
+            : result;
+          const truncationNotice = truncated
+            ? `\n\n[Note: Content was truncated to save context window space. For full context, please read the file directly: ${agentsPath}]`
+            : "";
+          output.output += `\n\n[Directory Context: ${agentsPath}]\n${finalResult}${truncationNotice}`;
+          budget.recordInjection("directory-agents-injector", estimateTokens(finalResult), sessionID);
+        } else {
+          const truncationNotice = truncated
+            ? `\n\n[Note: Content was truncated to save context window space. For full context, please read the file directly: ${agentsPath}]`
+            : "";
+          output.output += `\n\n[Directory Context: ${agentsPath}]\n${result}${truncationNotice}`;
+        }
+
         cache.add(agentsDir);
       } catch { }
     }

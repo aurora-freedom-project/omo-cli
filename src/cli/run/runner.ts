@@ -151,7 +151,7 @@ export async function run(options: RunOptions): Promise<number> {
         }
       }
 
-      await eventProcessor.catch(() => {})
+      await eventProcessor.catch((err) => { console.error(pc.dim(`[runner] Event processor ended: ${err instanceof Error ? err.message : String(err)}`)) })
       cleanup()
       return 130
     } catch (err) {

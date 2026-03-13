@@ -25,16 +25,22 @@ import {
   type PreCompactContext,
 } from "./pre-compact"
 import { cacheToolInput, getToolInput, cleanupToolInputCacheForSession } from "./tool-input-cache"
-import { recordToolUse, recordToolResult, getTranscriptPath, recordUserMessage } from "./transcript"
+import { recordToolUse, recordToolResult, getTranscriptPath, recordUserMessage, cleanupTranscriptForSession, cleanupStaleTranscripts } from "./transcript"
 import type { PluginConfig } from "./types"
 import { log, isHookDisabled } from "../../shared"
 import type { ContextCollector } from "../../features/context-injector"
-import { canInject, releaseInjectionLock } from "../loop-coordination"
+import { canInject, releaseInjectionLock, cleanupSession as cleanupLoopCoordination } from "../loop-coordination"
 import { cleanupStopHookState } from "./stop"
+import { cleanupDelegationDepth } from "../../tools/delegate-task/helpers"
+import { cleanupWorkpad } from "../workpad-tracker"
+import { releaseAllClaims } from "../../features/claim-release"
 
 const sessionFirstMessageProcessed = new Set<string>()
 const sessionErrorState = new Map<string, { hasError: boolean; errorMessage?: string }>()
 const sessionInterruptState = new Map<string, { interrupted: boolean }>()
+
+// Cleanup stale transcript files on plugin init (>7 days old)
+cleanupStaleTranscripts(7)
 
 export function createClaudeCodeHooksHook(
   ctx: PluginInput,
@@ -346,6 +352,11 @@ export function createClaudeCodeHooksHook(
           sessionFirstMessageProcessed.delete(sessionInfo.id)
           cleanupStopHookState(sessionInfo.id)
           cleanupToolInputCacheForSession(sessionInfo.id)
+          cleanupTranscriptForSession(sessionInfo.id)
+          cleanupDelegationDepth(sessionInfo.id)        // P0 #1: was never called
+          cleanupLoopCoordination(sessionInfo.id)        // P0 #2: only ralph-loop imported this
+          cleanupWorkpad(sessionInfo.id)                  // #27: workpad state
+          releaseAllClaims(sessionInfo.id)                  // #20: claim/release locks
         }
         return
       }

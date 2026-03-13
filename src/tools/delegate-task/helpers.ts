@@ -198,19 +198,41 @@ export interface BuildSystemContentInput {
     skillContent?: string
     categoryPromptAppend?: string
     agentName?: string
+    /** Retry context — injected when this is a retry/continuation attempt. */
+    retryContext?: {
+        attempt: number
+        previousError?: string
+        stallDetected?: boolean
+    }
 }
 
 /** Build system content from skill content, category prompt, and agent name. */
 export function buildSystemContent(input: BuildSystemContentInput): string | undefined {
-    const { skillContent, categoryPromptAppend, agentName } = input
+    const { skillContent, categoryPromptAppend, agentName, retryContext } = input
 
     const planAgentPrepend = isPlanAgent(agentName) ? PLAN_AGENT_SYSTEM_PREPEND : ""
 
-    if (!skillContent && !categoryPromptAppend && !planAgentPrepend) {
+    if (!skillContent && !categoryPromptAppend && !planAgentPrepend && !retryContext) {
         return undefined
     }
 
     const parts: string[] = []
+
+    // Retry preamble — gives agent context about why it's being retried
+    if (retryContext && retryContext.attempt > 1) {
+        const reason = retryContext.stallDetected
+            ? "stalled (no activity detected — agent was unresponsive)"
+            : "failed"
+        const lines = [
+            `⚠️ RETRY ATTEMPT #${retryContext.attempt}`,
+            `This task previously ${reason}.`,
+        ]
+        if (retryContext.previousError) {
+            lines.push(`Previous error: ${retryContext.previousError}`)
+        }
+        lines.push("Focus on completing the task efficiently. Avoid repeating the same approach if it failed.")
+        parts.push(lines.join("\n"))
+    }
 
     if (planAgentPrepend) {
         parts.push(planAgentPrepend)

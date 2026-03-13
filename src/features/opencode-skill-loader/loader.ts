@@ -12,7 +12,7 @@ import type { CommandDefinition } from "../claude-code-command-loader/types"
 import type { SkillScope, SkillMetadata, LoadedSkill, LazyContentLoader } from "./types"
 import type { SkillMcpConfig } from "../skill-mcp-manager/types"
 
-function parseSkillMcpConfigFromFrontmatter(content: string): SkillMcpConfig | undefined {
+export function parseSkillMcpConfigFromFrontmatter(content: string): SkillMcpConfig | undefined {
   const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)
   if (!frontmatterMatch) return undefined
 
@@ -30,7 +30,7 @@ function parseSkillMcpConfigFromFrontmatter(content: string): SkillMcpConfig | u
   )
 }
 
-async function loadMcpJsonFromDir(skillDir: string): Promise<SkillMcpConfig | undefined> {
+export async function loadMcpJsonFromDir(skillDir: string): Promise<SkillMcpConfig | undefined> {
   const mcpJsonPath = join(skillDir, "mcp.json")
 
   return Effect.runPromise(
@@ -58,7 +58,7 @@ async function loadMcpJsonFromDir(skillDir: string): Promise<SkillMcpConfig | un
   )
 }
 
-function parseAllowedTools(allowedTools: string | string[] | undefined): string[] | undefined {
+export function parseAllowedTools(allowedTools: string | string[] | undefined): string[] | undefined {
   if (!allowedTools) return undefined
 
   // Handle YAML array format: already parsed as string[]

@@ -91,7 +91,7 @@ export async function getOpenCodeVersion(
   return null
 }
 
-export function compareVersions(current: string, minimum: string): boolean {
+export function isVersionAtLeast(current: string, minimum: string): boolean {
   const parseVersion = (v: string): number[] => {
     const cleaned = v.replace(/^v/, "").split("-")[0]
     return cleaned.split(".").map((n) => parseInt(n, 10) || 0)
@@ -146,7 +146,7 @@ export async function checkOpenCodeInstallation(): Promise<CheckResult> {
     }
   }
 
-  if (info.version && !compareVersions(info.version, MIN_OPENCODE_VERSION)) {
+  if (info.version && !isVersionAtLeast(info.version, MIN_OPENCODE_VERSION)) {
     return {
       name: CHECK_NAMES[CHECK_IDS.OPENCODE_INSTALLATION],
       status: "warn",

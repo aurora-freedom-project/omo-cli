@@ -1,11 +1,13 @@
 import type { PluginInput } from "@opencode-ai/plugin";
 import { Effect } from "effect";
+import type { ContextBudget } from "./context-budget";
 
 const ANTHROPIC_ACTUAL_LIMIT =
 	process.env.ANTHROPIC_1M_CONTEXT === "true" ||
 		process.env.VERTEX_ANTHROPIC_1M_CONTEXT === "true"
 		? 1_000_000
 		: 200_000;
+const DEFAULT_CONTEXT_LIMIT = 128_000;
 const CHARS_PER_TOKEN_ESTIMATE = 4;
 const DEFAULT_TARGET_MAX_TOKENS = 50_000;
 
@@ -119,6 +121,7 @@ export function truncateToTokenLimit(
 export async function getContextWindowUsage(
 	ctx: PluginInput,
 	sessionID: string,
+	contextLimit?: number,
 ): Promise<{
 	usedTokens: number;
 	remainingTokens: number;
@@ -145,12 +148,14 @@ export async function getContextWindowUsage(
 					(lastTokens?.input ?? 0) +
 					(lastTokens?.cache?.read ?? 0) +
 					(lastTokens?.output ?? 0);
-				const remainingTokens = ANTHROPIC_ACTUAL_LIMIT - usedTokens;
+				// Use provided context limit, or fall back to Anthropic env, or default
+				const actualLimit = contextLimit ?? ANTHROPIC_ACTUAL_LIMIT;
+				const remainingTokens = actualLimit - usedTokens;
 
 				return {
 					usedTokens,
 					remainingTokens,
-					usagePercentage: usedTokens / ANTHROPIC_ACTUAL_LIMIT,
+					usagePercentage: usedTokens / actualLimit,
 				};
 			},
 			catch: () => "fail" as const,
@@ -196,15 +201,20 @@ export async function dynamicTruncate(
 }
 
 /** Create a session-bound truncator with pre-configured context */
-export function createDynamicTruncator(ctx: PluginInput) {
+export function createDynamicTruncator(ctx: PluginInput, budget?: ContextBudget) {
 	return {
 		truncate: (
 			sessionID: string,
 			output: string,
 			options?: TruncationOptions,
-		) => dynamicTruncate(ctx, sessionID, output, options),
+		) => dynamicTruncate(ctx, sessionID, output, {
+			...options,
+			contextWindowLimit: options?.contextWindowLimit ?? budget?.getContextLimit(),
+		}),
 
-		getUsage: (sessionID: string) => getContextWindowUsage(ctx, sessionID),
+		getUsage: (sessionID: string) => getContextWindowUsage(
+			ctx, sessionID, budget?.getContextLimit()
+		),
 
 		truncateSync: (
 			output: string,

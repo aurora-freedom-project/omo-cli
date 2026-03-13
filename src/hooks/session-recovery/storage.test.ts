@@ -19,6 +19,13 @@ const mockConstants = {
 }
 mock.module("./constants", () => mockConstants)
 
+// Mock hook-message-injector so shared/session-utils.getMessageDir uses our mock MESSAGE_STORAGE
+mock.module("../../features/hook-message-injector", () => ({
+    MESSAGE_STORAGE: "/mock/msg",
+    findNearestMessageWithFields: () => null,
+    findFirstMessageWithAgent: () => null,
+}))
+
 import * as storage from "./storage"
 
 describe("session-recovery/storage", () => {
@@ -41,9 +48,9 @@ describe("session-recovery/storage", () => {
             mockFs.existsSync.mockImplementation((p: string) => p === "/mock/msg" || p === join("/mock/msg", "s1"))
             expect(storage.getMessageDir("s1")).toBe(join("/mock/msg", "s1"))
         })
-        test("returns empty when root missing", () => {
+        test("returns null when root missing", () => {
             mockFs.existsSync.mockReturnValue(false)
-            expect(storage.getMessageDir("s1")).toBe("")
+            expect(storage.getMessageDir("s1")).toBeNull()
         })
         test("scans subdirs", () => {
             mockFs.existsSync.mockImplementation((p: string) => {
@@ -58,7 +65,7 @@ describe("session-recovery/storage", () => {
         test("returns empty if not found anywhere", () => {
             mockFs.existsSync.mockImplementation((p: string) => p === "/mock/msg")
             mockFs.readdirSync.mockReturnValue(["subA"])
-            expect(storage.getMessageDir("s1")).toBe("")
+            expect(storage.getMessageDir("s1")).toBeNull()
         })
     })
 

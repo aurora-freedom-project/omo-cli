@@ -31,7 +31,7 @@ interface Tool {
 // Ensure SurrealDB is ready
 // ---------------------------------------------------------------------------
 
-let schemaInitialized = false
+let schemaInitPromise: Promise<void> | null = null
 
 async function ensureReady(config: MemoryConfig): Promise<boolean> {
     return Effect.runPromise(
@@ -59,10 +59,10 @@ async function ensureReady(config: MemoryConfig): Promise<boolean> {
                 const connected = await isConnected()
                 if (!connected) return false
 
-                if (!schemaInitialized) {
-                    await initSchema()
-                    schemaInitialized = true
+                if (!schemaInitPromise) {
+                    schemaInitPromise = initSchema()
                 }
+                await schemaInitPromise
                 return true
             },
             catch: () => "fail" as const,

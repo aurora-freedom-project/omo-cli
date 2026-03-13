@@ -78,13 +78,46 @@ function mergeHooksConfig(
   return result
 }
 
+// In-memory cache with mtime-based invalidation.
+// Previously: Bun.file().text() + JSON.parse() on EVERY tool.execute.before/after.
+// Now: stat() to check mtime, only re-read if changed.
+const _configCache: {
+  result: ClaudeHooksConfig | null
+  mtimes: Map<string, number>
+} = { result: null, mtimes: new Map() }
+
+function getFileMtime(path: string): number {
+  try {
+    return existsSync(path) ? require("fs").statSync(path).mtimeMs : 0
+  } catch {
+    return 0
+  }
+}
+
 export async function loadClaudeHooksConfig(
   customSettingsPath?: string
 ): Promise<ClaudeHooksConfig | null> {
   const paths = getClaudeSettingsPaths(customSettingsPath)
+
+  // Check if any file has changed since last cache
+  let cacheValid = _configCache.result !== null
+  if (cacheValid) {
+    for (const p of paths) {
+      const currentMtime = getFileMtime(p)
+      const cachedMtime = _configCache.mtimes.get(p) ?? 0
+      if (currentMtime !== cachedMtime) {
+        cacheValid = false
+        break
+      }
+    }
+  }
+
+  if (cacheValid) return _configCache.result
+
   let mergedConfig: ClaudeHooksConfig = {}
 
   for (const settingsPath of paths) {
+    _configCache.mtimes.set(settingsPath, getFileMtime(settingsPath))
     if (existsSync(settingsPath)) {
       try {
         const content = await Bun.file(settingsPath).text()
@@ -99,5 +132,6 @@ export async function loadClaudeHooksConfig(
     }
   }
 
-  return Object.keys(mergedConfig).length > 0 ? mergedConfig : null
+  _configCache.result = Object.keys(mergedConfig).length > 0 ? mergedConfig : null
+  return _configCache.result
 }

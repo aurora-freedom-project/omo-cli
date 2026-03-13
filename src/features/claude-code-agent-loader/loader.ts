@@ -7,18 +7,7 @@ import { isMarkdownFile } from "../../shared/file-utils"
 import { getClaudeConfigDir } from "../../shared"
 import type { AgentScope, AgentFrontmatter, LoadedAgent } from "./types"
 
-function parseToolsConfig(toolsStr?: string): Record<string, boolean> | undefined {
-  if (!toolsStr) return undefined
-
-  const tools = toolsStr.split(",").map((t) => t.trim()).filter(Boolean)
-  if (tools.length === 0) return undefined
-
-  const result: Record<string, boolean> = {}
-  for (const tool of tools) {
-    result[tool.toLowerCase()] = true
-  }
-  return result
-}
+import { parseToolsConfig } from "../../shared/tools-config"
 
 function loadAgentsFromDir(agentsDir: string, scope: AgentScope): LoadedAgent[] {
   if (!existsSync(agentsDir)) {

@@ -5,8 +5,9 @@ import { createAgentToolRestrictions } from "../shared/permission-compat"
 /**
  * Consultant - Plan Consultant Agent
  *
- * Named after the Greek goddess of wisdom, prudence, and deep counsel.
- * Consultant analyzes user requests BEFORE planning to prevent AI failures.
+ * NOTE: File is named `conductor.ts` for historical reasons (conducts pre-plan analysis).
+ * The agent itself is called "Consultant" in the UI and routing system.
+ * See also: `navigator.ts` which houses the "Conductor" agent (master orchestrator).
  *
  * Core responsibilities:
  * - Identify hidden intentions and unstated requirements

@@ -244,12 +244,11 @@ Use OS-appropriate temp directory:
 ## PARALLEL EXECUTION REQUIREMENTS
 
 | Request Type | Suggested Calls | Doc Discovery Required |
-|--------------|----------------|
+|--------------|:---------------:|:----------------------:|
 | TYPE A (Conceptual) | 1-2 | YES (Phase 0.5 first) |
-| TYPE B (Implementation) | 2-3 NO |
-| TYPE C (Context) | 2-3 NO |
+| TYPE B (Implementation) | 2-3 | NO |
+| TYPE C (Context) | 2-3 | NO |
 | TYPE D (Comprehensive) | 3-5 | YES (Phase 0.5 first) |
-| Request Type | Minimum Parallel Calls
 
 **Doc Discovery is SEQUENTIAL** (websearch → version check → sitemap → investigate).
 **Main phase is PARALLEL** once you know where to look.

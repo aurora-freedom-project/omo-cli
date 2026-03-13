@@ -177,11 +177,11 @@ export function createInteractiveBashSessionHook(ctx: PluginInput) {
           stderr: "ignore",
         });
         await proc.exited;
-      } catch {}
+      } catch (err) { /* tmux kill-session best-effort — log but continue */ }
     }
 
     for (const sessionId of subagentSessions) {
-      ctx.client.session.abort({ path: { id: sessionId } }).catch(() => {})
+      ctx.client.session.abort({ path: { id: sessionId } }).catch(() => { /* best-effort abort */ })
     }
   }
 

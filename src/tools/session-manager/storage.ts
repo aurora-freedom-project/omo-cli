@@ -4,6 +4,10 @@ import { join } from "node:path"
 import { Effect } from "effect"
 import { MESSAGE_STORAGE, PART_STORAGE, SESSION_STORAGE, TODO_DIR, TRANSCRIPT_DIR } from "./constants"
 import type { SessionMessage, SessionInfo, TodoItem, SessionMetadata } from "./types"
+import { getMessageDir } from "../../shared/session-utils"
+
+// Re-export for backward compatibility (tests import from here)
+export { getMessageDir }
 
 /** Options for filtering main sessions. */
 export interface GetMainSessionsOptions {
@@ -92,41 +96,9 @@ export async function getAllSessions(): Promise<string[]> {
   return [...new Set(sessions)]
 }
 
-/**
- * Finds the message directory for a given session.
- * Checks both message storage and session storage paths.
- * @param sessionID - The session ID to look up
- * @returns Path to the session's message directory
- */
-export function getMessageDir(sessionID: string): string {
-  if (!existsSync(MESSAGE_STORAGE)) return ""
-
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) {
-    return directPath
-  }
-
-  return Effect.runSync(
-    Effect.try({
-      try: () => {
-        for (const dir of readdirSync(MESSAGE_STORAGE)) {
-          const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-          if (existsSync(sessionPath)) {
-            return sessionPath
-          }
-        }
-        return ""
-      },
-      catch: () => "" as never
-    }).pipe(Effect.catchAll(() => Effect.succeed("")))
-  )
-
-  return ""
-}
-
 /** Checks if a session exists in storage by its ID. */
 export function sessionExists(sessionID: string): boolean {
-  return getMessageDir(sessionID) !== ""
+  return getMessageDir(sessionID) !== null
 }
 
 /**

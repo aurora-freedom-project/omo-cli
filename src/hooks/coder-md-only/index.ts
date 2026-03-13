@@ -1,12 +1,13 @@
 import type { PluginInput } from "@opencode-ai/plugin"
-import { existsSync, readdirSync } from "node:fs"
-import { join, resolve, relative, isAbsolute } from "node:path"
+import { existsSync } from "node:fs"
+import { resolve, relative, isAbsolute } from "node:path"
 import { HOOK_NAME, PLANNER_AGENTS, ALLOWED_EXTENSIONS, ALLOWED_PATH_PREFIX, BLOCKED_TOOLS, PLANNING_CONSULT_WARNING, PLANNER_WORKFLOW_REMINDER } from "./constants"
-import { findNearestMessageWithFields, findFirstMessageWithAgent, MESSAGE_STORAGE } from "../../features/hook-message-injector"
+import { findNearestMessageWithFields, findFirstMessageWithAgent } from "../../features/hook-message-injector"
 import { getSessionAgent } from "../../features/claude-code-session-state"
 import { log } from "../../shared/logger"
 import { SYSTEM_DIRECTIVE_PREFIX } from "../../shared/system-directive"
 import { getAgentDisplayName } from "../../shared/agent-display-names"
+import { getMessageDir } from "../../shared/session-utils"
 
 export * from "./constants"
 
@@ -48,19 +49,7 @@ function isAllowedFile(filePath: string, workspaceRoot: string): boolean {
   return true
 }
 
-function getMessageDir(sessionID: string): string | null {
-  if (!existsSync(MESSAGE_STORAGE)) return null
 
-  const directPath = join(MESSAGE_STORAGE, sessionID)
-  if (existsSync(directPath)) return directPath
-
-  for (const dir of readdirSync(MESSAGE_STORAGE)) {
-    const sessionPath = join(MESSAGE_STORAGE, dir, sessionID)
-    if (existsSync(sessionPath)) return sessionPath
-  }
-
-  return null
-}
 
 const TASK_TOOLS = ["delegate_task", "task", "call_omo_agent"]
 

@@ -12,6 +12,7 @@ import { runCategorization } from "./skills-categorizer"
 import { adaptTier, adaptAllTiers } from "./skills-adapter"
 import { syncSkills } from "./skills-sync"
 import { createIndexCommand } from "./index-codebase"
+import { runCreateSkill } from "./skills-create"
 import type { InstallArgs } from "./types"
 import type { RunOptions } from "./run"
 import type { GetLocalVersionOptions } from "./get-local-version/types"
@@ -182,11 +183,14 @@ program
   .description("Security and quality scan for skills (run before importing)")
   .option("-o, --output <path>", "Output path for JSON report (default: ./skills_security_report.json)")
   .option("-d, --details", "Show detailed skill list")
+  .option("--min-score <score>", "Minimum quality score 0-100 for CI/CD gate (maps to 0-7 scale)", parseFloat)
+  .option("--strict", "Exit with code 1 if any skill fails --min-score threshold (CI/CD mode)")
   .addHelpText("after", `
 Examples:
   $ bunx omo-cli scan-skills
   $ bunx omo-cli scan-skills --details
   $ bunx omo-cli scan-skills --output ./my-report.json
+  $ bunx omo-cli scan-skills --min-score 70 --strict  # CI/CD gate
 
 This command scans all 600+ skills for:
   🔴 HIGH risk:   Dangerous commands (rm -rf, sudo, curl|bash)
@@ -195,11 +199,14 @@ This command scans all 600+ skills for:
   🟢 SAFE:        Pure markdown instructions
 
 Plus quality scoring and OMO agent mapping.
+CI/CD mode: --min-score 70 --strict → exit 1 if any skill < 70%.
 `)
   .action(async (options) => {
     await runSecurityScan({
       outputPath: options.output,
       showDetails: options.details,
+      minScore: options.minScore,
+      strict: options.strict,
     })
   })
 
@@ -291,5 +298,26 @@ deduplicates skill names before copying to ~/.config/_skills_.
 program.addCommand(createMemoryCommand())
 program.addCommand(createMcpOAuthCommand())
 program.addCommand(createIndexCommand())
+
+program
+  .command("create-skill <name>")
+  .description("Create a new skill with SKILL.md template and best-practice structure")
+  .option("-d, --description <text>", "Description of the skill")
+  .option("-t, --target <path>", "Target directory (default: ~/.config/_skills_)")
+  .option("-f, --force", "Overwrite existing skill")
+  .addHelpText("after", `
+Examples:
+  $ bunx omo-cli create-skill my-new-skill -d "A skill for X"
+  $ bunx omo-cli create-skill api-design -d "REST API design patterns" -t ./skills
+  $ bunx omo-cli create-skill my-skill -d "Updated skill" --force
+`)
+  .action(async (name: string, options) => {
+    const exitCode = await runCreateSkill(name, {
+      description: options.description,
+      target: options.target,
+      force: options.force,
+    })
+    process.exit(exitCode)
+  })
 
 program.parse()

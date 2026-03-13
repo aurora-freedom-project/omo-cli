@@ -1,16 +1,11 @@
-import {
-  KEYWORD_DETECTORS,
-  CODE_BLOCK_PATTERN,
-  INLINE_CODE_PATTERN,
-} from "./constants"
+import { KEYWORD_DETECTORS } from "./constants"
+import { removeCodeBlocks, extractPromptText } from "../../shared/prompt-text"
+
+export { removeCodeBlocks, extractPromptText }
 
 export interface DetectedKeyword {
   type: "ultrawork" | "search" | "analyze"
   message: string
-}
-
-export function removeCodeBlocks(text: string): string {
-  return text.replace(CODE_BLOCK_PATTERN, "").replace(INLINE_CODE_PATTERN, "")
 }
 
 /**
@@ -42,11 +37,3 @@ export function detectKeywordsWithType(text: string, agentName?: string): Detect
     .map(({ type, message }) => ({ type, message }))
 }
 
-export function extractPromptText(
-  parts: Array<{ type: string; text?: string }>
-): string {
-  return parts
-    .filter((p) => p.type === "text")
-    .map((p) => p.text || "")
-    .join(" ")
-}
