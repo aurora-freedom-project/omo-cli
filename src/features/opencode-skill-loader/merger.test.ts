@@ -38,7 +38,7 @@ describe("parseAllowedToolsFromMetadata", () => {
 
 describe("normalizeConfig", () => {
   it("handles undefined config gracefully", async () => {
-    const { normalizeConfig } = await import("./merger") as any
+    const { normalizeConfig } = await import("./merger") as Record<string, unknown>
 
     // normalizeConfig may not be exported — if so this test is a structural check
     if (typeof normalizeConfig === "function") {
@@ -78,6 +78,7 @@ describe("mergeSkills", () => {
       scope: "project" as const,
       metadata: {},
       source: "/project/SKILL.md",
+      definition: { name: "test-skill", template: "project content" },
     }]
 
     const result = mergeSkills(builtins, undefined, [], projectSkills)

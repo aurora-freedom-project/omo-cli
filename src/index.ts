@@ -36,6 +36,14 @@ import {
   createQuestionLabelTruncatorHook,
   createSubagentQuestionBlockerHook,
   createCostMeteringHook,
+  createPreflightSkillInjectorHook,
+  createAutoRemediateHook,
+  createJailbreakEvalHook,
+  createOutputGuardHook,
+  createSandboxServerHook,
+  createProviderProbeHook,
+  createMcpAuditHook,
+  createVariantHunterHook,
 } from "./hooks";
 import {
   contextCollector,
@@ -62,6 +70,7 @@ import {
   builtinTools,
   createCallOmoAgent,
   createBackgroundTools,
+  createSecurityTools,
   createLookAt,
   createSkillTool,
   createSkillMcpTool,
@@ -85,6 +94,10 @@ import { createConfigHandler } from "./plugin-handlers";
 import { createMemoryTools } from "./cli/memory/memory-tools";
 import { createMemoryCaptureHook } from "./hooks/memory-capture";
 import { createInputGuardHook } from "./hooks/input-guard";
+import { createDriftDetectorHook } from "./hooks/drift-detector";
+import { createRagEnricherHook } from "./hooks/rag-enricher";
+import { createStreamChainHook } from "./hooks/stream-chain";
+import { createReasoningBankHook } from "./hooks/reasoning-bank";
 import { createCodeIntelTools } from "./features/code-intel/code-intel-tools";
 import { startAutoInit } from "./features/code-intel/auto-init";
 import { createContextBudget, type ContextBudget } from "./shared/context-budget";
@@ -263,6 +276,19 @@ const OmoCliPlugin: Plugin = async (ctx) => {
   const subagentQuestionBlocker = createSubagentQuestionBlockerHook();
 
   const taskResumeInfo = createTaskResumeInfoHook();
+  
+  const preflightSkillInjector = isHookEnabled("preflight-skill-injector")
+    ? createPreflightSkillInjectorHook(ctx, pluginConfig.experimental, contextBudget)
+    : null;
+
+  // Security Framework (Phase 1 & 2)
+  const autoRemediate = isHookEnabled("auto-remediate") ? createAutoRemediateHook() : null;
+  const jailbreakEval = isHookEnabled("jailbreak-eval") ? createJailbreakEvalHook() : null;
+  const outputGuard = isHookEnabled("output-guard") ? createOutputGuardHook() : null;
+  const sandboxServer = isHookEnabled("sandbox-server") ? createSandboxServerHook() : null;
+  const providerProbe = isHookEnabled("provider-probe") ? createProviderProbeHook() : null;
+  const mcpAudit = isHookEnabled("mcp-audit") ? createMcpAuditHook() : null;
+  const variantHunter = isHookEnabled("variant-hunter") ? createVariantHunterHook() : null;
 
   const tmuxSessionManager = new TmuxSessionManager(ctx, tmuxConfig);
 
@@ -416,6 +442,22 @@ const OmoCliPlugin: Plugin = async (ctx) => {
     ? createInputGuardHook(pluginConfig.input_guard)
     : null;
 
+  const driftDetector = isHookEnabled("drift-detector")
+    ? createDriftDetectorHook()
+    : null;
+
+  const ragEnricher = isHookEnabled("rag-enricher") && pluginConfig.memory?.enabled
+    ? createRagEnricherHook(ctx.directory, contextBudget ?? undefined)
+    : null;
+
+  const streamChain = isHookEnabled("stream-chain")
+    ? createStreamChainHook()
+    : null;
+
+  const reasoningBank = isHookEnabled("reasoning-bank") && pluginConfig.memory?.enabled
+    ? createReasoningBankHook(ctx.directory)
+    : null;
+
   // Auto-start SurrealDB + incremental index in background (non-blocking)
   if (pluginConfig.memory?.enabled) {
     startAutoInit(ctx.directory, pluginConfig.memory);
@@ -427,6 +469,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       ...backgroundTools,
       ...memoryTools,
       ...codeIntelTools,
+      ...createSecurityTools(),
       call_omo_agent: callOmoAgent,
       ...(lookAt ? { look_at: lookAt } : {}),
       delegate_task: delegateTask,
@@ -478,6 +521,9 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await autoSlashCommand?.["chat.message"]?.(input, output);
       await startWork?.["chat.message"]?.(input, output);
       await inputGuard?.["chat.message"]?.(input, output);
+      await preflightSkillInjector?.["chat.message"]?.(input, output);
+      await ragEnricher?.["chat.message"]?.(input, output);
+      await reasoningBank?.["chat.message"]?.(input, output);
       await memoryCapture?.["chat.message"]?.(input, output);
 
       if (!hasConnectedProvidersCache()) {
@@ -576,9 +622,43 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await interactiveBashSession?.event(input);
       await ralphLoop?.event(input);
       await conductorHook?.handler(input);
+      await driftDetector?.event?.(input);
+      await streamChain?.event?.(input);
+      await reasoningBank?.event?.(input);
 
+      // Security Hooks Event wiring
+      await autoRemediate?.event?.(input);
+      await jailbreakEval?.event?.(input);
+      await outputGuard?.event?.(input);
+      await sandboxServer?.event?.(input);
+      await providerProbe?.event?.(input);
+      await mcpAudit?.event?.(input);
+      await variantHunter?.event?.(input);
+
+      // Map custom security lifecycle events from OpenCode "event.type"
       const { event } = input;
       const props = event.properties as Record<string, unknown> | undefined;
+      const eventType = event.type as string;
+
+      if (eventType === "agent.start") {
+         await providerProbe?.["agent.start"]?.(input);
+      }
+      if (eventType === "tool.register") {
+         await mcpAudit?.["tool.register"]?.(input);
+      }
+      if (eventType === "tool.call.validate") {
+         await providerProbe?.["tool.call.validate"]?.(input);
+      }
+      if (eventType === "finding.new") {
+         await autoRemediate?.["finding.new"]?.(input);
+         await variantHunter?.["finding.new"]?.(input);
+      }
+      if (eventType === "session.end") {
+         await jailbreakEval?.["session.end"]?.(input);
+         await sandboxServer?.["session.end"]?.(input);
+         await autoRemediate?.["session.end"]?.(input);
+         await variantHunter?.["session.end"]?.(input);
+      }
 
       if (event.type === "session.created") {
         const sessionInfo = props?.info as
@@ -612,6 +692,7 @@ const OmoCliPlugin: Plugin = async (ctx) => {
           resetMessageCursor(sessionInfo.id);
           firstMessageVariantGate.clear(sessionInfo.id);
           contextBudget.resetSession(sessionInfo.id);
+          preflightSkillInjector?.clearSession?.(sessionInfo.id);
           await skillMcpManager.disconnectSession(sessionInfo.id);
           await lspManager.cleanupTempDirectoryClients();
           await tmuxSessionManager.onSessionDeleted({
@@ -669,6 +750,9 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await plannerMdOnly?.["tool.execute.before"]?.(input, output);
       await workerNotepad?.["tool.execute.before"]?.(input, output);
       await conductorHook?.["tool.execute.before"]?.(input, output);
+      
+      await sandboxServer?.["tool.execute.before"]?.(input, output);
+      await mcpAudit?.["tool.execute.before"]?.(input, output);
 
       if (input.tool === "task") {
         const args = output.args as Record<string, unknown>;
@@ -752,12 +836,18 @@ const OmoCliPlugin: Plugin = async (ctx) => {
       await emptyTaskResponseDetector?.["tool.execute.after"](input, output);
       await agentUsageReminder?.["tool.execute.after"](input, output);
       await categorySkillReminder?.["tool.execute.after"](input, output);
+      await driftDetector?.["tool.execute.after"]?.(input, output);
       await interactiveBashSession?.["tool.execute.after"](input, output);
       await editErrorRecovery?.["tool.execute.after"](input, output);
       await delegateTaskRetry?.["tool.execute.after"](input, output);
       await conductorHook?.["tool.execute.after"]?.(input, output);
       await costMetering?.["tool.execute.after"]?.(input, output);
       await taskResumeInfo["tool.execute.after"](input, output);
+      await streamChain?.["tool.execute.after"]?.(input, output);
+      await reasoningBank?.["tool.execute.after"]?.(input, output);
+
+      await outputGuard?.["tool.execute.after"]?.(input, output);
+      await sandboxServer?.["tool.execute.after"]?.(input, output);
     },
   };
 };

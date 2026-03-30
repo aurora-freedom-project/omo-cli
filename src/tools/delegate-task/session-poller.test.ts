@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test"
 import { pollForSessionCompletion, fetchLastAssistantMessage } from "./session-poller"
 import { __setTimingConfig, __resetTimingConfig } from "./timing"
+import { createMockSessionClient } from "../../test-helpers"
 
 describe("session-poller", () => {
     beforeEach(() => {
@@ -24,15 +25,13 @@ describe("session-poller", () => {
         test("detects stable message count and completes", async () => {
             // #given - messages stabilize at count 3
             let callCount = 0
-            const mockClient = {
-                session: {
-                    messages: async () => {
-                        callCount++
-                        return { data: [{ id: 1 }, { id: 2 }, { id: 3 }] }
-                    },
-                    status: async () => ({ data: {} }),
+            const mockClient = createMockSessionClient({
+                messages: async () => {
+                    callCount++
+                    return { data: [{ id: 1 }, { id: 2 }, { id: 3 }] }
                 },
-            } as any
+                status: async () => ({ data: {} }),
+            })
 
             // #when
             const result = await pollForSessionCompletion({
@@ -49,12 +48,10 @@ describe("session-poller", () => {
         test("returns aborted when abort signal fires", async () => {
             // #given
             const controller = new AbortController()
-            const mockClient = {
-                session: {
-                    messages: async () => ({ data: [] }),
-                    status: async () => ({ data: {} }),
-                },
-            } as any
+            const mockClient = createMockSessionClient({
+                messages: async () => ({ data: [] }),
+                status: async () => ({ data: {} }),
+            })
 
             // Abort after a short delay
             setTimeout(() => controller.abort(), 30)
@@ -74,15 +71,13 @@ describe("session-poller", () => {
         test("times out when maxTimeMs exceeded", async () => {
             // #given - messages keep changing so stability never reached
             let count = 0
-            const mockClient = {
-                session: {
-                    messages: async () => {
-                        count++
-                        return { data: Array(count).fill({ id: count }) }
-                    },
-                    status: async () => ({ data: {} }),
+            const mockClient = createMockSessionClient({
+                messages: async () => {
+                    count++
+                    return { data: Array(count).fill({ id: count }) }
                 },
-            } as any
+                status: async () => ({ data: {} }),
+            })
 
             // #when
             const result = await pollForSessionCompletion({
@@ -109,12 +104,10 @@ describe("session-poller", () => {
             })
 
             const startTime = Date.now()
-            const mockClient = {
-                session: {
-                    messages: async () => ({ data: [{ id: 1 }] }),
-                    status: async () => ({ data: {} }),
-                },
-            } as any
+            const mockClient = createMockSessionClient({
+                messages: async () => ({ data: [{ id: 1 }] }),
+                status: async () => ({ data: {} }),
+            })
 
             // #when
             const result = await pollForSessionCompletion({
@@ -131,20 +124,18 @@ describe("session-poller", () => {
         test("checks session status when checkSessionStatus is true", async () => {
             // #given - session is busy for first call, then idle
             let statusCallCount = 0
-            const mockClient = {
-                session: {
-                    messages: async () => ({ data: [{ id: 1 }] }),
-                    status: async () => {
-                        statusCallCount++
-                        // First few calls: session is busy
-                        if (statusCallCount <= 2) {
-                            return { data: { "test-session": { type: "running" } } }
-                        }
-                        // Then idle
-                        return { data: { "test-session": { type: "idle" } } }
-                    },
+            const mockClient = createMockSessionClient({
+                messages: async () => ({ data: [{ id: 1 }] }),
+                status: async () => {
+                    statusCallCount++
+                    // First few calls: session is busy
+                    if (statusCallCount <= 2) {
+                        return { data: { "test-session": { type: "running" } } }
+                    }
+                    // Then idle
+                    return { data: { "test-session": { type: "idle" } } }
                 },
-            } as any
+            })
 
             // #when
             const result = await pollForSessionCompletion({
@@ -161,15 +152,13 @@ describe("session-poller", () => {
         test("skips session status check when checkSessionStatus is false", async () => {
             // #given
             let statusCallCount = 0
-            const mockClient = {
-                session: {
-                    messages: async () => ({ data: [{ id: 1 }] }),
-                    status: async () => {
-                        statusCallCount++
-                        return { data: {} }
-                    },
+            const mockClient = createMockSessionClient({
+                messages: async () => ({ data: [{ id: 1 }] }),
+                status: async () => {
+                    statusCallCount++
+                    return { data: {} }
                 },
-            } as any
+            })
 
             // #when
             const result = await pollForSessionCompletion({
@@ -196,12 +185,10 @@ describe("session-poller", () => {
             })
 
             const startTime = Date.now()
-            const mockClient = {
-                session: {
-                    messages: async () => ({ data: [{ id: 1 }] }),
-                    status: async () => ({ data: {} }),
-                },
-            } as any
+            const mockClient = createMockSessionClient({
+                messages: async () => ({ data: [{ id: 1 }] }),
+                status: async () => ({ data: {} }),
+            })
 
             // #when - override minStabilityTimeMs to something low
             const result = await pollForSessionCompletion({
@@ -220,23 +207,21 @@ describe("session-poller", () => {
     describe("fetchLastAssistantMessage", () => {
         test("returns text from last assistant message", async () => {
             // #given
-            const mockClient = {
-                session: {
-                    messages: async () => ({
-                        data: [
-                            { info: { role: "user" }, parts: [{ type: "text", text: "hello" }] },
-                            {
-                                info: { role: "assistant", time: { created: 1000 } },
-                                parts: [{ type: "text", text: "response A" }],
-                            },
-                            {
-                                info: { role: "assistant", time: { created: 2000 } },
-                                parts: [{ type: "text", text: "response B" }],
-                            },
-                        ],
-                    }),
-                },
-            } as any
+            const mockClient = createMockSessionClient({
+                messages: async () => ({
+                    data: [
+                        { info: { role: "user" }, parts: [{ type: "text", text: "hello" }] },
+                        {
+                            info: { role: "assistant", time: { created: 1000 } },
+                            parts: [{ type: "text", text: "response A" }],
+                        },
+                        {
+                            info: { role: "assistant", time: { created: 2000 } },
+                            parts: [{ type: "text", text: "response B" }],
+                        },
+                    ],
+                }),
+            })
 
             // #when
             const result = await fetchLastAssistantMessage(mockClient, "test-session")
@@ -248,21 +233,19 @@ describe("session-poller", () => {
 
         test("returns reasoning parts for thinking models", async () => {
             // #given
-            const mockClient = {
-                session: {
-                    messages: async () => ({
-                        data: [
-                            {
-                                info: { role: "assistant", time: { created: 1000 } },
-                                parts: [
-                                    { type: "reasoning", text: "Let me think..." },
-                                    { type: "text", text: "The answer is 42" },
-                                ],
-                            },
-                        ],
-                    }),
-                },
-            } as any
+            const mockClient = createMockSessionClient({
+                messages: async () => ({
+                    data: [
+                        {
+                            info: { role: "assistant", time: { created: 1000 } },
+                            parts: [
+                                { type: "reasoning", text: "Let me think..." },
+                                { type: "text", text: "The answer is 42" },
+                            ],
+                        },
+                    ],
+                }),
+            })
 
             // #when
             const result = await fetchLastAssistantMessage(mockClient, "test-session")
@@ -275,15 +258,13 @@ describe("session-poller", () => {
 
         test("returns found=false when no assistant messages", async () => {
             // #given
-            const mockClient = {
-                session: {
-                    messages: async () => ({
-                        data: [
-                            { info: { role: "user" }, parts: [{ type: "text", text: "hello" }] },
-                        ],
-                    }),
-                },
-            } as any
+            const mockClient = createMockSessionClient({
+                messages: async () => ({
+                    data: [
+                        { info: { role: "user" }, parts: [{ type: "text", text: "hello" }] },
+                    ],
+                }),
+            })
 
             // #when
             const result = await fetchLastAssistantMessage(mockClient, "test-session")
@@ -295,11 +276,9 @@ describe("session-poller", () => {
 
         test("returns found=false with error text on API error", async () => {
             // #given
-            const mockClient = {
-                session: {
-                    messages: async () => ({ error: "Not found" }),
-                },
-            } as any
+            const mockClient = createMockSessionClient({
+                messages: async () => ({ error: "Not found" }),
+            })
 
             // #when
             const result = await fetchLastAssistantMessage(mockClient, "test-session")
@@ -311,18 +290,16 @@ describe("session-poller", () => {
 
         test("handles empty parts gracefully", async () => {
             // #given
-            const mockClient = {
-                session: {
-                    messages: async () => ({
-                        data: [
-                            {
-                                info: { role: "assistant", time: { created: 1000 } },
-                                parts: [],
-                            },
-                        ],
-                    }),
-                },
-            } as any
+            const mockClient = createMockSessionClient({
+                messages: async () => ({
+                    data: [
+                        {
+                            info: { role: "assistant", time: { created: 1000 } },
+                            parts: [],
+                        },
+                    ],
+                }),
+            })
 
             // #when
             const result = await fetchLastAssistantMessage(mockClient, "test-session")

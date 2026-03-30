@@ -38,9 +38,23 @@ describe("provider-error-recovery", () => {
             expect(result!.statusCode).toBe(429)
         })
 
-        it("returns null for non-HTTP errors", () => {
-            const result = parseProviderError({ message: "Network timeout" })
+        it("returns null for non-HTTP non-network errors", () => {
+            const result = parseProviderError({ message: "Invalid configuration" })
             expect(result).toBeNull()
+        })
+
+        it("detects network errors (ECONNRESET)", () => {
+            const result = parseProviderError({ code: "ECONNRESET", message: "connection reset" })
+            expect(result).not.toBeNull()
+            expect(result!.isNetworkError).toBe(true)
+            expect(result!.statusCode).toBe(0)
+        })
+
+        it("detects streaming errors (premature close)", () => {
+            const result = parseProviderError({ message: "premature close during response" })
+            expect(result).not.toBeNull()
+            expect(result!.isStreamingError).toBe(true)
+            expect(result!.statusCode).toBe(0)
         })
 
         it("parses Retry-After header", () => {
@@ -65,15 +79,28 @@ describe("provider-error-recovery", () => {
     })
 
     describe("isRetryable", () => {
-        it("429 is retryable", () => expect(isRetryable(429)).toBe(true))
-        it("500 is retryable", () => expect(isRetryable(500)).toBe(true))
-        it("502 is retryable", () => expect(isRetryable(502)).toBe(true))
-        it("503 is retryable", () => expect(isRetryable(503)).toBe(true))
-        it("400 is NOT retryable", () => expect(isRetryable(400)).toBe(false))
-        it("401 is NOT retryable", () => expect(isRetryable(401)).toBe(false))
-        it("403 is NOT retryable", () => expect(isRetryable(403)).toBe(false))
-        it("404 is NOT retryable", () => expect(isRetryable(404)).toBe(false))
-        it("422 is NOT retryable", () => expect(isRetryable(422)).toBe(false))
+        const err = (statusCode: number) => ({
+            statusCode,
+            providerID: "test",
+            message: "test",
+        })
+        it("429 is retryable", () => expect(isRetryable(err(429))).toBe(true))
+        it("500 is retryable", () => expect(isRetryable(err(500))).toBe(true))
+        it("502 is retryable", () => expect(isRetryable(err(502))).toBe(true))
+        it("503 is retryable", () => expect(isRetryable(err(503))).toBe(true))
+        it("400 is NOT retryable", () => expect(isRetryable(err(400))).toBe(false))
+        it("401 is NOT retryable", () => expect(isRetryable(err(401))).toBe(false))
+        it("403 is NOT retryable", () => expect(isRetryable(err(403))).toBe(false))
+        it("404 is NOT retryable", () => expect(isRetryable(err(404))).toBe(false))
+        it("422 is NOT retryable", () => expect(isRetryable(err(422))).toBe(false))
+
+        it("network errors are always retryable", () => {
+            expect(isRetryable({ statusCode: 0, providerID: "test", message: "ECONNRESET", isNetworkError: true })).toBe(true)
+        })
+
+        it("streaming errors are always retryable", () => {
+            expect(isRetryable({ statusCode: 0, providerID: "test", message: "stream error", isStreamingError: true })).toBe(true)
+        })
     })
 
     describe("calculateBackoff", () => {

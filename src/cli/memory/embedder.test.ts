@@ -1,58 +1,86 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test"
+import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test"
 
 const mockLog = mock(() => { })
 mock.module("../../shared/logger", () => ({ log: mockLog }))
 
-const mockP = mock(async (text: string) => {
-    if (text === "error_dims") {
-        return [{ data: new Float32Array(10).fill(1) }]
-    }
-    return [{ data: new Float32Array(384).fill(0.5) }]
-})
-
-const mockCreatePipeline = mock(async () => mockP)
-
-mock.module("@xenova/transformers", () => ({
-    env: { cacheDir: "", allowLocalModels: false },
-    pipeline: mockCreatePipeline
-}))
-
 import { generateEmbedding, generateEmbeddingBatch } from "./embedder"
 
+/**
+ * Mock helper: create a successful Ollama embedding response
+ */
+function ollamaResponse(embeddings: number[][]): Response {
+    return new Response(JSON.stringify({ embeddings }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+    })
+}
+
+/**
+ * Mock helper: create a 404 error response (model not found)
+ */
+function ollamaError(status: number, message: string): Response {
+    return new Response(JSON.stringify({ error: message }), {
+        status,
+        headers: { "Content-Type": "application/json" },
+    })
+}
+
 describe("cli/memory/embedder", () => {
+    let fetchSpy: ReturnType<typeof spyOn>
+
     beforeEach(() => {
         mockLog.mockClear()
-        mockP.mockClear()
-        mockCreatePipeline.mockClear()
+        // Mock global fetch to intercept Ollama API calls
+        fetchSpy = spyOn(globalThis, "fetch")
     })
 
-    describe("generateEmbedding logic limits mapping loop", () => {
-        test("loads pipeline limits strings schemas loops loop mapping checks bounded limits", async () => {
+    afterEach(() => {
+        fetchSpy?.mockRestore()
+    })
+
+    describe("generateEmbedding", () => {
+        test("returns 768-dimensional embedding from Ollama", async () => {
+            const embedding = new Array(768).fill(0.5)
+            fetchSpy.mockResolvedValueOnce(ollamaResponse([embedding]))
+
             const res = await generateEmbedding("hello")
-            expect(res.length).toBe(384)
+            expect(res.length).toBe(768)
             expect(res[0]).toBe(0.5)
-            // Second call uses cached pipeline mapped checking limitations variables target
-            const res2 = await generateEmbedding("world")
-            expect(res2.length).toBe(384)
-            expect(mockCreatePipeline).toHaveBeenCalledTimes(1)
         })
 
-        test("throws tracking dims limit limit mappings target checks strings loops maps boundaries logical boundary target logic limiting arrays string arrays limits map map array targets mapping bounds logic mappings values", async () => {
-            await expect(generateEmbedding("error_dims")).rejects.toThrow("Unexpected embedding dimensions")
+        test("throws on unexpected dimensions", async () => {
+            const shortEmbedding = new Array(10).fill(1.0)
+            fetchSpy.mockResolvedValueOnce(ollamaResponse([shortEmbedding]))
+
+            await expect(generateEmbedding("wrong_dims")).rejects.toThrow("Unexpected embedding dimensions")
+        })
+
+        test("throws on HTTP error (model not found)", async () => {
+            fetchSpy.mockResolvedValueOnce(
+                ollamaError(404, 'model "snowflake-arctic-embed2:568m" not found')
+            )
+
+            await expect(generateEmbedding("hello")).rejects.toThrow("Ollama embedding failed")
         })
     })
 
-    describe("generateEmbeddingBatch array checks bounds logic string constraints bounds variables variables arrays mappings target limitations schemas array maps limits mappings string schemas", () => {
-        test("returns empty tracking limits mapping targets variable bounds maps bounds targeting bounds loops boundaries target limit targets loop maps values value logical logic schema variable objects limit testing target properties testing targets array variable bounds maps string boundaries boolean variables variable logic value targets targets", async () => {
+    describe("generateEmbeddingBatch", () => {
+        test("returns empty array for empty input", async () => {
             const res = await generateEmbeddingBatch([])
             expect(res).toEqual([])
         })
 
-        test("returns strings constraints values limits testing string property object targeting mapping parameters arrays maps boundary checks bounds targeting mapped arrays parameter checking limitations loops mapping testing limits mapping target objects variables target limit map looping string bounds parameter value objects targeting bound loops arrays bounds limits strings mapping arrays schemas targets array loop constraint mapping limitation tracking limits constraints bounds objects schemas values missing", async () => {
+        test("returns embeddings for multiple texts from single batch call", async () => {
+            const embedding1 = new Array(768).fill(0.5)
+            const embedding2 = new Array(768).fill(0.8)
+            // One call to /api/embed returning an array of embeddings
+            fetchSpy.mockResolvedValueOnce(ollamaResponse([embedding1, embedding2]))
+
             const res = await generateEmbeddingBatch(["a", "b"])
             expect(res.length).toBe(2)
-            expect(res[0].length).toBe(384)
-            expect(res[1].length).toBe(384)
+            expect(res[0].length).toBe(768)
+            expect(res[1].length).toBe(768)
+            expect(fetchSpy).toHaveBeenCalledTimes(1) // Parallel batching
         })
     })
 })

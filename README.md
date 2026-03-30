@@ -442,9 +442,9 @@ When Orchestrator needs to run multiple tasks in parallel, it uses the `backgrou
 
 ---
 
-## Hook System (40+)
+## Hook System (50+)
 
-40+ hooks run throughout the lifecycle, categorized into 6 groups:
+50+ hooks run throughout the lifecycle, categorized into 8 groups:
 
 ```
 chat.message --------+
@@ -497,6 +497,14 @@ messages.transform --+    |   - Modify input/output     |
 | | `tool-output-truncator` | Truncate long tool output |
 | | `empty-task-response-detector` | Detect empty responses |
 | | `task-resume-info` | Task resume information |
+| **Security** | `input-guard` | Detects prompt injection (9 layers) |
+| | `auto-remediate` | Automated vulnerability triage and remediation |
+| | `jailbreak-eval` | Post-session LLM refusal detection |
+| | `output-guard` | Sanitizes malicious MCP payload returns |
+| | `sandbox-server` | Containerizes dangerous exec invocations |
+| | `provider-probe` | Monitors adversarial payloads via external probes |
+| | `mcp-audit` | Audits high-risk MCP network egress |
+| | `variant-hunter` | Triage variations of legacy and fingerprint DB anti-patterns |
 | **Metering** | `cost-metering` | Track token usage and estimate USD cost per session |
 
 > **Disable hooks**: Add hook names to `disabled_hooks` in `omo-cli.json`. See [Configuration Reference](#configuration-reference).

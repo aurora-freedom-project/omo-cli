@@ -441,16 +441,16 @@ Khi Orchestrator cần chạy nhiều tác vụ song song, nó dùng `background
 
 ---
 
-## Hệ thống Hook (40+)
+## Hệ thống Hook (50+)
 
-40+ hook chạy xuyên suốt lifecycle, phân loại theo 6 danh mục:
+50+ hook chạy xuyên suốt lifecycle, phân loại theo 8 danh mục:
 
 ```
 chat.message --------+
                      |    +-----------------------------+
 event ---------------+--->|       Hook Pipeline         |
                      |    |                             |
-tool.execute.before -+    |  40+ hooks x 6 danh muc     |
+tool.execute.before -+    |  50+ hooks x 8 danh muc     |
 tool.execute.after --+    |                             |
                      |    |  Moi hook co the:            |
 messages.transform --+    |   - Thay doi input/output   |
@@ -496,6 +496,14 @@ messages.transform --+    |   - Thay doi input/output   |
 | | `tool-output-truncator` | Cắt ngắn output tool quá dài |
 | | `empty-task-response-detector` | Phát hiện response rỗng |
 | | `task-resume-info` | Thông tin resume tác vụ |
+| **Bảo mật** | `input-guard` | Phát hiện prompt injection (9 lớp) |
+| | `auto-remediate` | Tự động phân tích và khắc phục lỗ hổng |
+| | `jailbreak-eval` | Phát hiện từ chối sau session LLM |
+| | `output-guard` | Lọc dữ liệu độc hại từ MCP payload |
+| | `sandbox-server` | Cô lập mã thực thi nguy hiểm |
+| | `provider-probe` | Giám sát tấn công qua external probe |
+| | `mcp-audit` | Giám sát thất thoát dữ liệu mạng MCP |
+| | `variant-hunter` | Xử lý biến thể của anti-pattern DB |
 | **Metering** | `cost-metering` | Theo dõi token usage và ước tính chi phí USD mỗi session |
 
 > **Tắt hook**: Thêm tên hook vào `disabled_hooks` trong `omo-cli.json`. Xem [Tham chiếu cấu hình](#tham-chiếu-cấu-hình).

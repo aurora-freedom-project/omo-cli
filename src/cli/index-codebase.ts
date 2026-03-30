@@ -33,8 +33,7 @@ Prerequisites:
                 const connected = await isConnected()
                 if (!connected) {
                     p.log.error("SurrealDB not connected. Run 'omo-cli memory start' first.")
-                    p.outro(color.red("Failed"))
-                    process.exit(1)
+                    throw new Error("SurrealDB not connected")
                 }
 
                 const overview = await getCodeOverview(project)
@@ -65,8 +64,7 @@ Prerequisites:
             if (!connected) {
                 s.stop(color.red("SurrealDB not connected"))
                 p.log.error("Run 'omo-cli memory start' to start SurrealDB.")
-                p.outro(color.red("Failed"))
-                process.exit(1)
+                throw new Error("SurrealDB not connected")
             }
             s.stop(color.green("SurrealDB connected"))
 
@@ -92,8 +90,7 @@ Prerequisites:
             } catch (err) {
                 s.stop(color.red("Indexing failed"))
                 p.log.error(`Error: ${err}`)
-                p.outro(color.red("Failed"))
-                process.exit(1)
+                throw err as Error
             }
 
             s.stop(color.green("Indexing complete"))

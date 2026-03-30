@@ -35,6 +35,25 @@ import {
   createBackgroundCancel,
 } from "./background-task"
 
+import {
+  pattern_scan,
+  input_guard_test,
+  createPromptTest,
+  vulnerability_triage,
+  fingerprint_stats,
+} from "./security"
+
+import {
+  dns_resolve,
+  port_check,
+  tls_inspect,
+  web_crawl,
+} from "./network"
+
+import { createSandboxExec, type SandboxConfig } from "./sandbox"
+import { createFactExtractor } from "./fact-extractor"
+import { createGitWorktreeTools } from "./git-worktree"
+
 import type { PluginInput, ToolDefinition } from "@opencode-ai/plugin"
 import type { BackgroundManager } from "../features/background-agent"
 
@@ -51,6 +70,27 @@ export function createBackgroundTools(manager: BackgroundManager, client: Openco
   }
 }
 
+/** Create security tools that require runtime configuration. */
+export function createSecurityTools(ollamaUrl?: string): Record<string, ToolDefinition> {
+  return {
+    prompt_test: createPromptTest(ollamaUrl),
+    fact_extract: createFactExtractor(ollamaUrl),
+  }
+}
+
+/** Create network security tools. */
+export function createNetworkTools(): Record<string, ToolDefinition> {
+  return { dns_resolve, port_check, tls_inspect, web_crawl }
+}
+
+/** Create sandbox execution tool. */
+export function createSandboxTools(config?: Partial<SandboxConfig>): Record<string, ToolDefinition> {
+  return { sandbox_exec: createSandboxExec(config) }
+}
+
+/** Create git worktree isolation tools. */
+export { createGitWorktreeTools }
+
 export const builtinTools: Record<string, ToolDefinition> = {
   lsp_goto_definition,
   lsp_find_references,
@@ -64,4 +104,15 @@ export const builtinTools: Record<string, ToolDefinition> = {
   session_read,
   session_search,
   session_info,
+  // Security tools (ported from Omni, enhanced with Vuln Fingerprint DB)
+  pattern_scan,
+  input_guard_test,
+  vulnerability_triage,
+  fingerprint_stats,
+  // Network security tools (ported from Omni)
+  dns_resolve,
+  port_check,
+  tls_inspect,
+  web_crawl,
 }
+

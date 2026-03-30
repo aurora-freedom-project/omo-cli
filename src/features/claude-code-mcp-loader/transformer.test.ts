@@ -56,7 +56,7 @@ describe("claude-code-mcp-loader/transformer", () => {
         const server = { type: "http" as const }
 
         // #when / #then
-        expect(() => transformMcpServer("badhttp", server as any)).toThrow("requires url")
+        expect(() => transformMcpServer("badhttp", server as Partial<Parameters<typeof transformMcpServer>[1]>)).toThrow("requires url")
     })
 
     test("throws for stdio without command", () => {
@@ -64,7 +64,7 @@ describe("claude-code-mcp-loader/transformer", () => {
         const server = {}
 
         // #when / #then
-        expect(() => transformMcpServer("badstdio", server as any)).toThrow("requires command")
+        expect(() => transformMcpServer("badstdio", server as Partial<Parameters<typeof transformMcpServer>[1]>)).toThrow("requires command")
     })
 
     test("defaults to stdio when type not specified", () => {

@@ -2,6 +2,11 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test"
 import { resumeBackgroundSession, resumeSyncSession, type ResumeContext } from "./session-resume"
 import { __setTimingConfig, __resetTimingConfig } from "./timing"
 import type { DelegateTaskArgs } from "./types"
+import {
+    createMockToolContext,
+    createMockSessionClient,
+    createMockBackgroundManager,
+} from "../../test-helpers"
 
 /** Creates a minimal ResumeContext for testing. */
 function createTestContext(overrides?: Partial<ResumeContext>): ResumeContext {
@@ -13,50 +18,37 @@ function createTestContext(overrides?: Partial<ResumeContext>): ResumeContext {
         session_id: "ses_resume_test",
     }
 
-    const ctx = {
+    const ctx = createMockToolContext({
         sessionID: "parent-session",
         messageID: "parent-message",
         agent: "orchestrator",
-        abort: new AbortController().signal,
-        metadata: () => { },
-    }
+    })
 
-    const manager = {
-        resume: async (input: Record<string, unknown>) => ({
-            id: "task-bg-123",
-            sessionID: input.sessionId as string,
-            description: "Resumed task",
-            agent: "explorer",
-            status: "running",
-        }),
-        launch: async () => ({}),
-    }
+    const manager = createMockBackgroundManager()
 
-    const client = {
-        session: {
-            messages: async () => ({
-                data: [
-                    {
-                        info: {
-                            role: "assistant",
-                            agent: "explorer",
-                            model: { providerID: "anthropic", modelID: "claude-sonnet-4-5" },
-                            time: { created: Date.now() },
-                        },
-                        parts: [{ type: "text", text: "Task resumed successfully" }],
+    const client = createMockSessionClient({
+        messages: async () => ({
+            data: [
+                {
+                    info: {
+                        role: "assistant",
+                        agent: "explorer",
+                        model: { providerID: "anthropic", modelID: "claude-sonnet-4-5" },
+                        time: { created: Date.now() },
                     },
-                ],
-            }),
-            prompt: async () => ({ data: {} }),
-            status: async () => ({ data: {} }),
-        },
-    }
+                    parts: [{ type: "text", text: "Task resumed successfully" }],
+                },
+            ],
+        }),
+        prompt: async () => ({ data: {} }),
+        status: async () => ({ data: {} }),
+    })
 
     return {
         args,
-        ctx: ctx as any,
-        client: client as any,
-        manager: manager as any,
+        ctx,
+        client,
+        manager,
         ...overrides,
     }
 }
@@ -97,13 +89,12 @@ describe("session-resume", () => {
             // #given
             let resumeInput: Record<string, unknown> | undefined
             const context = createTestContext({
-                manager: {
+                manager: createMockBackgroundManager({
                     resume: async (input: Record<string, unknown>) => {
                         resumeInput = input
                         return { id: "t1", sessionID: "s1", description: "d", agent: "a", status: "running" }
                     },
-                    launch: async () => ({}),
-                } as any,
+                }),
                 parentModel: { providerID: "anthropic", modelID: "claude-sonnet-4-5" },
                 parentAgent: "orchestrator",
             })
@@ -122,10 +113,9 @@ describe("session-resume", () => {
         test("returns error message when manager.resume fails", async () => {
             // #given
             const context = createTestContext({
-                manager: {
+                manager: createMockBackgroundManager({
                     resume: async () => { throw new Error("Session not found") },
-                    launch: async () => ({}),
-                } as any,
+                }),
             })
 
             // #when
@@ -155,28 +145,26 @@ describe("session-resume", () => {
             // #given
             let promptBody: Record<string, unknown> | undefined
             const context = createTestContext({
-                client: {
-                    session: {
-                        messages: async () => ({
-                            data: [
-                                {
-                                    info: {
-                                        role: "assistant",
-                                        agent: "researcher",
-                                        model: { providerID: "openai", modelID: "gpt-5.2" },
-                                        time: { created: Date.now() },
-                                    },
-                                    parts: [{ type: "text", text: "Response" }],
+                client: createMockSessionClient({
+                    messages: async () => ({
+                        data: [
+                            {
+                                info: {
+                                    role: "assistant",
+                                    agent: "researcher",
+                                    model: { providerID: "openai", modelID: "gpt-5.2" },
+                                    time: { created: Date.now() },
                                 },
-                            ],
-                        }),
-                        prompt: async (input: Record<string, unknown>) => {
-                            promptBody = input.body as Record<string, unknown>
-                            return { data: {} }
-                        },
-                        status: async () => ({ data: {} }),
+                                parts: [{ type: "text", text: "Response" }],
+                            },
+                        ],
+                    }),
+                    prompt: async (input: unknown) => {
+                        promptBody = (input as Record<string, unknown>).body as Record<string, unknown>
+                        return { data: {} }
                     },
-                } as any,
+                    status: async () => ({ data: {} }),
+                }),
             })
 
             // #when
@@ -191,13 +179,11 @@ describe("session-resume", () => {
         test("returns error when prompt fails", async () => {
             // #given
             const context = createTestContext({
-                client: {
-                    session: {
-                        messages: async () => ({ data: [] }),
-                        prompt: async () => { throw new Error("Prompt rejected") },
-                        status: async () => ({ data: {} }),
-                    },
-                } as any,
+                client: createMockSessionClient({
+                    messages: async () => ({ data: [] }),
+                    prompt: async () => { throw new Error("Prompt rejected") },
+                    status: async () => ({ data: {} }),
+                }),
             })
 
             // #when
@@ -211,17 +197,15 @@ describe("session-resume", () => {
         test("returns no-response message when no assistant messages found", async () => {
             // #given - messages only from user, no assistant reply
             const context = createTestContext({
-                client: {
-                    session: {
-                        messages: async () => ({
-                            data: [
-                                { info: { role: "user" }, parts: [{ type: "text", text: "hello" }] },
-                            ],
-                        }),
-                        prompt: async () => ({ data: {} }),
-                        status: async () => ({ data: {} }),
-                    },
-                } as any,
+                client: createMockSessionClient({
+                    messages: async () => ({
+                        data: [
+                            { info: { role: "user" }, parts: [{ type: "text", text: "hello" }] },
+                        ],
+                    }),
+                    prompt: async () => ({ data: {} }),
+                    status: async () => ({ data: {} }),
+                }),
             })
 
             // #when

@@ -36,7 +36,7 @@ import { getMessageDir } from "../../shared/session-utils"
 const WORKER_AGENT = "worker"
 
 // Re-export for backward compatibility (tests and index.ts import from here)
-export { resolveCategoryConfig, type DelegateTaskToolOptions }
+export { resolveCategoryConfig, buildSystemContent, type DelegateTaskToolOptions }
 
 export function createDelegateTask(options: DelegateTaskToolOptions): ToolDefinition {
   const { manager, client, directory, userCategories, gitMasterConfig, workerModel, browserProvider, onSyncSessionCreated } = options

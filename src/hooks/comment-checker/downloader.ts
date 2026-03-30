@@ -39,9 +39,6 @@ const PLATFORM_MAP: Record<string, PlatformInfo> = {
  * On Windows: Uses %LOCALAPPDATA% or %APPDATA% (Windows conventions)
  * On Unix: Follows XDG Base Directory Specification
  */
-/** @deprecated Use `getOmoOpenCodeCacheDir` from `shared/data-path.ts` directly */
-export const getCacheDir = getOmoOpenCodeCacheDir
-
 /**
  * Get the binary name based on platform.
  */
@@ -53,7 +50,7 @@ export function getBinaryName(): string {
  * Get the cached binary path if it exists.
  */
 export function getCachedBinaryPath(): string | null {
-  const binaryPath = join(getCacheDir(), getBinaryName())
+  const binaryPath = join(getOmoOpenCodeCacheDir(), getBinaryName())
   return existsSync(binaryPath) ? binaryPath : null
 }
 
@@ -107,7 +104,7 @@ export async function downloadCommentChecker(): Promise<string | null> {
     return null
   }
 
-  const cacheDir = getCacheDir()
+  const cacheDir = getOmoOpenCodeCacheDir()
   const binaryName = getBinaryName()
   const binaryPath = join(cacheDir, binaryName)
 

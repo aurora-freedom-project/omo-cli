@@ -55,6 +55,12 @@ const DEFAULT_PRICE: ModelPrice = { input: 3.00, output: 15.00 }
 export function normalizeModelID(raw: string): string {
     let id = raw.toLowerCase().trim()
 
+    // Strip provider prefix: "ollama/", "openai/", "anthropic/", etc.
+    const slashIdx = id.indexOf("/")
+    if (slashIdx !== -1) {
+        id = id.slice(slashIdx + 1)
+    }
+
     // Strip "antigravity-" prefix
     if (id.startsWith("antigravity-")) {
         id = id.slice("antigravity-".length)

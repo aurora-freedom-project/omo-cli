@@ -159,6 +159,20 @@ export const HookNameSchema = z.enum([
   "atlas",
   "start-work",
   "input-guard",
+  "preflight-skill-injector",
+  "drift-detector",
+  "rag-enricher",
+  "stream-chain",
+  "reasoning-bank",
+
+  // Agentic Security Hooks (Phase 1 & 2)
+  "auto-remediate",
+  "jailbreak-eval",
+  "output-guard",
+  "sandbox-server",
+  "provider-probe",
+  "mcp-audit",
+  "variant-hunter",
 ])
 
 /** Built-in slash command names that can be disabled. */
@@ -367,6 +381,8 @@ export const ExperimentalConfigSchema = z.object({
   truncate_all_tool_outputs: z.boolean().optional(),
   /** Dynamic context pruning configuration */
   dynamic_context_pruning: DynamicContextPruningConfigSchema.optional(),
+  /** Enable pre-flight skill injection (searches SurrealDB on first long prompt and injects top skills) */
+  preflight_skills: z.boolean().optional(),
 })
 
 /** Skill source: either a path string or an object with path + glob options. */

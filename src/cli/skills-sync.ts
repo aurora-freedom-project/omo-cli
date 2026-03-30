@@ -40,7 +40,7 @@ export async function syncSkills(force: boolean = false) {
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err)
             p.log.error(`❌ Failed to initialize shadow clone: ${message}`)
-            return process.exit(1)
+            throw new Error(`Failed to initialize shadow clone: ${message}`)
         }
     } else {
         try {
@@ -49,7 +49,7 @@ export async function syncSkills(force: boolean = false) {
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err)
             p.log.error(`❌ Failed to update shadow clone: ${message}`)
-            return process.exit(1)
+            throw new Error(`Failed to update shadow clone: ${message}`)
         }
     }
 
@@ -57,7 +57,7 @@ export async function syncSkills(force: boolean = false) {
     const sourceSkillsDir = path.join(tmpRepoDir, TARGET_SUBDIR)
     if (!fs.existsSync(sourceSkillsDir)) {
         p.log.error("❌ Failed to find 'skills' directory in the remote repository.")
-        return process.exit(1)
+        throw new Error("Failed to find 'skills' directory in the remote repository")
     }
 
     // 3. Run Validator & One-Way Sync

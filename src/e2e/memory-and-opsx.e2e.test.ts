@@ -131,7 +131,7 @@ describe("E2E: memory install → start → add/search/graph", () => {
             `${import.meta.dir}/../hooks/compaction-context-injector/index.ts`
         ).text()
 
-        expect(src).toContain("searchSimilar")
+        expect(src).toContain("queryMemoryConcepts")
     })
 
     test("disabled config returns disabled message for all tools", async () => {

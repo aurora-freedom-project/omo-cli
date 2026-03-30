@@ -32,6 +32,7 @@ export type ErrorCategory =
     | { _tag: "ValidationError"; message: string; provider: string }
     | { _tag: "Timeout"; message: string; provider: string }
     | { _tag: "NetworkError"; message: string; provider: string }
+    | { _tag: "StreamingError"; message: string; provider: string }
     | { _tag: "UnknownError"; message: string; provider: string; cause?: unknown }
 
 // ─── Provider Error Domain Model ───────────────────────────────────────────
@@ -44,6 +45,10 @@ export interface ProviderErrorInfo {
     readonly message: string
     readonly retryAfter?: number // seconds, from Retry-After header
     readonly cause?: unknown
+    /** True if error was detected from a network-level failure (no HTTP status) */
+    readonly isNetworkError?: boolean
+    /** True if error was detected from a streaming disconnect */
+    readonly isStreamingError?: boolean
 }
 
 // ─── Retry Strategy ─────────────────────────────────────────────────────────
@@ -55,6 +60,8 @@ export interface RetryStrategy {
     readonly maxDelayMs: number
     readonly jitterMaxMs: number
     readonly retryableStatuses: ReadonlySet<number>
+    /** Watchdog timeout: if no response within this period, trigger recovery (ms) */
+    readonly watchdogTimeoutMs?: number
 }
 
 // ─── Retry State ───────────────────────────────────────────────────────────
@@ -109,7 +116,35 @@ export const DEFAULT_RETRY_STRATEGY: RetryStrategy = {
     maxDelayMs: 30_000,
     jitterMaxMs: 1_000,
     retryableStatuses: new Set([429, 500, 502, 503, 504]),
+    watchdogTimeoutMs: 120_000, // 2 minutes
 }
 
 /** Non-retryable HTTP status codes */
 export const NON_RETRYABLE_STATUSES: ReadonlySet<number> = new Set([400, 401, 403, 404, 422])
+
+// ─── Network & Streaming Error Detection ────────────────────────────────────
+
+/** Node.js/Bun network error codes that indicate transient failures */
+export const NETWORK_ERROR_CODES: ReadonlySet<string> = new Set([
+    "ECONNRESET",
+    "ETIMEDOUT",
+    "ENOTFOUND",
+    "EPIPE",
+    "EHOSTUNREACH",
+    "ECONNREFUSED",
+    "ENETUNREACH",
+    "EAI_AGAIN",
+])
+
+/** Patterns indicating a streaming/SSE disconnect (case-insensitive) */
+export const STREAMING_ERROR_PATTERNS: readonly RegExp[] = [
+    /stream\s*(ing)?\s*(error|fail|disconnect|abort)/i,
+    /chunk\s*(error|fail|corrupt)/i,
+    /connection\s*(reset|closed|abort|lost)/i,
+    /SSE\s*(error|disconnect|timeout)/i,
+    /ReadableStream\s*(error|cancel|closed)/i,
+    /premature\s*close/i,
+    /incomplete\s*(response|message|chunk)/i,
+    /unexpected\s*end\s*of\s*(stream|data|input)/i,
+]
+

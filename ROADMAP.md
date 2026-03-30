@@ -1,61 +1,34 @@
 # omo-cli Feature Roadmap
 
-> Last updated: 2026-03-04
-
-## 🔴 High Priority
-
-### Agent Freeze Auto-Recovery
-**Status**: Investigation complete, implementation pending
-**Background**: OpenCode freezes when LLM providers return 400 Bad Request errors. The `provider-error-recovery` hook exists but doesn't cover all edge cases.
-**Next**: Implement comprehensive provider error detection + auto-retry with exponential backoff.
-**Ref**: Conversation `1feddf97`
-
-### Remove Remaining `as any` Casts (Phase 2)
-**Status**: Phase 1 done (205→180), need Phase 2 for remaining 180
-**Next**: Create typed helpers for `look-at`, `plugin-config`, `auto-update-checker`, `question-label-truncator` (top 4 remaining by count).
-
----
-
-## 🟡 Medium Priority
-
-### Cost Metering Verification
-**Status**: Implemented, enabled for `mike` and `mike-local` profiles
-**Next**: Verify end-to-end cost tracking in production usage.
-**Ref**: Conversation `41a00339`
-
-### BM25 Search Enhancement
-**Status**: Phase 5 of FastCode integration complete
-**Next**: Tune tokenization, verify search relevance in production.
-**Ref**: Conversation `4eb85714`
-
-### Test `as any` Audit — Type-Safe Mock Interfaces
-**Status**: Initial audit complete (205 casts categorized)
-**Next**: Create proper interfaces for `OpencodeClient` mock subsets, `PluginInput` factory, config schema partials.
-**Ref**: Conversation `8c2540fa`
-
----
-
-## 🟢 Low Priority / Maintenance
-
-### Bun `mock.module()` Workaround
-**Status**: Documented as architectural limitation. `test-isolated.ts` provides full workaround.
-**Impact**: 347 false failures only appear when running raw `bun test`. `bun run test` (via test-isolated.ts) shows 0 failures.
-
-### Fix `fix-test-types.ts` Coverage
-**Status**: Script covers 9 error patterns. Could add more automated patterns for remaining manual fixes.
-**Next**: Add patterns for `toEqual` overload mismatches, ToolContext property completion.
-
----
+> Last updated: 2026-03-25 (ALL ITEMS VERIFIED ✅)
 
 ## ✅ Recently Completed
 
-| Feature | Date | Commit |
-|---------|------|--------|
+| Feature | Date | Details |
+|---------|------|---------|
+| **Agentic Security Integration (P3 & P4)** | 2026-03-30 | Security Pipeline Wiring, 7 Hooks Exported, JSON Schema Gen |
+| **Snowflake Arctic Vector Migration (P5 & P6)** | 2026-03-30 | Native Batch /api/embed, 768-D SurrealDB HNSW Schema Update |
+| **Agentic Security Integration (P1 & P2)** | 2026-03-29 | Defense-in-Depth, 33 Vuln Fingerprints, Auto-Remediate, 121 tests pass |
+| **All Previous ROADMAP items resolved** | 2026-03-25 | 7 phases complete, 940+ tests pass |
+| Agent Freeze Auto-Recovery | 2026-03-25 | +2 modules (network.ts, watchdog.ts), 77 tests |
+| `as any` elimination | 2026-03-25 | 0 source, 0 test casts (was 205→30→0) |
+| Cost Metering verified | 2026-03-25 | 43 tests, normalizeModelID fix for ollama/ prefix |
+| BM25 tokenizer enhanced | 2026-03-25 | camelCase/snake_case splitting, recall@5≥0.7 |
+| fix-test-types.ts +2 patterns | 2026-03-25 | TS2554 toEqual, TS2339 missing property |
+| PROJECT_KNOWLEDGE.md | 2026-03-25 | — |
 | Test tsc errors 189→0 | 2026-03-04 | `e08b13cc` |
 | `fix-test-types.ts` +4 patterns | 2026-03-04 | `7e852286` |
 | `test-helpers.ts` + Phase 1 refactor | 2026-03-04 | `6191c0fc` |
-| Install command refactor | 2026-03-01 | — |
-| Agent registration audit | 2026-02-27 | — |
-| SurrealDB IPv6 fix | 2026-02-27 | — |
 | FastCode Phase 5 (BM25) | 2026-02-27 | — |
 | Cost metering implementation | 2026-02-28 | — |
+
+---
+
+## 🟢 Maintenance Only
+
+### Bun `mock.module()` Workaround
+**Status**: Documented as architectural limitation. `test-isolated.ts` (60 LOC) provides full workaround.
+**Impact**: False failures only appear when running raw `bun test`. `bun run test` (via test-isolated.ts) shows **227/227 pass, 0 fail**.
+
+### Test Type Strictness
+**Status**: ✅ `npx tsc --noEmit` = **0 errors**. Mock factories in `test-helpers.ts` return properly-typed `OpencodeClient`/`BackgroundManager`.

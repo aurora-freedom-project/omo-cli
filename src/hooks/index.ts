@@ -35,3 +35,13 @@ export { createDelegateTaskRetryHook } from "./delegate-task-retry";
 export { createQuestionLabelTruncatorHook } from "./question-label-truncator";
 export { createSubagentQuestionBlockerHook } from "./subagent-question-blocker";
 export { createCostMeteringHook } from "./cost-metering";
+export { createPreflightSkillInjectorHook } from "./preflight-skill-injector";
+
+// Security Framework Hooks (Phase 1 & 2)
+export { createAutoRemediateHook } from "./auto-remediate";
+export { createJailbreakEvalHook } from "./jailbreak-eval";
+export { createOutputGuardHook } from "./output-guard";
+export { createSandboxServerHook } from "./sandbox-server";
+export { createProviderProbeHook } from "./provider-probe";
+export { createMcpAuditHook } from "./mcp-audit";
+export { createVariantHunterHook } from "./variant-hunter";

@@ -39,15 +39,12 @@ const PLATFORM_MAP: Record<string, PlatformInfo> = {
   "win32-ia32": { arch: "i686", os: "pc-windows-msvc" },
 }
 
-/** @deprecated Use `getOmoOpenCodeCacheDir` from `shared/data-path.ts` directly */
-export const getCacheDir = getOmoOpenCodeCacheDir
-
 export function getBinaryName(): string {
   return process.platform === "win32" ? "sg.exe" : "sg"
 }
 
 export function getCachedBinaryPath(): string | null {
-  const binaryPath = join(getCacheDir(), getBinaryName())
+  const binaryPath = join(getOmoOpenCodeCacheDir(), getBinaryName())
   return existsSync(binaryPath) ? binaryPath : null
 }
 
@@ -62,7 +59,7 @@ export async function downloadAstGrep(version: string = DEFAULT_VERSION): Promis
     return null
   }
 
-  const cacheDir = getCacheDir()
+  const cacheDir = getOmoOpenCodeCacheDir()
   const binaryName = getBinaryName()
   const binaryPath = join(cacheDir, binaryName)
 

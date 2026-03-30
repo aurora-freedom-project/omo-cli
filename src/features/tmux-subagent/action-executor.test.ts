@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test"
 import type { ActionResult, ExecuteActionsResult, ExecuteContext } from "./action-executor"
 import type { PaneAction, WindowState } from "./types"
+import { createMockTmuxConfig } from "../../test-helpers"
 
 /**
  * Tests for action-executor types and type contracts.
@@ -154,7 +155,7 @@ describe("action-executor", () => {
             }
 
             const ctx: ExecuteContext = {
-                config: { enabled: true } as any,
+                config: createMockTmuxConfig(),
                 serverUrl: "http://localhost:3000",
                 windowState,
             }

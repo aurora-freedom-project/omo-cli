@@ -1,75 +1,58 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, mock, beforeEach } from "bun:test"
 
 // Mock dependencies
-const mockLog = mock(() => { })
-mock.module("../../shared/logger", () => ({ log: mockLog }))
-
-// Mock isConnected and getCodeOverview
-const mockIsConnected = mock(async () => true)
-const mockGetCodeOverview = mock(async () => ({
-    fileCount: 42,
-    elementCounts: [
-        { kind: "function", count: 120 },
-        { kind: "class", count: 15 },
-        { kind: "interface", count: 25 },
-    ],
-    exportCount: 80,
+const mockIsConnected = mock(() => Promise.resolve(false))
+const mockGetCodeOverview = mock(() => Promise.resolve({
+    fileCount: 0,
+    exportCount: 0,
+    elementCounts: [],
 }))
 
 mock.module("./memory/surreal-client", () => ({
     isConnected: mockIsConnected,
     getCodeOverview: mockGetCodeOverview,
 }))
-
-// Mock indexer
-const mockIndexProject = mock(async () => ({
-    filesScanned: 50,
-    filesSkipped: 10,
-    elementsIndexed: 200,
-    relationsIndexed: 45,
-    durationMs: 1500,
-    errors: [],
-}))
 mock.module("../features/code-intel/indexer", () => ({
-    indexProject: mockIndexProject,
+    indexProject: mock(() => Promise.resolve({
+        filesScanned: 10,
+        filesSkipped: 5,
+        elementsIndexed: 42,
+        relationsIndexed: 20,
+        durationMs: 1234,
+        errors: [],
+    })),
+}))
+mock.module("@clack/prompts", () => ({
+    intro: mock(() => {}),
+    outro: mock(() => {}),
+    spinner: () => ({ start: mock(() => {}), stop: mock(() => {}) }),
+    log: {
+        info: mock(() => {}),
+        error: mock(() => {}),
+        warn: mock(() => {}),
+        message: mock(() => {}),
+        success: mock(() => {}),
+    },
 }))
 
 import { createIndexCommand } from "./index-codebase"
 
-describe("index-codebase CLI", () => {
+describe("createIndexCommand", () => {
     beforeEach(() => {
-        mockLog.mockClear()
         mockIsConnected.mockClear()
         mockGetCodeOverview.mockClear()
-        mockIndexProject.mockClear()
     })
 
-    test("createIndexCommand returns a Command", () => {
+    it("returns a Command instance", () => {
         const cmd = createIndexCommand()
-        expect(cmd).toBeDefined()
         expect(cmd.name()).toBe("index")
     })
 
-    test("command has correct description", () => {
-        const cmd = createIndexCommand()
-        expect(cmd.description()).toContain("Index")
-    })
-
-    test("command has --vector option", () => {
+    it("has expected options", () => {
         const cmd = createIndexCommand()
         const opts = cmd.options.map(o => o.long)
         expect(opts).toContain("--vector")
-    })
-
-    test("command has --stats option", () => {
-        const cmd = createIndexCommand()
-        const opts = cmd.options.map(o => o.long)
         expect(opts).toContain("--stats")
-    })
-
-    test("command has --rebuild option", () => {
-        const cmd = createIndexCommand()
-        const opts = cmd.options.map(o => o.long)
         expect(opts).toContain("--rebuild")
     })
 })

@@ -94,31 +94,31 @@ async function checkEmbeddingModel(): Promise<PrerequisiteResult> {
                         name: "Embedding Model",
                         ok: false,
                         critical: false,
-                        hint: "Ollama not reachable — start Ollama first, then run: ollama pull all-minilm:l6-v2",
+                        hint: "Ollama not reachable — start Ollama first, then run: ollama pull snowflake-arctic-embed2:568m",
                     } as PrerequisiteResult
                 }
 
                 const data = (await res.json()) as { models?: Array<{ name: string }> }
                 const models = data.models ?? []
-                const hasModel = models.some((m) => m.name.startsWith("all-minilm"))
+                const hasModel = models.some((m) => m.name.startsWith("snowflake-arctic-embed2"))
 
                 if (hasModel) {
-                    return { name: "Embedding Model (all-minilm)", ok: true, critical: false } as PrerequisiteResult
+                    return { name: "Embedding Model (snowflake-arctic-embed2)", ok: true, critical: false } as PrerequisiteResult
                 }
 
                 return {
-                    name: "Embedding Model (all-minilm)",
+                    name: "Embedding Model (snowflake-arctic-embed2)",
                     ok: false,
                     critical: false,
-                    hint: "Run: ollama pull all-minilm:l6-v2",
+                    hint: "Run: ollama pull snowflake-arctic-embed2:568m",
                 } as PrerequisiteResult
             },
             catch: () => "fail" as const,
         }).pipe(Effect.catchAll(() => Effect.succeed({
-            name: "Embedding Model (all-minilm)",
+            name: "Embedding Model (snowflake-arctic-embed2)",
             ok: false,
             critical: false,
-            hint: "Start Ollama first, then run: ollama pull all-minilm:l6-v2",
+            hint: "Start Ollama first, then run: ollama pull snowflake-arctic-embed2:568m",
         } as PrerequisiteResult)))
     )
 }

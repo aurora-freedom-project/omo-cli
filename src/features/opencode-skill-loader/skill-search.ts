@@ -41,8 +41,26 @@ const MIN_SCORE_THRESHOLD = 0.1
 // ---------------------------------------------------------------------------
 
 /**
+ * Split camelCase/PascalCase identifiers into sub-tokens.
+ * e.g., "handleUserAuth" → ["handle", "user", "auth"]
+ *       "XMLParser" → ["xml", "parser"]
+ */
+function splitCamelCase(token: string): string[] {
+    // Insert space before uppercase letters that follow lowercase
+    const split = token
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        // Insert space between consecutive uppercase and following lowercase
+        .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+        .toLowerCase()
+        .split(/[\s_-]+/)
+        .filter((t) => t.length > 1)
+    return split
+}
+
+/**
  * Tokenize text into lowercase tokens, stripping punctuation.
  * Filters out tokens shorter than 2 characters and common stop words.
+ * Splits camelCase/PascalCase and snake_case identifiers.
  */
 const STOP_WORDS = new Set([
     "the", "is", "at", "of", "on", "and", "or", "to", "in", "for",
@@ -51,11 +69,32 @@ const STOP_WORDS = new Set([
 ])
 
 export function tokenize(text: string): string[] {
-    return text
+    const rawTokens = text
         .toLowerCase()
         .replace(/[^\w\s-]/g, " ")
         .split(/\s+/)
         .filter((token) => token.length > 1 && !STOP_WORDS.has(token))
+
+    // Expand camelCase/PascalCase/snake_case tokens
+    const expanded: string[] = []
+    for (const token of rawTokens) {
+        expanded.push(token)
+        // Only split if token contains mixed case or underscores
+        if (/[A-Z]/.test(text) && /[a-z]/.test(token) && token.length > 3) {
+            const parts = splitCamelCase(token)
+            if (parts.length > 1) {
+                expanded.push(...parts.filter((p) => !STOP_WORDS.has(p)))
+            }
+        }
+        if (token.includes("_") || token.includes("-")) {
+            const parts = token.split(/[_-]+/).filter((p) => p.length > 1 && !STOP_WORDS.has(p))
+            if (parts.length > 1) {
+                expanded.push(...parts)
+            }
+        }
+    }
+
+    return expanded
 }
 
 // ---------------------------------------------------------------------------

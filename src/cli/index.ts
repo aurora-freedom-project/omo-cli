@@ -290,7 +290,11 @@ without corrupting local git caches. It automatically applies YAML fixes and
 deduplicates skill names before copying to ~/.config/_skills_.
 `)
   .action(async (options) => {
-    await syncSkills(options.force)
+    try {
+      await syncSkills(options.force)
+    } catch (err) {
+      process.exit(1)
+    }
   })
 
 

@@ -11,6 +11,13 @@ import * as path from "path"
 describe("shared/logger", () => {
     beforeEach(() => {
         mockAppendFileSync.mockClear()
+        // Enable file logging for tests (defaults to false since runtime config was added)
+        logger.configureLogger({ fileLogging: true })
+    })
+
+    afterEach(() => {
+        // Reset to default disabled state
+        logger.configureLogger({ fileLogging: false })
     })
 
     describe("getLogFilePath", () => {

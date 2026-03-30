@@ -10,6 +10,10 @@
 
 import type { ToolContext } from "@opencode-ai/plugin/tool"
 import type { PluginInput } from "@opencode-ai/plugin"
+import type { BackgroundManager } from "./features/background-agent"
+
+/** The SDK client type used throughout omo-cli */
+export type OpencodeClient = PluginInput["client"]
 
 // ─── ToolContext ────────────────────────────────────────────────────────────
 
@@ -90,6 +94,78 @@ export interface MockOpencodeClient {
     }
 }
 
+// ─── Session Client (for session-poller / session-resume tests) ─────────────
+
+/**
+ * Lightweight mock client for tests that only need session.messages() and session.status().
+ * Returns OpencodeClient type so consuming tests don't need to cast.
+ *
+ * Usage:
+ *   const client = createMockSessionClient({
+ *       messages: async () => ({ data: [{ id: 1 }] }),
+ *   })
+ */
+interface MockSessionShape {
+    messages: (...args: unknown[]) => Promise<{ data?: unknown[]; error?: string }>
+    status?: (...args: unknown[]) => Promise<{ data: unknown }>
+    prompt?: (...args: unknown[]) => Promise<{ data: unknown }>
+    get?: (...args: unknown[]) => Promise<{ data: unknown }>
+    create?: (...args: unknown[]) => Promise<{ data: unknown }>
+}
+
+/**
+ * Creates a typed mock client for session-poller / session-resume tests.
+ * Returns `OpencodeClient` to satisfy TypeScript strict checks in consumers.
+ */
+export function createMockSessionClient(
+    sessionOverrides: Partial<MockSessionShape> = {}
+): OpencodeClient {
+    return {
+        session: {
+            messages: async () => ({ data: [] }),
+            status: async () => ({ data: {} }),
+            prompt: async () => ({ data: {} }),
+            ...sessionOverrides,
+        },
+    } as unknown as OpencodeClient
+}
+
+// ─── Background Manager Mock ────────────────────────────────────────────────
+
+/**
+ * Shape for mock BackgroundManager overrides.
+ */
+interface MockBackgroundManagerShape {
+    resume: (input: Record<string, unknown>) => Promise<{
+        id: string
+        sessionID: string
+        description: string
+        agent: string
+        status: string
+    }>
+    launch: (...args: unknown[]) => Promise<unknown>
+}
+
+/**
+ * Creates a typed mock BackgroundManager.
+ * Returns `BackgroundManager` to satisfy TypeScript strict checks in consumers.
+ */
+export function createMockBackgroundManager(
+    overrides: Partial<MockBackgroundManagerShape> = {}
+): BackgroundManager {
+    return {
+        resume: async (input: Record<string, unknown>) => ({
+            id: "task-bg-123",
+            sessionID: (input.sessionId as string) ?? "mock-session",
+            description: "Resumed task",
+            agent: "explorer",
+            status: "running",
+        }),
+        launch: async () => ({}),
+        ...overrides,
+    } as unknown as BackgroundManager
+}
+
 // ─── Hook Test Helpers ──────────────────────────────────────────────────────
 
 /**
@@ -151,3 +227,4 @@ export function createMockTmuxConfig(overrides: Record<string, unknown> = {}) {
         ...overrides,
     }
 }
+

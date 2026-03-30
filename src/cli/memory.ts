@@ -42,7 +42,7 @@ Data stored at: ~/.config/opencode/omo-memory/omo.db
                 s.stop("Failed")
                 log.error(String(err))
                 outro("Failed to start memory")
-                process.exit(1)
+                throw err as Error
             }
         })
 
@@ -61,7 +61,7 @@ Data stored at: ~/.config/opencode/omo-memory/omo.db
             } catch (err) {
                 s.stop("Failed")
                 log.error(String(err))
-                process.exit(1)
+                throw err as Error
             }
         })
 
@@ -93,7 +93,7 @@ Data stored at: ~/.config/opencode/omo-memory/omo.db
                 process.exit(0)
             } catch (err) {
                 log.error(String(err))
-                process.exit(1)
+                throw err as Error
             }
         })
 
@@ -126,7 +126,7 @@ Data stored at: ~/.config/opencode/omo-memory/omo.db
             } catch (err) {
                 s.stop("Failed")
                 log.error(String(err))
-                process.exit(1)
+                throw err as Error
             }
         })
 

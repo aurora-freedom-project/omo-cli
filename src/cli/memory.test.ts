@@ -85,11 +85,10 @@ describe("cli/memory", () => {
             mockDocker.ensureSurrealDBRunning.mockRejectedValue(new Error("Start failed"))
             const root = new Command().addCommand(createMemoryCommand())
 
-            await runCmd(root, ["memory", "start"])
+            await expect(runCmd(root, ["memory", "start"])).rejects.toThrow("Start failed")
 
             expect(mockSpinner.stop).toHaveBeenCalledWith("Failed")
             expect(mockClack.log.error).toHaveBeenCalledWith(expect.stringContaining("Start failed"))
-            expect(exitSpy).toHaveBeenCalledWith(1)
         })
     })
 
@@ -109,11 +108,10 @@ describe("cli/memory", () => {
             mockDocker.stopSurrealDB.mockRejectedValue(new Error("Stop failed"))
             const root = new Command().addCommand(createMemoryCommand())
 
-            await runCmd(root, ["memory", "stop"])
+            await expect(runCmd(root, ["memory", "stop"])).rejects.toThrow("Stop failed")
 
             expect(mockSpinner.stop).toHaveBeenCalledWith("Failed")
             expect(mockClack.log.error).toHaveBeenCalledWith(expect.stringContaining("Stop failed"))
-            expect(exitSpy).toHaveBeenCalledWith(1)
         })
     })
 
@@ -168,10 +166,9 @@ describe("cli/memory", () => {
             mockDocker.getSurrealDBStatus.mockRejectedValue(new Error("Status lookup crash"))
 
             const root = new Command().addCommand(createMemoryCommand())
-            await runCmd(root, ["memory", "status"])
+            await expect(runCmd(root, ["memory", "status"])).rejects.toThrow("Status lookup crash")
 
             expect(mockClack.log.error).toHaveBeenCalledWith(expect.stringContaining("Status lookup crash"))
-            expect(exitSpy).toHaveBeenCalledWith(1)
         })
     })
 
@@ -233,11 +230,10 @@ describe("cli/memory", () => {
             mockDocker.resetSurrealDB.mockRejectedValue(new Error("Reset fail"))
 
             const root = new Command().addCommand(createMemoryCommand())
-            await runCmd(root, ["memory", "reset"])
+            await expect(runCmd(root, ["memory", "reset"])).rejects.toThrow("Reset fail")
 
             expect(mockSpinner.stop).toHaveBeenCalledWith("Failed")
             expect(mockClack.log.error).toHaveBeenCalledWith(expect.stringContaining("Reset fail"))
-            expect(exitSpy).toHaveBeenCalledWith(1)
         })
     })
 })

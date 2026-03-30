@@ -82,7 +82,7 @@ DEFINE FIELD IF NOT EXISTS outcome       ON concept TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS confidence    ON concept TYPE option<float>;
 
 DEFINE INDEX IF NOT EXISTS idx_concept_embedding ON concept
-  FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
+  FIELDS embedding HNSW DIMENSION 768 DIST COSINE;
 DEFINE INDEX IF NOT EXISTS idx_concept_trajectory ON concept FIELDS trajectory_id;
 DEFINE INDEX IF NOT EXISTS idx_concept_outcome    ON concept FIELDS outcome;
 
@@ -122,7 +122,7 @@ DEFINE INDEX IF NOT EXISTS idx_code_search ON code_element
 
 -- Vector index (populated by omo-cli index --vector)
 DEFINE INDEX IF NOT EXISTS idx_code_embedding ON code_element
-  FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
+  FIELDS embedding HNSW DIMENSION 768 DIST COSINE;
 
 -- Lookup indexes
 DEFINE INDEX IF NOT EXISTS idx_code_file ON code_element FIELDS file;

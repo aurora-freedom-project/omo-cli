@@ -29,7 +29,7 @@ import { recordToolUse, recordToolResult, getTranscriptPath, recordUserMessage, 
 import type { PluginConfig } from "./types"
 import { log, isHookDisabled } from "../../shared"
 import type { ContextCollector } from "../../features/context-injector"
-import { canInject, releaseInjectionLock, cleanupSession as cleanupLoopCoordination } from "../loop-coordination"
+import { canInject, releaseInjectionLock, cleanupSession as cleanupLoopCoordination, markCompactionActive, clearCompactionActive } from "../loop-coordination"
 import { cleanupStopHookState } from "./stop"
 import { cleanupDelegationDepth } from "../../tools/delegate-task/helpers"
 import { cleanupWorkpad } from "../workpad-tracker"
@@ -52,6 +52,8 @@ export function createClaudeCodeHooksHook(
       input: { sessionID: string },
       output: { context: string[] }
     ): Promise<void> => {
+      markCompactionActive(input.sessionID)
+
       if (isHookDisabled(config, "PreCompact")) {
         return
       }
@@ -339,6 +341,15 @@ export function createClaudeCodeHooksHook(
             hasError: true,
             errorMessage: String(props?.error ?? "Unknown error"),
           })
+        }
+        return
+      }
+
+      if (event.type === "session.compacted") {
+        const props = event.properties as Record<string, unknown> | undefined
+        const sessionID = props?.sessionID as string | undefined
+        if (sessionID) {
+          clearCompactionActive(sessionID)
         }
         return
       }
