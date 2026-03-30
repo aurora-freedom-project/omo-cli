@@ -105,7 +105,19 @@
           "sisyphus-junior-notepad",
           "atlas",
           "start-work",
-          "input-guard"
+          "input-guard",
+          "preflight-skill-injector",
+          "drift-detector",
+          "rag-enricher",
+          "stream-chain",
+          "reasoning-bank",
+          "auto-remediate",
+          "jailbreak-eval",
+          "output-guard",
+          "sandbox-server",
+          "provider-probe",
+          "mcp-audit",
+          "variant-hunter"
         ]
       }
     },
@@ -6558,6 +6570,9 @@
               }
             }
           }
+        },
+        "preflight_skills": {
+          "type": "boolean"
         }
       }
     },

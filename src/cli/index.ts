@@ -12,6 +12,7 @@ import { runCategorization } from "./skills-categorizer"
 import { adaptTier, adaptAllTiers } from "./skills-adapter"
 import { syncSkills } from "./skills-sync"
 import { createIndexCommand } from "./index-codebase"
+import { createProfileCommand } from "./profile"
 import { runCreateSkill } from "./skills-create"
 import type { InstallArgs } from "./types"
 import type { RunOptions } from "./run"
@@ -302,6 +303,7 @@ deduplicates skill names before copying to ~/.config/_skills_.
 program.addCommand(createMemoryCommand())
 program.addCommand(createMcpOAuthCommand())
 program.addCommand(createIndexCommand())
+program.addCommand(createProfileCommand())
 
 program
   .command("create-skill <name>")
